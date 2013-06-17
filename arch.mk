@@ -1,0 +1,58 @@
+# get architecture
+ARCH ?= $(shell uname -m)
+
+# ARCH was specified as empty value
+ifeq ($(ARCH),)
+	override ARCH = $(shell uname -m)
+endif
+
+# common part
+CROSS_COMPILE ?= 
+CC = $(CROSS_COMPILE)gcc
+CXX = $(CROSS_COMPILE)g++
+CFLAGS = -std=c99 -pedantic -Wall -Wextra -O2
+CXXFLAGS = -std=c++98 -pedantic -Wall -Wextra -O2
+LDLIBS = -lm
+LDFLAGS = 
+
+# ASVP platform
+ifeq ($(ARCH),microblaze)
+	CROSS_COMPILE = microblaze-uclinux-
+	CFLAGS += -mno-xl-soft-mul -mhard-float -mcpu=v8.00.b -DEMBED -Dlinux -D__linux__ -Dunix -D__uClinux__ -DLINUX -I$(ROOT)/api/22-mb-petalinux/libwal -I$(ROOT)/api/22-mb-petalinux/libbce_config_step4 -Wno-unknown-pragmas
+	LDFLAGS += -L$(ROOT)/api/22-mb-petalinux/libwal -L$(ROOT)/api/22-mb-petalinux/libbce_config_step4 # asvp-demo_v0
+	LDLIBS += -lwal -lbce_config
+endif
+
+# AMD64
+ifeq ($(ARCH),x86_64)
+	CROSS_COMPILE = 
+	CFLAGS += -fopenmp -fPIC
+	CFLAGS += -ftree-vectorize
+	LDFLAGS += -fopenmp
+	LDLIBS += -lrt
+endif
+
+# ARM11 (Raspberry Pi)
+ifeq ($(ARCH),armv6l)
+	CROSS_COMPILE = 
+	CFLAGS += -fopenmp -fPIC
+	LDFLAGS += -fopenmp
+	LDLIBS += -lrt                                                                                                                                                              
+endif
+
+# Cortex-A8 (N900)
+ifeq ($(ARCH),armv7l)
+	CROSS_COMPILE = 
+	CFLAGS += -fopenmp -fPIC
+	CFLAGS += -O3 -ftree-vectorize -mfpu=neon -march=armv7-a -mfloat-abi=softfp -mvectorize-with-neon-quad -funsafe-math-optimizations
+	LDFLAGS += -fopenmp
+	LDLIBS += -lrt
+endif
+
+ifeq ($(BUILD),release)
+	CFLAGS += -DNDEBUG
+endif
+
+ifeq ($(BUILD),debug)
+	CFLAGS += -DDEBUG -g
+endif

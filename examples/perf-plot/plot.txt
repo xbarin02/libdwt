@@ -1,0 +1,124 @@
+# sprintf(format, dir, threads, accel, stride, j, arr, workers, type)
+format = "data/dir=%s.threads=%d.accel=%i.opt-stride=%i.j=%i.arr=%s.workers=%i.type=%s.txt"
+
+#############################################################################
+set terminal svg enhanced size 640 420
+set output "array.svg"
+set xlabel "pixels"
+set ylabel "seconds / pixel"
+set format x "%.1s%c"
+set format y "%.1s%c"
+set logscale x
+set logscale y
+
+dir = "fwd"
+threads = 1
+accel = 9
+stride = 2
+j = -1
+workers = 1
+type = "float"
+
+unset arrow
+
+plot \
+	sprintf(format, dir, threads,  accel, stride, j, "simple", workers, type) with lines lc rgb "#ff0000" lw 2 title "simple", \
+	sprintf(format, dir, threads,  accel, stride, j, "sparse", workers, type) with lines lc rgb "#00ff00" lw 2 title "sparse", \
+	sprintf(format, dir, threads,  accel, stride, j, "packed", workers, type) with lines lc rgb "#0000ff" lw 2 title "packed"
+
+#############################################################################
+set terminal svg enhanced size 640 420
+set output "stride.svg"
+set xlabel "pixels"
+set ylabel "seconds / pixel"
+set format x "%.1s%c"
+set format y "%.1s%c"
+set logscale x
+set logscale y
+
+dir = "fwd"
+threads = 1
+accel = 9
+j = 1
+arr = "packed"
+workers = 1
+type = "float"
+
+unset arrow
+
+# L1cache = 32*1024
+# set arrow from L1cache/4,graph(0,0) to L1cache/4,graph(1,1) nohead
+# 
+# L2cache = 3072*1024
+# set arrow from L2cache/4,graph(0,0) to L2cache/4,graph(1,1) nohead
+
+plot \
+	sprintf(format, dir, threads,  accel, 0, j, arr, workers, type) with lines lc rgb "#ff0000" lw 2 title "non-optimal (0)", \
+	sprintf(format, dir, threads,  accel, 1, j, arr, workers, type) with lines lc rgb "#0000ff" lw 2 title "prime (1)", \
+	sprintf(format, dir, threads,  accel, 2, j, arr, workers, type) with lines lc rgb "#00ffff" lw 2 title "prime-set (2)", \
+	sprintf(format, dir, threads,  accel, 3, j, arr, workers, type) with lines lc rgb "#00ff00" lw 2 title "one-set (3)", \
+	sprintf(format, dir, threads,  accel, 4, j, arr, workers, type) with lines lc rgb "#007f00" lw 2 title "set (4)", \
+	sprintf(format, dir, threads,  accel, 5, j, arr, workers, type) with lines lc rgb "#007f7f" lw 2 title "(5)", \
+	sprintf(format, dir, threads,  accel, 6, j, arr, workers, type) with lines lc rgb "#7f7f00" lw 2 title "odd (6)", \
+	sprintf(format, dir, threads,  accel, 7, j, arr, workers, type) with lines lc rgb "#7f7f7f" lw 2 title "odd-set (7)"
+
+#############################################################################
+set terminal svg enhanced size 640 420
+set output "threads.svg"
+set xlabel "pixels"
+set ylabel "seconds / pixel"
+set format x "%.1s%c"
+set format y "%.1s%c"
+set logscale x
+set logscale y
+
+dir = "fwd"
+accel = 9
+stride = 2
+j = 1
+arr = "packed"
+workers = 1
+type = "float"
+
+unset arrow
+
+plot \
+	sprintf(format, dir, 1,  accel, stride, j, arr, workers, type) with lines lc rgb "#ff0000" lw 2 title "1 thread", \
+	sprintf(format, dir, 2,  accel, stride, j, arr, workers, type) with lines lc rgb "#0000ff" lw 2 title "2 threads"
+
+#############################################################################
+set terminal svg enhanced size 640 420
+set output "accel.svg"
+set xlabel "pixels"
+set ylabel "seconds / pixel"
+set format x "%.1s%c"
+set format y "%.1s%c"
+set logscale x
+set logscale y
+
+dir = "fwd"
+threads = 1
+stride = 7
+j = 1
+arr = "packed"
+type = "float"
+
+unset arrow
+
+plot \
+	sprintf(format, dir, threads,  0, stride, j, arr, 1, type) with lines lc rgb "#ff0000" lw 2 title "ML (0)", \
+	sprintf(format, dir, threads,  1, stride, j, arr, 1, type) with lines lc rgb "#0000ff" lw 2 title "ML/BCEx1 (1)", \
+	sprintf(format, dir, threads,  1, stride, j, arr, 2, type) with lines lc rgb "#00007f" lw 2 title "ML/BCEx2 (1)", \
+	sprintf(format, dir, threads,  4, stride, j, arr, 1, type) with lines lc rgb "#00ff00" lw 2 title "DL (4)", \
+	sprintf(format, dir, threads,  5, stride, j, arr, 1, type) with lines lc rgb "#000000" lw 2 title "SDL (5)", \
+	sprintf(format, dir, threads,  6, stride, j, arr, 1, type) with lines lc rgb "#00003f" lw 2 title "SDL2 (6)", \
+	sprintf(format, dir, threads,  7, stride, j, arr, 1, type) with lines lc rgb "#003f00" lw 2 title "SDL6 (7)", \
+	sprintf(format, dir, threads,  8, stride, j, arr, 1, type) with lines lc rgb "#00007f" lw 2 title "SDL2/SSE (8)", \
+	sprintf(format, dir, threads,  9, stride, j, arr, 1, type) with lines lc rgb "#007f00" lw 2 title "SDL6/SSE (9)", \
+	sprintf(format, dir, threads, 10, stride, j, arr, 4, type) with lines lc rgb "#3fff00" lw 2 title "DL4 (10)", \
+	sprintf(format, dir, threads, 11, stride, j, arr, 4, type) with lines lc rgb "#7fff00" lw 2 title "DL4/SSE (11)", \
+	sprintf(format, dir, threads, 12, stride, j, arr, 4, type) with lines lc rgb "#ff7f00" lw 2 title "ML4/SSE (12)", \
+	sprintf(format, dir, threads, 13, stride, j, arr, 1, type) with lines lc rgb "#7f3f3f" lw 2 title "ML/NOSSE (13)", \
+	sprintf(format, dir, threads, 14, stride, j, arr, 1, type) with lines lc rgb "#3f7f3f" lw 2 title "DL/NOSSE (14)", \
+	sprintf(format, dir, threads, 15, stride, j, arr, 1, type) with lines lc rgb "#00ff3f" lw 2 title "DL4L (15)", \
+	sprintf(format, dir, threads, 16, stride, j, arr, 1, type) with lines lc rgb "#00ff7f" lw 2 title "DL4L/SSE (16)"

@@ -1,0 +1,29 @@
+* unit tests
+* better SIMD support
+* more wavelets (Haar)
+* more data types (integer, fixed point)
+* integrate performance measurement
+* more example applications
+* more effective lifting implementation (take a look at another implementations, e.g. OpenJPEG or JasPer)
+* support for full decomposition in 1D
+* relicense to GNU LGPL
+* OpenCV wrapper (C)
+* C++ interface
+* drop deprecated interface
+* remove duplicate code
+* tiling (e.g., as in JPEG 2000)
+* remove "lib" prefix from source file names
+* 2D DWT: single-loop approach (iteration of horizontal part is immediately fed into iteration of vertical part)
+* memory access through incremented pointers instead of indexed arrays
+* use size_t, etc. instead of unsigned int, etc.
+* 3D data support
+* better ARM support
+* ASVP: upload new data when waiting for preceding operation (use memory bank "D", then copy to bank "A")
+* ASVP: number of workers should be adjustable by environment variable like number of threads in OpenMP
+* MS Windows support
+* code cleanup
+* drop x86_64+nosse architecture support
+* non-dyadic decompositions
+* Gabor transform
+* add simple functions like minimum, maximum, average, median, threshold
+* functions for type (float, double, int) conversion

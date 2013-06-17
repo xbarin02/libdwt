@@ -1,0 +1,183 @@
+2013-06-12 David Barina <ibarina@fit.vutbr.cz>
+* Initial support for Cortex-A8 CPU.
+
+2013-06-01 David Barina <ibarina@fit.vutbr.cz>
+* Initial support for ARM11 CPU family.
+
+2013-05-27 David Barina <ibarina@fit.vutbr.cz>
+* PC: Added -ftree-vectorize option into CFLAGS on x86_64 architecture.
+* Added SIMD implementations of double-loop algorithm (plain C and SSE variant).
+* Added examples/info application which shows various system informations.
+* Added dwt_util_get_ncpus function which gets the number of processors.
+
+2013-04-28 David Barina <ibarina@fit.vutbr.cz>
+* Improved examples/perf-plot{,-line} applications.
+* Some missing exports added to libdwt.h header file.
+
+2013-04-26 David Barina <ibarina@fit.vutbr.cz>
+* Added CDF 9/7 integer to integer wavelet trasnform.
+
+2013-04-24 David Barina <ibarina@fit.vutbr.cz>
+* Added simple support for loading images from PGM files.
+* Added out-of-place transform of 2D CDF 9/7 DWT.
+* Added no-sse variant of multi-loop CDF 9/7 SP FP transform.
+
+2013-04-18 David Barina <ibarina@fit.vutbr.cz>
+* Minor optimizations and bugfixes.
+* Added several functions related to integer transform.
+* Added example showing usage of subband access functions with integer data type.
+
+2013-04-11 David Barina <ibarina@fit.vutbr.cz>
+* Added integer implementation of DWT with CDF 5/3 wavelet.
+
+2013-02-08 David Barina <ibarina@fit.vutbr.cz>
+* Added SSE implementation of multi-loop algorithm (4 rows in parallel).
+* Improved several SSE implementations with 4 workers.
+* PC: Added a flush function for x86_64 architecture.
+* Rewritten the perf-plot example.
+* Some code optimization and cleanup.
+
+2013-02-04 David Barina <ibarina@fit.vutbr.cz>
+* Added support for workers on PC platform.
+* Added SSE implementation of double-loop algorithm (4 rows in parallel).
+
+2013-02-03 David Barina <ibarina@fit.vutbr.cz>
+* Rewritten workers line processing.
+* Added dwt_util_image_size function that calculates the size of the image in memory.
+* In some functions, POSIX compliant sysconf function is used instead of constant macros.
+* Code cleanup in the double-loop algorithm.
+
+2013-01-29 David Barina <ibarina@fit.vutbr.cz>
+* Added more examples.
+* Added more complex performance measurement functions.
+
+2013-01-27 David Barina <ibarina@fit.vutbr.cz>
+* Many small bugfixes.
+* Added performance measurement function.
+* Added some example applications.
+
+2013-01-26 David Barina <ibarina@fit.vutbr.cz>
+* Added SSE implementation of the shifted double-loop algorithm with 6
+iterations merged.
+
+2013-01-25 David Barina <ibarina@fit.vutbr.cz>
+* Added SSE implementation of the shifted double-loop algorithm.
+
+2013-01-24 David Barina <ibarina@fit.vutbr.cz>
+* Added merged implementations (2 and 6 merged iterations) of the shifted
+double-loop algorithm.
+* Added subband addressing functions into OpenCV interface.
+* Added an example showing usage of new OpenCV subband addressing functions.
+* Added a function which can convert the transform into a viewable image.
+
+2013-01-22 David Barina <ibarina@fit.vutbr.cz>
+* Added subband addressing function.
+
+2013-01-18 David Barina <ibarina@fit.vutbr.cz>
+* Added primality testing support together with better optimal stride
+estimation.
+* Added initial lifting implementation using shifted double-loop algorithm.
+* Several bugfixes.
+
+2012-11-29 David Barina <ibarina@fit.vutbr.cz>
+* Added support for double-loop lifting algorithm.
+* Added initial support for optimal stride selection.
+
+2012-11-21 David Barina <ibarina@fit.vutbr.cz>
+* ASVP: dwt_util_switch_op remember currently active firmware.
+* Added dwt_util_node and dwt_util_appname functions.
+
+2012-11-18 David Barina <ibarina@fit.vutbr.cz>
+* ASVP: Fixed several bugs.
+* ASVP: Optimized firmwares.
+* Added dwt_util_arch function.
+
+2012-11-12 David Barina <ibarina@fit.vutbr.cz>
+* ASVP: Acceleration of non power of two image sizes.
+* ASVP: Fixed several bugs.
+
+2012-11-09 David Barina <ibarina@fit.vutbr.cz>
+* On ASVP platform, added initial support for parallel processing by several
+BCE workers.
+* Added some logging functions.
+
+2012-11-05 David Barina <ibarina@fit.vutbr.cz>
+* Removed volatile modifier.
+* Rewritten firmwares according to 64-bit data alignment.
+
+2012-10-30 David Barina <ibarina@fit.vutbr.cz>
+* Added initial support for UTIA ASVP platform and DMA memory transfers.
+
+2011-10-07 David Barina <ibarina@fit.vutbr.cz>
+* libdwt.c libdwt.h: Added support for CDF 5/3 wavelet.
+
+2011-08-10 David Barina <ibarina@fit.vutbr.cz>
+* libdwt.c libdwt.h: EdkDSP implementation speed-up.
+
+2011-07-19 David Barina <ibarina@fit.vutbr.cz>
+* libdwt.c libdwt.h: Added many timer types (enum dwt_timer_types) and
+dwt_util_clock_available function. Code consolidation. Added experimental
+dwt_util_switch_op function which changes PicoBlaze firmware.
+
+2011-07-07 David Barina <ibarina@fit.vutbr.cz>
+* libdwt.c firmware/fw_fp01_lift4sa.c firmware/fw_fp01_lift4sb.c: Two firmwares
+for forward and inverse transform. Merged with coefficient scaling.
+
+* libdwt.c (dwt_util_memcpy_stride_s, dwt_util_memcpy_stride_d): Added functions
+for fast memory area copying.
+
+2011-06-23 David Barina <ibarina@fit.vutbr.cz>
+* libdwt.c firmware/fw_fp01_lift97.c: Improved EdkDSP acceleration (two lifting
+steps merged together).
+
+2011-06-20 David Barina <ibarina@fit.vutbr.cz>
+
+* libdwt.c Makefile INSTALL firmware/fw_fp01_lift97.c: Improved UTIA EdkDSP
+platform support. Computation is now implemented in PicoBlaze firmware.
+
+2011-06-16 David Barina <ibarina@fit.vutbr.cz>
+
+* libdwt.c libdwt.h Makefile INSTALL examples/simple: Added support for UTIA
+EdkDSP platform. Several small fixes.
+
+2011-06-07 David Barina <ibarina@fit.vutbr.cz>
+
+* libdwt.h: Fixed usage of string class.
+
+* examples/simple: Added simple example application.
+
+2011-06-01 David Barina <ibarina@fit.vutbr.cz>
+
+* libdwt.c libdwt.h: Added dwt_util_* functions for performance measurement.
+
+2011-05-16 David Barina <ibarina@fit.vutbr.cz>
+
+* libdwt.c libdwt.h (dwt_cdf97_f_d, dwt_cdf97_f_s, dwt_cdf97_i_d, dwt_cdf97_i_s)
+(dwt_cdf97_f_ex_d, dwt_cdf97_f_ex_s, dwt_cdf97_f_ex_stride_d)
+(dwt_cdf97_f_ex_stride_s, dwt_cdf97_i_ex_d, dwt_cdf97_i_ex_s)
+(dwt_cdf97_i_ex_stride_d, dwt_cdf97_i_ex_stride_s, dwt_zero_padding_f_d)
+(dwt_zero_padding_f_s, dwt_zero_padding_f_stride_d, dwt_zero_padding_f_stride_s)
+(dwt_zero_padding_i_d, dwt_zero_padding_i_s, dwt_zero_padding_i_stride_d)
+(dwt_zero_padding_i_stride_s, dwt_cdf97_2f_d, dwt_cdf97_2f_s, dwt_cdf97_2i_d)
+(dwt_cdf97_2i_s): Added support for single precision floating point numbers.
+
+* cvdwt.cpp cvdwt.h (isPOT, resizePOT, transform, wtshow): Added C++ OpenCV
+interface.
+
+* examples/opencv/showdwt.cpp: Now, using C++ OpenCV interface.
+
+2011-05-09 David Barina <ibarina@fit.vutbr.cz>
+
+* libdwt.c (dwt_cdf97_2f, dwt_cdf97_2i): More effective OpenMP parallelization.
+
+* libdwt.c (or_shift, pot, bits, ceil_log2, ceil_div): Added some fast integer
+math routines.
+
+2011-05-03 David Barina <ibarina@fit.vutbr.cz>
+
+* libdwt.c (dwt_cdf97_2f, dwt_cdf97_2i): Added OpenMP support.
+
+2011-04-21 David Barina <ibarina@fit.vutbr.cz>
+
+* libdwt.c libdwt.h (dwt_cdf97_2f, dwt_cdf97_2i): Added functions for image
+processing.

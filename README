@@ -1,0 +1,20 @@
+NAME
+	libdwt
+
+DESCRIPTION
+	libdwt is a cross-platform discrete wavelet transform library.
+
+ACKNOWLEDGMENT
+	This work has been supported by the EU FP7-ARTEMIS project SMECY,
+	grant no. 100230.
+
+TRANSFORM/TYPE MATRIX
+	+-----------+-------+--------+-----+
+	| transform | float | double | int |
+	+-----------+-------+--------+-----+
+	| CDF 5/3   | yes   | yes    | yes |
+	| CDF 9/7   | yes*  | yes    | yes |
+	+-----------+-------+--------+-----+
+
+	Notes:
+	* accelerated with SSE (PC platform) or BCE (ASVP platform)
