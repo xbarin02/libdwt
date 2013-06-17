@@ -13446,3 +13446,101 @@ void dwt_util_measure_perf_cdf97_2_d(
 
 	FUNC_END;
 }
+
+float dwt_util_band_wps_s(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_x,
+	int size_y,
+	int j
+)
+{
+	float sum = 0.0f;
+
+	for(int y = 0; y < size_y; y++)
+		for(int x = 0; x < size_x; x++)
+		{
+			float *coeff = dwt_util_addr_coeff_s(ptr, y, x, stride_x, stride_y);
+
+			// ^2
+			sum += *coeff * *coeff;
+		}
+
+	// rectification
+	// Liu, Y., X.S. Liang, and R.H. Weisberg, 2007: Rectification of the bias in the wavelet power spectrum. Journal of Atmospheric and Oceanic Technology, 24(12), 2093-2102.
+	// http://ocgweb.marine.usf.edu/~liu/wavelet.html
+	// http://ocgweb.marine.usf.edu/~liu/Papers/Liu_etal_2007_JAOT_wavelet.pdf
+	sum /= 1<<j;
+
+	return sum;
+}
+
+int dwt_util_count_subbands_s(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max
+)
+{
+	int count = 0;
+
+	for(int j = 1; j < j_max; j++)
+	{
+		void *band_ptr;
+		int band_x;
+		int band_y;
+		
+		dwt_util_subband_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			count++;
+
+		dwt_util_subband_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_LH, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			count++;
+
+		dwt_util_subband_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HH, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			count++;
+	}
+
+	return count;
+}
+
+void dwt_util_wps_s(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	float *fv
+)
+{
+	int count = 0;
+
+	for(int j = 1; j < j_max; j++)
+	{
+		void *band_ptr;
+		int band_x;
+		int band_y;
+		
+		dwt_util_subband_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_wps_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+
+		dwt_util_subband_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_LH, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_wps_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+
+		dwt_util_subband_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HH, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_wps_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+	}
+}

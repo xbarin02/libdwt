@@ -1851,6 +1851,57 @@ void dwt_util_print_info();
 long dwt_util_get_ncpus();
 
 /**
+ * @brief Rectified wavelet power spectrum for a specific subband.
+ *
+ * @returns Value of the wavelet power spectrum.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_wps_s(
+	void *ptr,	///< pointer to beginning of image data
+	int stride_x,	///< difference between rows (in bytes)
+	int stride_y,	///< difference between columns (in bytes)
+	int size_x,	///< width of outer image frame (in elements)
+	int size_y,	///< height of outer image frame (in elements)
+	int j		///< decomposition levels
+);
+
+/**
+ * @brief Count the subbands up to given decomposition level.
+ *
+ * @returns The number of subbands.
+ *
+ * @warning experimental
+ */
+int dwt_util_count_subbands_s(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max		///< the decomposition level of interest
+);
+
+/**
+ * @brief Calculate the wavelet power spectra for all the subbands.
+ *
+ * @warning experimental
+ */
+void dwt_util_wps_s(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< the decomposition level of interest
+	float *fv		///< store feature vector here
+);
+
+/**
  * @}
  */
 
