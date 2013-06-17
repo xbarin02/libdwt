@@ -1358,6 +1358,19 @@ int dwt_util_log(
 );
 
 /**
+ * @brief Print formatted output and abort the program.
+ *
+ * Print an error message and exit the program.
+ * Format has same syntax like @p printf function.
+ *
+ * @warning experimental
+ */
+void dwt_util_error(
+	const char *format,
+	...
+);
+
+/**
  * @brief Check if memory is aligned to 128 bits.
  * 
  * @returns Returns 0 when not aligned or 1 when aligned.

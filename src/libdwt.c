@@ -11922,6 +11922,19 @@ int dwt_util_log(
 	return ret;
 }
 
+void dwt_util_error(
+	const char *format,
+	...)
+{
+	va_list ap;
+
+	va_start(ap, format);
+	dwt_util_log(LOG_ERR, format, ap);
+	va_end(ap);
+
+	dwt_util_abort();
+}
+
 static
 void *alloc(size_t size)
 {
