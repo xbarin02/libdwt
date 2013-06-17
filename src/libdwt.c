@@ -17,6 +17,50 @@
 
 #define STRING(x) #x
 
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#if (GCC_VERSION >= 30200) && (GCC_VERSION < 30300)
+	#warning "GCC 3.2"
+#endif
+#if (GCC_VERSION >= 30300) && (GCC_VERSION < 30400)
+	#warning "GCC 3.3"
+#endif
+#if (GCC_VERSION >= 30400) && (GCC_VERSION < 40000)
+	#warning "GCC 3.4"
+#endif
+#if (GCC_VERSION >= 40000) && (GCC_VERSION < 40100)
+	#warning "GCC 4.0"
+#endif
+#if (GCC_VERSION >= 40100) && (GCC_VERSION < 40200)
+	#warning "GCC 4.1"
+#endif
+#if (GCC_VERSION >= 40200) && (GCC_VERSION < 40300)
+	#warning "GCC 4.2"
+#endif
+#if (GCC_VERSION >= 40300) && (GCC_VERSION < 40400)
+	#warning "GCC 4.3"
+#endif
+#if (GCC_VERSION >= 40400) && (GCC_VERSION < 40500)
+	#warning "GCC 4.4"
+#endif
+#if (GCC_VERSION >= 40500) && (GCC_VERSION < 40600)
+	#warning "GCC 4.5"
+#endif
+#if (GCC_VERSION >= 40600) && (GCC_VERSION < 40700)
+	#warning "GCC 4.6"
+#endif
+#if (GCC_VERSION >= 40700) && (GCC_VERSION < 40800)
+	#warning "GCC 4.7"
+#endif
+#if (GCC_VERSION >= 40800)
+	#warning "GCC 4.8+"
+#endif
+
+#if (GCC_VERSION < 40300)
+	#warning Missing GCC 4.3+
+	#warning Missing __builtin___clear_cache function
+	#define __builtin___clear_cache(begin,end)
+#endif
+
 #ifdef NDEBUG
 	/* Release build */
 	#undef DEBUG
