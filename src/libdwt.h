@@ -1466,7 +1466,7 @@ void dwt_util_subband_i(
 	int size_o_big_y,	///< height of outer image frame (in elements)
 	int size_i_big_x,	///< width of nested image (in elements)
 	int size_i_big_y,	///< height of nested image (in elements)
-	int j_max,		///< pointer to the decomposition level of interest
+	int j_max,		///< the decomposition level of interest
 	enum dwt_subbands band,	///< subband of interest (LL, HL, LH, HH)
 	void **dst_ptr,		///< here will be stored pointer to beginning of subband data
 	int *dst_size_x,	///< here will be stored width of subband
@@ -1484,7 +1484,7 @@ void dwt_util_subband_s(
 	int size_o_big_y,	///< height of outer image frame (in elements)
 	int size_i_big_x,	///< width of nested image (in elements)
 	int size_i_big_y,	///< height of nested image (in elements)
-	int j_max,		///< pointer to the decomposition level of interest
+	int j_max,		///< the decomposition level of interest
 	enum dwt_subbands band,	///< subband of interest (LL, HL, LH, HH)
 	void **dst_ptr,		///< here will be stored pointer to beginning of subband data
 	int *dst_size_x,	///< here will be stored width of subband
@@ -1502,7 +1502,7 @@ void dwt_util_subband_d(
 	int size_o_big_y,	///< height of outer image frame (in elements)
 	int size_i_big_x,	///< width of nested image (in elements)
 	int size_i_big_y,	///< height of nested image (in elements)
-	int j_max,		///< pointer to the decomposition level of interest
+	int j_max,		///< the decomposition level of interest
 	enum dwt_subbands band,	///< subband of interest (LL, HL, LH, HH)
 	void **dst_ptr,		///< here will be stored pointer to beginning of subband data
 	int *dst_size_x,	///< here will be stored width of subband
@@ -1520,7 +1520,7 @@ void dwt_util_subband(
 	int size_o_big_y,	///< height of outer image frame (in elements)
 	int size_i_big_x,	///< width of nested image (in elements)
 	int size_i_big_y,	///< height of nested image (in elements)
-	int j_max,		///< pointer to the decomposition level of interest
+	int j_max,		///< the decomposition level of interest
 	enum dwt_subbands band,	///< subband of interest (LL, HL, LH, HH)
 	void **dst_ptr,		///< here will be stored pointer to beginning of subband data
 	int *dst_size_x,	///< here will be stored width of subband

@@ -22,11 +22,14 @@ type = "float"
 
 unset arrow
 
-# L1cache = 32*1024
-# set arrow from L1cache/4,graph(0,0) to L1cache/4,graph(1,1) nohead
+if("x86_64" eq system("uname -m"))
+{
+	L1cache = system("getconf LEVEL1_DCACHE_SIZE")
+	set arrow from L1cache/4,graph(0,0) to L1cache/4,graph(1,1) nohead
 
-# L2cache = 3072*1024
-# set arrow from L2cache/4,graph(0,0) to L2cache/4,graph(1,1) nohead
+	L2cache = system("getconf LEVEL2_CACHE_SIZE")
+	set arrow from L2cache/4,graph(0,0) to L2cache/4,graph(1,1) nohead
+}
 
 plot \
 	sprintf(format, dir, threads,  0, stride, j, arr, workers, type) with lines lc rgb "#ff0000" lw 2 title "ML (0)", \
