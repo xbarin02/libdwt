@@ -1874,7 +1874,7 @@ float dwt_util_band_wps_s(
  * @warning experimental
  */
 int dwt_util_count_subbands_s(
-	void *ptr,		///< pointer to beginning of image data
+	const void *ptr,	///< pointer to beginning of image data
 	int stride_x,		///< difference between rows (in bytes)
 	int stride_y,		///< difference between columns (in bytes)
 	int size_o_big_x,	///< width of outer image frame (in elements)
@@ -1890,7 +1890,7 @@ int dwt_util_count_subbands_s(
  * @warning experimental
  */
 void dwt_util_wps_s(
-	void *ptr,		///< pointer to beginning of image data
+	const void *ptr,	///< pointer to beginning of image data
 	int stride_x,		///< difference between rows (in bytes)
 	int stride_y,		///< difference between columns (in bytes)
 	int size_o_big_x,	///< width of outer image frame (in elements)
