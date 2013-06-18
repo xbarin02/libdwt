@@ -39,3 +39,4 @@ enable OpenMP with -fopenmp.
 ** OpenMP support (optional)
 * PicoBlaze C Compiler Toolchain V2 (optional on ASVP)
 * Doxygen (optional)
+* gnuplot (optional for examples)
