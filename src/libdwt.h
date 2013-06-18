@@ -1853,11 +1853,43 @@ long dwt_util_get_ncpus();
 /**
  * @brief Rectified wavelet power spectrum for a specific subband.
  *
- * @returns Value of the wavelet power spectrum.
+ * @returns The value of the wavelet power spectrum.
  *
  * @warning experimental
  */
 float dwt_util_band_wps_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y,		///< height of outer image frame (in elements)
+	int j			///< decomposition levels
+);
+
+/**
+ * @brief Index of coefficient with maximal magnitude in a specific subband.
+ *
+ * @returns The integer index as float.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_maxidx_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y,		///< height of outer image frame (in elements)
+	int j			///< decomposition levels
+);
+
+/**
+ * @brief The arithmetic mean for a specific subband.
+ *
+ * @returns The mean.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_mean_s(
 	const void *ptr,	///< pointer to beginning of image data
 	int stride_x,		///< difference between rows (in bytes)
 	int stride_y,		///< difference between columns (in bytes)
@@ -1890,6 +1922,40 @@ int dwt_util_count_subbands_s(
  * @warning experimental
  */
 void dwt_util_wps_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< the decomposition level of interest
+	float *fv		///< store feature vector here
+);
+
+/**
+ * @brief Calculate the indices of coefficients with maximal magnitudes for all the subbands.
+ *
+ * @warning experimental
+ */
+void dwt_util_maxidx_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< the decomposition level of interest
+	float *fv		///< store feature vector here
+);
+
+/**
+ * @brief Calculate the arithmetic mean for all the subbands.
+ *
+ * @warning experimental
+ */
+void dwt_util_mean_s(
 	const void *ptr,	///< pointer to beginning of image data
 	int stride_x,		///< difference between rows (in bytes)
 	int stride_y,		///< difference between columns (in bytes)

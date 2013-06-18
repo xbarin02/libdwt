@@ -13660,3 +13660,126 @@ void dwt_util_wps_s(
 			fv[count++] = dwt_util_band_wps_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
 	}
 }
+
+float dwt_util_band_maxidx_s(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_x,
+	int size_y,
+	int j
+)
+{
+	UNUSED(j);
+
+	int idx = -1;
+	float val;
+
+	for(int y = 0; y < size_y; y++)
+		for(int x = 0; x < size_x; x++)
+		{
+			float coeff = fabsf(*dwt_util_addr_coeff_const_s(ptr, y, x, stride_x, stride_y));
+
+			if( -1 == idx || coeff > val )
+			{
+				val = coeff;
+				idx = y * size_x + x;
+			}
+		}
+
+	return (float)idx;
+}
+
+float dwt_util_band_mean_s(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_x,
+	int size_y,
+	int j
+)
+{
+	UNUSED(j);
+
+	float sum = 0.0f;
+
+	for(int y = 0; y < size_y; y++)
+		for(int x = 0; x < size_x; x++)
+		{
+			float coeff = *dwt_util_addr_coeff_const_s(ptr, y, x, stride_x, stride_y);
+
+			sum += coeff;
+		}
+
+	sum /= size_x * size_y;
+
+	return sum;
+}
+
+void dwt_util_maxidx_s(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	float *fv
+)
+{
+	int count = 0;
+
+	for(int j = 1; j < j_max; j++)
+	{
+		const void *band_ptr;
+		int band_x;
+		int band_y;
+		
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_maxidx_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_LH, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_maxidx_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HH, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_maxidx_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+	}
+}
+
+void dwt_util_mean_s(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	float *fv
+)
+{
+	int count = 0;
+
+	for(int j = 1; j < j_max; j++)
+	{
+		const void *band_ptr;
+		int band_x;
+		int band_y;
+		
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_mean_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_LH, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_mean_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HH, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_mean_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+	}
+}
