@@ -1858,12 +1858,12 @@ long dwt_util_get_ncpus();
  * @warning experimental
  */
 float dwt_util_band_wps_s(
-	void *ptr,	///< pointer to beginning of image data
-	int stride_x,	///< difference between rows (in bytes)
-	int stride_y,	///< difference between columns (in bytes)
-	int size_x,	///< width of outer image frame (in elements)
-	int size_y,	///< height of outer image frame (in elements)
-	int j		///< decomposition levels
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y,		///< height of outer image frame (in elements)
+	int j			///< decomposition levels
 );
 
 /**

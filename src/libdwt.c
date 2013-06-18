@@ -1216,6 +1216,16 @@ float *dwt_util_addr_coeff_s(
 	return addr2_s(ptr, y, x, stride_x, stride_y);
 }
 
+const float *dwt_util_addr_coeff_const_s(
+	const void *ptr,
+	int y,
+	int x,
+	int stride_x,
+	int stride_y)
+{
+	return addr2_const_s(ptr, y, x, stride_x, stride_y);
+}
+
 double *dwt_util_addr_coeff_d(
 	void *ptr,
 	int y,
@@ -13448,7 +13458,7 @@ void dwt_util_measure_perf_cdf97_2_d(
 }
 
 float dwt_util_band_wps_s(
-	void *ptr,
+	const void *ptr,
 	int stride_x,
 	int stride_y,
 	int size_x,
@@ -13461,7 +13471,7 @@ float dwt_util_band_wps_s(
 	for(int y = 0; y < size_y; y++)
 		for(int x = 0; x < size_x; x++)
 		{
-			float *coeff = dwt_util_addr_coeff_s(ptr, y, x, stride_x, stride_y);
+			const float *coeff = dwt_util_addr_coeff_const_s(ptr, y, x, stride_x, stride_y);
 
 			// ^2
 			sum += *coeff * *coeff;
@@ -13476,6 +13486,7 @@ float dwt_util_band_wps_s(
 	return sum;
 }
 
+// FIXME: const ptr
 int dwt_util_count_subbands_s(
 	void *ptr,
 	int stride_x,
@@ -13511,6 +13522,7 @@ int dwt_util_count_subbands_s(
 	return count;
 }
 
+// FIXME: const ptr
 void dwt_util_wps_s(
 	void *ptr,
 	int stride_x,
