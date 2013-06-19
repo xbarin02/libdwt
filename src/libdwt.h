@@ -2113,6 +2113,74 @@ void dwt_util_med_s(
 );
 
 /**
+ * @brief Calculate variances for all the subbands.
+ *
+ * @warning experimental
+ */
+void dwt_util_var_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< the decomposition level of interest
+	float *fv		///< store feature vector here
+);
+
+/**
+ * @brief Calculate standard deviations for all the subbands.
+ *
+ * @warning experimental
+ */
+void dwt_util_stdev_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< the decomposition level of interest
+	float *fv		///< store feature vector here
+);
+
+/**
+ * @brief Calculate skewnesses for all the subbands.
+ *
+ * @warning experimental
+ */
+void dwt_util_skew_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< the decomposition level of interest
+	float *fv		///< store feature vector here
+);
+
+/**
+ * @brief Calculate kurtosises for all the subbands.
+ *
+ * @warning experimental
+ */
+void dwt_util_kurt_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< the decomposition level of interest
+	float *fv		///< store feature vector here
+);
+
+/**
  * @}
  */
 
