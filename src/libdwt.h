@@ -1863,7 +1863,7 @@ float dwt_util_band_wps_s(
 	int stride_y,		///< difference between columns (in bytes)
 	int size_x,		///< width of outer image frame (in elements)
 	int size_y,		///< height of outer image frame (in elements)
-	int j			///< decomposition levels
+	int j			///< decomposition level of given subband
 );
 
 /**
@@ -1878,8 +1878,7 @@ float dwt_util_band_maxidx_s(
 	int stride_x,		///< difference between rows (in bytes)
 	int stride_y,		///< difference between columns (in bytes)
 	int size_x,		///< width of outer image frame (in elements)
-	int size_y,		///< height of outer image frame (in elements)
-	int j			///< decomposition levels
+	int size_y		///< height of outer image frame (in elements)
 );
 
 /**
@@ -1894,8 +1893,7 @@ float dwt_util_band_mean_s(
 	int stride_x,		///< difference between rows (in bytes)
 	int stride_y,		///< difference between columns (in bytes)
 	int size_x,		///< width of outer image frame (in elements)
-	int size_y,		///< height of outer image frame (in elements)
-	int j			///< decomposition levels
+	int size_y		///< height of outer image frame (in elements)
 );
 
 /**

@@ -13611,13 +13611,13 @@ float dwt_util_band_med_s(
 
 	const int size = size_x * size_y;
 
-	// FIXME: alloc
+	// FIXME: dwt_util_allocate_vec_s
 	float arr[size];
 
 	for(int y = 0; y < size_y; y++)
 		for(int x = 0; x < size_x; x++)
 		{
-			// FIXME: memcpy
+			// FIXME: dwt_util_memcpy_stride_s
 			arr[y * size_x + x] = *dwt_util_addr_coeff_const_s(ptr, y, x, stride_x, stride_y);
 		}
 
@@ -13735,12 +13735,9 @@ float dwt_util_band_maxidx_s(
 	int stride_x,
 	int stride_y,
 	int size_x,
-	int size_y,
-	int j
+	int size_y
 )
 {
-	UNUSED(j);
-
 	int idx = -1;
 	float val;
 
@@ -13764,12 +13761,9 @@ float dwt_util_band_mean_s(
 	int stride_x,
 	int stride_y,
 	int size_x,
-	int size_y,
-	int j
+	int size_y
 )
 {
-	UNUSED(j);
-
 	float sum = 0.0f;
 
 	for(int y = 0; y < size_y; y++)
@@ -13813,12 +13807,7 @@ float dwt_util_band_moment_s(
 		{
 			float coeff = *dwt_util_addr_coeff_const_s(ptr, y, x, stride_x, stride_y);
 
-			// FIXME: powf
-			float prod = 1;
-			for(int nn = 0; nn < n; nn++)
-				prod *= (coeff - c);
-
-			sum += prod;
+			sum += powf(coeff - c, n);
 		}
 
 	return sum/size;
@@ -13842,8 +13831,7 @@ float dwt_util_band_cmoment_s(
 	int n			///< the n-th moment
 )
 {
-	// FIXME: remove j parameter
-	const float mean = dwt_util_band_mean_s(ptr, stride_x, stride_y, size_x, size_y, 0);
+	const float mean = dwt_util_band_mean_s(ptr, stride_x, stride_y, size_x, size_y);
 
 	return dwt_util_band_moment_s(ptr, stride_x, stride_y, size_x, size_y, n, mean);
 }
@@ -13967,15 +13955,15 @@ void dwt_util_maxidx_s(
 		
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
-			fv[count++] = dwt_util_band_maxidx_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+			fv[count++] = dwt_util_band_maxidx_s(band_ptr, stride_x, stride_y, band_x, band_y);
 
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_LH, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
-			fv[count++] = dwt_util_band_maxidx_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+			fv[count++] = dwt_util_band_maxidx_s(band_ptr, stride_x, stride_y, band_x, band_y);
 
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HH, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
-			fv[count++] = dwt_util_band_maxidx_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+			fv[count++] = dwt_util_band_maxidx_s(band_ptr, stride_x, stride_y, band_x, band_y);
 	}
 }
 
@@ -14001,14 +13989,14 @@ void dwt_util_mean_s(
 		
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
-			fv[count++] = dwt_util_band_mean_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+			fv[count++] = dwt_util_band_mean_s(band_ptr, stride_x, stride_y, band_x, band_y);
 
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_LH, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
-			fv[count++] = dwt_util_band_mean_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+			fv[count++] = dwt_util_band_mean_s(band_ptr, stride_x, stride_y, band_x, band_y);
 
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HH, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
-			fv[count++] = dwt_util_band_mean_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+			fv[count++] = dwt_util_band_mean_s(band_ptr, stride_x, stride_y, band_x, band_y);
 	}
 }
