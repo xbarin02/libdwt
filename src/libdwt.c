@@ -431,7 +431,7 @@
 #include <stdlib.h> // abort, malloc, free, qsort
 #include <limits.h> // CHAR_BIT
 // NOTE: -lm
-#include <math.h> // fabs, fabsf, isnan, isinf
+#include <math.h> // fabs, fabsf, isnan, isinf, powf
 #include <stdio.h> // FILE, fopen, fprintf, fclose
 #include <string.h> // memcpy
 #include <stdarg.h> // va_start, va_end
@@ -13783,6 +13783,166 @@ float dwt_util_band_mean_s(
 	sum /= size_x * size_y;
 
 	return sum;
+}
+
+/**
+ * @brief Moment.
+ *
+ * The @e n -th moment about the @e c value.
+ *
+ * @returns Moment.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_moment_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y,		///< height of outer image frame (in elements)
+	int n,			///< the n-th moment
+	float c			///< moment about this value
+)
+{
+	const int size = size_x * size_y;
+
+	float sum = 0.0f;
+	
+	for(int y = 0; y < size_y; y++)
+		for(int x = 0; x < size_x; x++)
+		{
+			float coeff = *dwt_util_addr_coeff_const_s(ptr, y, x, stride_x, stride_y);
+
+			// FIXME: powf
+			float prod = 1;
+			for(int nn = 0; nn < n; nn++)
+				prod *= (coeff - c);
+
+			sum += prod;
+		}
+
+	return sum/size;
+}
+
+/**
+ * @brief Central moment.
+ *
+ * The @e n -th moment about the mean.
+ *
+ * @returns Moment.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_cmoment_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y,		///< height of outer image frame (in elements)
+	int n			///< the n-th moment
+)
+{
+	// FIXME: remove j parameter
+	const float mean = dwt_util_band_mean_s(ptr, stride_x, stride_y, size_x, size_y, 0);
+
+	return dwt_util_band_moment_s(ptr, stride_x, stride_y, size_x, size_y, n, mean);
+}
+
+/**
+ * @brief Variance.
+ *
+ * @returns The variance.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_var_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y		///< height of outer image frame (in elements)
+)
+{
+	return dwt_util_band_cmoment_s(ptr, stride_x, stride_y, size_x, size_y, 2);
+}
+
+/**
+ * @brief Standard deviation.
+ *
+ * @returns The standard deviation.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_stdev_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y		///< height of outer image frame (in elements)
+)
+{
+	const float var = dwt_util_band_var_s(ptr, stride_x, stride_y, size_x, size_y);
+
+	return sqrtf(var);
+}
+
+/**
+ * @brief Standardized moment.
+ *
+ * The normalized/standardized n-th central moment.
+ *
+ * @returns Moment.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_smoment_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y,		///< height of outer image frame (in elements)
+	int n			///< the n-th moment
+)
+{
+	const float stdev = dwt_util_band_stdev_s(ptr, stride_x, stride_y, size_x, size_y);
+
+	return dwt_util_band_cmoment_s(ptr, stride_x, stride_y, size_x, size_y, n) / powf(stdev, n);
+}
+
+/**
+ * @brief Skewness.
+ *
+ * @returns The skewness.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_skew_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y		///< height of outer image frame (in elements)
+)
+{
+	return dwt_util_band_smoment_s(ptr, stride_x, stride_y, size_x, size_y, 3);
+}
+
+/**
+ * @brief Kurtosis.
+ *
+ * @returns The kurtosis.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_kurt_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y		///< height of outer image frame (in elements)
+)
+{
+	return dwt_util_band_smoment_s(ptr, stride_x, stride_y, size_x, size_y, 4) - 3;
 }
 
 void dwt_util_maxidx_s(
