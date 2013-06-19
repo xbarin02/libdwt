@@ -1899,6 +1899,22 @@ float dwt_util_band_mean_s(
 );
 
 /**
+ * @brief Median of a specific subband.
+ *
+ * @returns The median.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_med_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y,		///< height of outer image frame (in elements)
+	int j			///< decomposition levels
+);
+
+/**
  * @brief Count the subbands up to given decomposition level.
  *
  * @returns The number of subbands.
@@ -1956,6 +1972,23 @@ void dwt_util_maxidx_s(
  * @warning experimental
  */
 void dwt_util_mean_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< the decomposition level of interest
+	float *fv		///< store feature vector here
+);
+
+/**
+ * @brief Calculate medians for all the subbands.
+ *
+ * @warning experimental
+ */
+void dwt_util_med_s(
 	const void *ptr,	///< pointer to beginning of image data
 	int stride_x,		///< difference between rows (in bytes)
 	int stride_y,		///< difference between columns (in bytes)

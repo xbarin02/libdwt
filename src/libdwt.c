@@ -428,7 +428,7 @@
 #endif /* __SSE__ */
 #endif /* __x86_64__ */
 
-#include <stdlib.h> // abort, malloc, free
+#include <stdlib.h> // abort, malloc, free, qsort
 #include <limits.h> // CHAR_BIT
 // NOTE: -lm
 #include <math.h> // fabs, fabsf, isnan, isinf
@@ -13592,6 +13592,41 @@ float dwt_util_band_wps_s(
 	return sum;
 }
 
+static
+int cmp_s(const void *p1, const void *p2)
+{
+	return (const float *)p1 > (const float *)p2;
+}
+
+float dwt_util_band_med_s(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_x,
+	int size_y,
+	int j
+)
+{
+	UNUSED(j);
+
+	const int size = size_x * size_y;
+
+	// FIXME: alloc
+	float arr[size];
+
+	for(int y = 0; y < size_y; y++)
+		for(int x = 0; x < size_x; x++)
+		{
+			// FIXME: memcpy
+			arr[y * size_x + x] = *dwt_util_addr_coeff_const_s(ptr, y, x, stride_x, stride_y);
+		}
+
+
+	qsort(arr, size, sizeof(float), cmp_s);
+
+	return arr[size/2];
+}
+
 int dwt_util_count_subbands_s(
 	const void *ptr,
 	int stride_x,
@@ -13658,6 +13693,40 @@ void dwt_util_wps_s(
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HH, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
 			fv[count++] = dwt_util_band_wps_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+	}
+}
+
+void dwt_util_med_s(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	float *fv
+)
+{
+	int count = 0;
+
+	for(int j = 1; j < j_max; j++)
+	{
+		const void *band_ptr;
+		int band_x;
+		int band_y;
+		
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_med_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_LH, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_med_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HH, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_med_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
 	}
 }
 
