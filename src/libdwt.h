@@ -1912,6 +1912,121 @@ float dwt_util_band_med_s(
 );
 
 /**
+ * @brief Moment.
+ *
+ * The @e n -th moment about the @e c value.
+ *
+ * @returns Moment.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_moment_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y,		///< height of outer image frame (in elements)
+	int n,			///< the n-th moment
+	float c			///< moment about this value
+);
+
+/**
+ * @brief Central moment.
+ *
+ * The @e n -th moment about the mean.
+ *
+ * @returns Moment.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_cmoment_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y,		///< height of outer image frame (in elements)
+	int n			///< the n-th moment
+);
+
+/**
+ * @brief Variance.
+ *
+ * @returns The variance.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_var_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y		///< height of outer image frame (in elements)
+);
+
+/**
+ * @brief Standard deviation.
+ *
+ * @returns The standard deviation.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_stdev_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y		///< height of outer image frame (in elements)
+);
+
+/**
+ * @brief Standardized moment.
+ *
+ * The normalized/standardized n-th central moment.
+ *
+ * @returns Moment.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_smoment_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y,		///< height of outer image frame (in elements)
+	int n			///< the n-th moment
+);
+
+/**
+ * @brief Skewness.
+ *
+ * @returns The skewness.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_skew_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y		///< height of outer image frame (in elements)
+);
+
+/**
+ * @brief Kurtosis.
+ *
+ * @returns The kurtosis.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_kurt_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y		///< height of outer image frame (in elements)
+);
+
+/**
  * @brief Count the subbands up to given decomposition level.
  *
  * @returns The number of subbands.
