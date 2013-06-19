@@ -13603,28 +13603,28 @@ float dwt_util_band_med_s(
 	int stride_x,
 	int stride_y,
 	int size_x,
-	int size_y,
-	int j
+	int size_y
 )
 {
-	UNUSED(j);
-
 	const int size = size_x * size_y;
 
-	// FIXME: dwt_util_allocate_vec_s
-	float arr[size];
+	float *arr = dwt_util_allocate_vec_s(size);
 
 	for(int y = 0; y < size_y; y++)
-		for(int x = 0; x < size_x; x++)
-		{
-			// FIXME: dwt_util_memcpy_stride_s
-			arr[y * size_x + x] = *dwt_util_addr_coeff_const_s(ptr, y, x, stride_x, stride_y);
-		}
-
+		dwt_util_memcpy_stride_s(
+			&arr[y*size_x],
+			sizeof(float),
+			dwt_util_addr_coeff_const_s(ptr, y, 0, stride_x, stride_y),
+			stride_y,
+			size_x);
 
 	qsort(arr, size, sizeof(float), cmp_s);
 
-	return arr[size/2];
+	const float med = arr[size/2];
+
+	free(arr);
+
+	return med;
 }
 
 int dwt_util_count_subbands_s(
@@ -13718,15 +13718,15 @@ void dwt_util_med_s(
 		
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
-			fv[count++] = dwt_util_band_med_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+			fv[count++] = dwt_util_band_med_s(band_ptr, stride_x, stride_y, band_x, band_y);
 
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_LH, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
-			fv[count++] = dwt_util_band_med_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+			fv[count++] = dwt_util_band_med_s(band_ptr, stride_x, stride_y, band_x, band_y);
 
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HH, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
-			fv[count++] = dwt_util_band_med_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
+			fv[count++] = dwt_util_band_med_s(band_ptr, stride_x, stride_y, band_x, band_y);
 	}
 }
 

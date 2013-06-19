@@ -1908,8 +1908,7 @@ float dwt_util_band_med_s(
 	int stride_x,		///< difference between rows (in bytes)
 	int stride_y,		///< difference between columns (in bytes)
 	int size_x,		///< width of outer image frame (in elements)
-	int size_y,		///< height of outer image frame (in elements)
-	int j			///< decomposition levels
+	int size_y		///< height of outer image frame (in elements)
 );
 
 /**
