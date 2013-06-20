@@ -1,7 +1,8 @@
 2013-06-XX David Barina <ibarina@fit.vutbr.cz>
-* Improved support for ARM CPU families.
+* Improved the support for ARM CPU families.
 * Added dwt_util_error function.
-* Added some functions for feature description based on the DWT.
+* Added some functions for a feature description based on the DWT.
+* Added a norm and a moment related functions.
 
 2013-06-12 David Barina <ibarina@fit.vutbr.cz>
 * Initial support for Cortex-A8 CPU.
