@@ -453,6 +453,14 @@
 	#include <omp.h>
 #endif
 
+#ifdef microblaze
+static
+inline float powf(float x, float y)
+{
+	return __builtin_powf(x, y);
+}
+#endif
+
 #define ASM_MARKER __asm volatile ("# MARKER: " QUOTE(__LINE__))
 
 #ifdef microblaze
