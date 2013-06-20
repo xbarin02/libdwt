@@ -14139,3 +14139,106 @@ void dwt_util_kurt_s(
 			fv[count++] = dwt_util_band_kurt_s(band_ptr, stride_x, stride_y, band_x, band_y);
 	}
 }
+
+void dwt_util_maxnorm_s(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	float *fv
+)
+{
+	int count = 0;
+
+	for(int j = 1; j < j_max; j++)
+	{
+		const void *band_ptr;
+		int band_x;
+		int band_y;
+		
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_maxnorm_s(band_ptr, stride_x, stride_y, band_x, band_y);
+
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_LH, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_maxnorm_s(band_ptr, stride_x, stride_y, band_x, band_y);
+
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HH, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_maxnorm_s(band_ptr, stride_x, stride_y, band_x, band_y);
+	}
+}
+
+void dwt_util_lpnorm_s(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	float *fv,
+	float p
+)
+{
+	int count = 0;
+
+	for(int j = 1; j < j_max; j++)
+	{
+		const void *band_ptr;
+		int band_x;
+		int band_y;
+		
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_lpnorm_s(band_ptr, stride_x, stride_y, band_x, band_y, p);
+
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_LH, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_lpnorm_s(band_ptr, stride_x, stride_y, band_x, band_y, p);
+
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HH, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_lpnorm_s(band_ptr, stride_x, stride_y, band_x, band_y, p);
+	}
+}
+
+void dwt_util_norm_s(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	float *fv
+)
+{
+	int count = 0;
+
+	for(int j = 1; j < j_max; j++)
+	{
+		const void *band_ptr;
+		int band_x;
+		int band_y;
+		
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_norm_s(band_ptr, stride_x, stride_y, band_x, band_y);
+
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_LH, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_norm_s(band_ptr, stride_x, stride_y, band_x, band_y);
+
+		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HH, &band_ptr, &band_x, &band_y);
+		if( band_x && band_y )
+			fv[count++] = dwt_util_band_norm_s(band_ptr, stride_x, stride_y, band_x, band_y);
+	}
+}

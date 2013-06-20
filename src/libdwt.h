@@ -2227,6 +2227,58 @@ void dwt_util_kurt_s(
 );
 
 /**
+ * @brief Calculate the maximum norm for all the subbands.
+ *
+ * @warning experimental
+ */
+void dwt_util_maxnorm_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< the decomposition level of interest
+	float *fv		///< store feature vector here
+);
+
+/**
+ * @brief Calculate the p-norm for all the subbands.
+ *
+ * @warning experimental
+ */
+void dwt_util_lpnorm_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< the decomposition level of interest
+	float *fv,		///< store feature vector here
+	float p			///< the parameter of the norm (p=1 for the taxicab norm, p=2 for the Euclidean norm)
+);
+
+/**
+ * @brief Calculate the Euclidean norm for all the subbands.
+ *
+ * @warning experimental
+ */
+void dwt_util_norm_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< the decomposition level of interest
+	float *fv		///< store feature vector here
+);
+
+/**
  * @}
  */
 
