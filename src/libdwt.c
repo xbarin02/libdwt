@@ -13878,6 +13878,64 @@ float dwt_util_band_kurt_s(
 	return dwt_util_band_smoment_s(ptr, stride_x, stride_y, size_x, size_y, 4) - 3;
 }
 
+float dwt_util_band_maxnorm_s(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_x,
+	int size_y
+)
+{
+	float max = 0.0f;
+
+	for(int y = 0; y < size_y; y++)
+		for(int x = 0; x < size_x; x++)
+		{
+			const float c = fabsf(*dwt_util_addr_coeff_const_s(ptr, y, x, stride_x, stride_y));
+
+			if( c > max )
+				max = c;
+		}
+	
+	return max;
+}
+
+float dwt_util_band_lpnorm_s(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_x,
+	int size_y,
+	float p
+)
+{
+	float sum = 0.0f;
+
+	if( +INFINITY == p )
+		return dwt_util_band_maxnorm_s(ptr, stride_x, stride_y, size_x, size_y);
+
+	for(int y = 0; y < size_y; y++)
+		for(int x = 0; x < size_x; x++)
+		{
+			const float c = *dwt_util_addr_coeff_const_s(ptr, y, x, stride_x, stride_y);
+
+			sum += powf(fabsf(c), p);
+		}
+
+	return powf(sum, 1/p);
+}
+
+float dwt_util_band_norm_s(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_x,
+	int size_y
+)
+{
+	return dwt_util_band_lpnorm_s(ptr, stride_x, stride_y, size_x, size_y, 2);
+}
+
 void dwt_util_maxidx_s(
 	const void *ptr,
 	int stride_x,

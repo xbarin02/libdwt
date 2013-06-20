@@ -2027,6 +2027,52 @@ float dwt_util_band_kurt_s(
 );
 
 /**
+ * @brief Maximum norm.
+ *
+ * @returns The norm of the subband.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_maxnorm_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y		///< height of outer image frame (in elements)
+);
+
+/**
+ * @brief The @f$ \ell^p @f$ norm.
+ *
+ * @returns The norm of the subband.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_lpnorm_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y,		///< height of outer image frame (in elements)
+	float p			///< the parameter of the norm (p=1 for the taxicab norm, p=2 for the Euclidean norm)
+);
+
+/**
+ * @brief The Euclidean norm.
+ *
+ * @returns The norm of the subband.
+ *
+ * @warning experimental
+ */
+float dwt_util_band_norm_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y		///< height of outer image frame (in elements)
+);
+
+/**
  * @brief Count the subbands up to given decomposition level.
  *
  * @returns The number of subbands.
