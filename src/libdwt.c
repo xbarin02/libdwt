@@ -6,7 +6,6 @@
 #include "libdwt.h"
 
 #define MEASURE_PER_PIXEL
-//#define TEMP_ON_HEAP
 //#define DEBUG_VERBOSE
 //#define DISABLE_MEMCPY
 //#define ENABLE_LAZY_MEMCPY
@@ -492,6 +491,60 @@ void set_active_workers(int active_workers)
 	dwt_util_global_active_workers = active_workers;
 }
 
+static
+size_t alignment(
+	size_t type_size
+)
+{
+	assert( type_size );
+
+#ifdef microblaze
+	// FIXME: DMA memory transfers seems to need alignment of 2*sizeof(float) = 8
+	// http://www.xilinx.com/support/documentation/sw_manuals/mb_ref_guide.pdf => Memory Architecture
+	return 8;
+#endif
+
+#ifdef __x86_64__
+	// due to SSE memory access sizeof(__m128) = 16
+	// FIXME: this should return proper value according to accel_type (not for each implementation the SSE alignment is needed)
+	return 16;
+#endif
+
+#ifdef __arm__
+	// http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0301h/Cdfifaec.html
+	return type_size;
+#endif
+
+	// fallback: unaligned data
+	return 1;
+}
+
+size_t dwt_util_alignment(
+	size_t type_size
+)
+{
+	return alignment(type_size);
+}
+
+static
+int is_aligned_s(
+	const void *ptr
+      	)
+{
+	const size_t alignment = dwt_util_alignment(sizeof(float));
+
+	return ( (intptr_t)ptr & (intptr_t)(alignment-1) ) ? 0 : 1;
+}
+
+static
+void *align(
+	void *ptr,
+	size_t alignment
+ 	)
+{
+	return (void *)( ((intptr_t)ptr+(alignment-1)) & (~(alignment-1)) );
+}
+
 /** in bytes; offset in src[] and dst[] is given by worker_id * dwt_util_global_data_step */
 ptrdiff_t dwt_util_global_data_step = 0;
 
@@ -501,7 +554,8 @@ ptrdiff_t get_data_step_s()
 	return dwt_util_global_data_step;
 }
 
-static void set_data_step_s(ptrdiff_t data_step)
+static
+void set_data_step_s(ptrdiff_t data_step)
 {
 	dwt_util_global_data_step = data_step;
 }
@@ -737,6 +791,12 @@ static const double dwt_cdf53_u1_d =    0.25;
 static const double dwt_cdf53_s1_d =    1.41421356237309504880;
 static const double dwt_cdf53_s2_d =    0.70710678118654752440; // FIXME: unnecessary
 /**@}*/
+
+static
+int is_pow2(int x)
+{
+	return 0 == (x & (x - 1));
+}
 
 /**
  * @brief Power of two using greater or equal to x, i.e. 2^(ceil(log_2(x)).
@@ -1026,6 +1086,9 @@ float *calc_temp_offset_s(
 #endif
 }
 
+/**
+ * @note in elements (floats), not in bytes!
+ */
 static
 int calc_and_set_temp_size(
 	int temp_step)
@@ -9120,6 +9183,129 @@ void dwt_util_switch_op(
 	FUNC_END;
 }
 
+static
+int is_aligned(
+	void *ptr,
+	size_t alignment
+)
+{
+	assert( is_pow2(alignment) );
+
+	return ( (intptr_t)ptr & (intptr_t)(alignment-1) ) ? 0 : 1;
+}
+
+/** allocated memory aligned on current platform for type of size of elem_size bytes */
+static
+void *alloc_aligned(
+	int elements,
+	size_t elem_size
+)
+{
+	assert( is_pow2(elem_size) );
+
+	// alignment for type of given size
+	const size_t align = alignment(elem_size);
+
+	const size_t size = elements * elem_size;
+
+	void *addr = (void *)0;
+
+	addr = (void *)memalign(align, size);
+
+	assert( is_aligned(addr, align) );
+
+	return addr;
+}
+
+static
+void **alloc_temp(
+	int threads,
+	int elements,
+	size_t elem_size
+)
+{
+	void **temp;
+
+	temp = (void **)malloc( sizeof(void*) * threads );
+	if( !temp )
+		dwt_util_error("malloc fails!\n");
+
+	for(int t = 0; t < threads; t++)
+	{
+		temp[t] = alloc_aligned(elements, elem_size);
+
+		if( !temp[t] )
+			dwt_util_error("Unable to allocate temp[] buffer!\n");
+	}
+
+	return temp;
+}
+
+static
+float **alloc_temp_s(
+	int threads,
+	int elements
+)
+{
+	return (float **)alloc_temp(threads, elements, sizeof(float));
+}
+
+static
+double **alloc_temp_d(
+	int threads,
+	int elements
+)
+{
+	return (double **)alloc_temp(threads, elements, sizeof(double));
+}
+
+static
+int **alloc_temp_i(
+	int threads,
+	int elements
+)
+{
+	return (int **)alloc_temp(threads, elements, sizeof(int));
+}
+
+static
+void free_temp(
+	int threads,
+	void **temp
+)
+{
+	for(int t = 0; t < threads; t++)
+		free(temp[t]);
+	free(temp);
+}
+
+static
+void free_temp_s(
+	int threads,
+	float **temp
+)
+{
+	free_temp(threads, (void **)temp);
+}
+
+static
+void free_temp_d(
+	int threads,
+	double **temp
+)
+{
+	free_temp(threads, (void **)temp);
+}
+
+static
+void free_temp_i(
+	int threads,
+	int **temp
+)
+{
+	free_temp(threads, (void **)temp);
+}
+
 void dwt_cdf97_2f_d(
 	void *ptr,
 	int stride_x,
@@ -9301,35 +9487,25 @@ void dwt_cdf97_2f_s2(
 {
 	FUNC_BEGIN;
 
+#ifdef _OPENMP
+	const int threads = dwt_util_get_num_threads();
+#endif
+	const int workers = dwt_util_get_num_workers();
+
 #ifdef microblaze
 	dwt_util_switch_op(DWT_OP_LIFT4SA);
 #endif
 	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
 	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
 
-	// FIXME: allocate temp[max_threads][temp_size] and remove private() in omp parallel
-	// FIXME: OpenMP cannot use this in private()
 #ifdef microblaze
 	#define TEMP_OFFSET 1
-	float *temp = dwt_util_allocate_vec_s(calc_and_set_temp_size(size_o_big_max));
-#else /* microblaze */
-	//#define TEMP_OFFSET 0
-	// FIXME(x86) HACK: __attribute__ ((aligned (16)))
+#else /* AMD64 or ARM */
 	#define TEMP_OFFSET 3
+#endif
 
-#ifdef TEMP_ON_HEAP
-	float *temp = dwt_util_allocate_vec_s(calc_and_set_temp_size(size_o_big_max));
-#else /* TEMP_ON_HEAP */
-	// FIXME(x86) BUG: temp[] is allocated on stack! so stack overflow is caused by big sizes of temp[size]
-	float temp[calc_and_set_temp_size(size_o_big_max)] __attribute__ ((aligned (16)));
-#endif /* TEMP_ON_HEAP */
-
-	if( !is_aligned_16(temp) )
-		dwt_util_abort();
-#endif /* microblaze */
-
-	if(NULL == temp)
-		dwt_util_abort();
+	float **temp = alloc_temp_s(threads,
+		calc_and_set_temp_size(size_o_big_max));
 
 	int j = 0;
 
@@ -9349,10 +9525,6 @@ void dwt_cdf97_2f_s2(
 		const int size_o_dst_y = ceil_div_pow2(size_o_big_y, j+1);
 		const int size_i_src_x = ceil_div_pow2(size_i_big_x, j  );
 		const int size_i_src_y = ceil_div_pow2(size_i_big_y, j  );
-#ifdef _OPENMP
-		const int threads = dwt_util_get_num_threads();
-#endif
-		const int workers = dwt_util_get_num_workers();
 		
 		const int lines_x = size_o_src_x;
 		const int lines_y = size_o_src_y;
@@ -9368,14 +9540,14 @@ void dwt_cdf97_2f_s2(
 
 		set_data_step_s( stride_x );
 
-		#pragma omp parallel for private(temp) schedule(static, threads_segment_y)
+		#pragma omp parallel for schedule(static, threads_segment_y)
 		for(int y = 0; y < workers_lines_y; y += workers)
 		{
 			dwt_cdf97_f_ex_stride_s(
 				addr2_const_s(src,y,0,stride_x,stride_y),
 				addr2_s(dst,y,0,stride_x,stride_y),
 				addr2_s(dst,y,size_o_dst_x,stride_x,stride_y),
-				temp + TEMP_OFFSET, // HACK: +1
+				temp[omp_get_thread_num()] + TEMP_OFFSET, // HACK: +1
 				size_i_src_x,
 				stride_y);
 		}
@@ -9386,7 +9558,7 @@ void dwt_cdf97_2f_s2(
 				addr2_const_s(src,y,0,stride_x,stride_y),
 				addr2_s(dst,y,0,stride_x,stride_y),
 				addr2_s(dst,y,size_o_dst_x,stride_x,stride_y),
-				temp + TEMP_OFFSET, // HACK: +1
+				temp[omp_get_thread_num()] + TEMP_OFFSET, // HACK: +1
 				size_i_src_x,
 				stride_y);
 		}
@@ -9394,14 +9566,14 @@ void dwt_cdf97_2f_s2(
 
 		set_data_step_s( stride_y );
 
-		#pragma omp parallel for private(temp) schedule(static, threads_segment_x)
+		#pragma omp parallel for schedule(static, threads_segment_x)
 		for(int x = 0; x < workers_lines_x; x += workers)
 		{
 			dwt_cdf97_f_ex_stride_s(
 				addr2_s(dst,0,x,stride_x,stride_y),
 				addr2_s(dst,0,x,stride_x,stride_y),
 				addr2_s(dst,size_o_dst_y,x,stride_x,stride_y),
-				temp + TEMP_OFFSET, // HACK: +1
+				temp[omp_get_thread_num()] + TEMP_OFFSET, // HACK: +1
 				size_i_src_y,
 				stride_x);
 		}
@@ -9412,7 +9584,7 @@ void dwt_cdf97_2f_s2(
 				addr2_s(dst,0,x,stride_x,stride_y),
 				addr2_s(dst,0,x,stride_x,stride_y),
 				addr2_s(dst,size_o_dst_y,x,stride_x,stride_y),
-				temp + TEMP_OFFSET, // HACK: +1
+				temp[omp_get_thread_num()] + TEMP_OFFSET, // HACK: +1
 				size_i_src_y,
 				stride_x);
 		}
@@ -9445,13 +9617,7 @@ void dwt_cdf97_2f_s2(
 
 #undef TEMP_OFFSET
 
-#ifdef microblaze
-	free(temp);
-#endif
-
-#ifdef TEMP_ON_HEAP
-	free(temp);
-#endif
+	free_temp_s(threads, temp);
 
 	FUNC_END;
 }
@@ -9470,37 +9636,25 @@ void dwt_cdf97_2f_s(
 {
 	FUNC_BEGIN;
 
+#ifdef _OPENMP
+	const int threads = dwt_util_get_num_threads();
+#endif
+	const int workers = dwt_util_get_num_workers();
+
 #ifdef microblaze
 	dwt_util_switch_op(DWT_OP_LIFT4SA);
 #endif
 	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
 	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
 
-	// FIXME: allocate temp[max_threads][temp_size] and remove private() in omp parallel
-	// FIXME: OpenMP cannot use this in private()
 #ifdef microblaze
 	#define TEMP_OFFSET 1
-	float *temp = dwt_util_allocate_vec_s(calc_and_set_temp_size(size_o_big_max));
-#else /* microblaze */
-	//#define TEMP_OFFSET 0
-	// FIXME(x86) HACK: __attribute__ ((aligned (16)))
+#else /* AMD64 or ARM */
 	#define TEMP_OFFSET 3
+#endif
 
-#ifdef TEMP_ON_HEAP
-	float *temp = dwt_util_allocate_vec_s(calc_and_set_temp_size(size_o_big_max));
-#else /* TEMP_ON_HEAP */
-	// FIXME(x86) BUG: temp[] is allocated on stack! so stack overflow is caused by big sizes of temp[size]
-	float temp[calc_and_set_temp_size(size_o_big_max)] __attribute__ ((aligned (16)));
-#endif /* TEMP_ON_HEAP */
-
-	if( !is_aligned_16(temp) )
-	{
-		dwt_util_log(LOG_ERR, "Unaligned temp[] buffer\n");
-		dwt_util_abort();
-	}
-#endif /* microblaze */
-	if(NULL == temp)
-		dwt_util_abort();
+	float **temp = alloc_temp_s(threads,
+		calc_and_set_temp_size(size_o_big_max));
 
 	int j = 0;
 
@@ -9520,10 +9674,6 @@ void dwt_cdf97_2f_s(
 		const int size_o_dst_y = ceil_div_pow2(size_o_big_y, j+1);
 		const int size_i_src_x = ceil_div_pow2(size_i_big_x, j  );
 		const int size_i_src_y = ceil_div_pow2(size_i_big_y, j  );
-#ifdef _OPENMP
-		const int threads = dwt_util_get_num_threads();
-#endif
-		const int workers = dwt_util_get_num_workers();
 		
 		const int lines_x = size_o_src_x;
 		const int lines_y = size_o_src_y;
@@ -9541,21 +9691,16 @@ void dwt_cdf97_2f_s(
 	if( lines_x > 1 )
 	{
 		set_data_step_s( stride_x );
-#ifdef TEMP_ON_HEAP
+		#pragma omp parallel for schedule(static, threads_segment_y)
 		for(int y = 0; y < workers_lines_y; y += workers)
-#else /* TEMP_ON_HEAP */
-		// FIXME: OpenMP ignores __attribute__ ((aligned (16)))
-		#pragma omp parallel for private(temp) schedule(static, threads_segment_y)
-		for(int y = 0; y < workers_lines_y; y += workers)
-#endif /* TEMP_ON_HEAP */
 		{
-			assert( is_aligned_16(temp) );
+			assert( is_aligned_16(temp[omp_get_thread_num()]) );
 
 			dwt_cdf97_f_ex_stride_s(
 				addr2_s(ptr,y,0,stride_x,stride_y),
 				addr2_s(ptr,y,0,stride_x,stride_y),
 				addr2_s(ptr,y,size_o_dst_x,stride_x,stride_y),
-				temp + TEMP_OFFSET, // HACK: +1
+				temp[omp_get_thread_num()] + TEMP_OFFSET, // HACK: +1
 				size_i_src_x,
 				stride_y);
 		}
@@ -9566,7 +9711,7 @@ void dwt_cdf97_2f_s(
 				addr2_s(ptr,y,0,stride_x,stride_y),
 				addr2_s(ptr,y,0,stride_x,stride_y),
 				addr2_s(ptr,y,size_o_dst_x,stride_x,stride_y),
-				temp + TEMP_OFFSET, // HACK: +1
+				temp[omp_get_thread_num()] + TEMP_OFFSET, // HACK: +1
 				size_i_src_x,
 				stride_y);
 		}
@@ -9578,18 +9723,14 @@ void dwt_cdf97_2f_s(
 	if( lines_y > 1 )
 	{
 		set_data_step_s( stride_y );
-#ifdef TEMP_ON_HEAP
+		#pragma omp parallel for schedule(static, threads_segment_x)
 		for(int x = 0; x < workers_lines_x; x += workers)
-#else /* TEMP_ON_HEAP */
-		#pragma omp parallel for private(temp) schedule(static, threads_segment_x)
-		for(int x = 0; x < workers_lines_x; x += workers)
-#endif /* TEMP_ON_HEAP */
 		{
 			dwt_cdf97_f_ex_stride_s(
 				addr2_s(ptr,0,x,stride_x,stride_y),
 				addr2_s(ptr,0,x,stride_x,stride_y),
 				addr2_s(ptr,size_o_dst_y,x,stride_x,stride_y),
-				temp + TEMP_OFFSET, // HACK: +1
+				temp[omp_get_thread_num()] + TEMP_OFFSET, // HACK: +1
 				size_i_src_y,
 				stride_x);
 		}
@@ -9600,7 +9741,7 @@ void dwt_cdf97_2f_s(
 				addr2_s(ptr,0,x,stride_x,stride_y),
 				addr2_s(ptr,0,x,stride_x,stride_y),
 				addr2_s(ptr,size_o_dst_y,x,stride_x,stride_y),
-				temp + TEMP_OFFSET, // HACK: +1
+				temp[omp_get_thread_num()] + TEMP_OFFSET, // HACK: +1
 				size_i_src_y,
 				stride_x);
 		}
@@ -9635,13 +9776,7 @@ void dwt_cdf97_2f_s(
 
 #undef TEMP_OFFSET
 
-#ifdef microblaze
-	free(temp);
-#endif
-
-#ifdef TEMP_ON_HEAP
-	free(temp);
-#endif
+	free_temp_s(threads, temp);
 
 	FUNC_END;
 }
@@ -10063,35 +10198,19 @@ void dwt_cdf97_2i_s(
 {
 	FUNC_BEGIN;
 
+#ifdef _OPENMP
+	const int threads = dwt_util_get_num_threads();
+#endif
+	const int workers = dwt_util_get_num_workers();
+
 #ifdef microblaze
 	dwt_util_switch_op(DWT_OP_LIFT4SB);
 #endif
 	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
 	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
 
-	// FIXME: allocate temp[max_threads][temp_size] and remove private() in omp parallel
-	// FIXME: OpenMP cannot use this in private()
-#ifdef microblaze
-	float *temp = dwt_util_allocate_vec_s(calc_and_set_temp_size(size_o_big_max));
-#else /* microblaze */
-
-#ifdef TEMP_ON_HEAP
-	float *temp = dwt_util_allocate_vec_s(calc_and_set_temp_size(size_o_big_max));
-#else /* TEMP_ON_HEAP */
-	// FIXME(x86) BUG: temp[] is allocated on stack! so stack overflow is caused by big sizes of temp[size]
-	// FIXME: is aligned(16) needed?
-	float temp[calc_and_set_temp_size(size_o_big_max)] __attribute__ ((aligned (16)));
-#endif /* TEMP_ON_HEAP */
-
-	if( !is_aligned_16(temp) )
-	{
-		dwt_util_log(LOG_ERR, "Unaligned temp[] buffer\n");
-		dwt_util_abort();
-	}
-#endif /* microblaze */
-
-	if(NULL == temp)
-		dwt_util_abort();
+	float **temp = alloc_temp_s(threads,
+		calc_and_set_temp_size(size_o_big_max));
 
 	int j = ceil_log2( decompose_one ? size_o_big_max : size_o_big_min );
 
@@ -10109,10 +10228,6 @@ void dwt_cdf97_2i_s(
 		const int size_o_dst_y = ceil_div_pow2(size_o_big_y, j-1);
 		const int size_i_dst_x = ceil_div_pow2(size_i_big_x, j-1);
 		const int size_i_dst_y = ceil_div_pow2(size_i_big_y, j-1);
-#ifdef _OPENMP
-		const int threads = dwt_util_get_num_threads();
-#endif
-		const int workers = dwt_util_get_num_workers();
 
 		const int lines_y = size_o_dst_y;
 		const int lines_x = size_o_dst_x;
@@ -10130,20 +10245,16 @@ void dwt_cdf97_2i_s(
 	{
 		set_data_step_s( stride_x );
 
-#ifdef TEMP_ON_HEAP
+		#pragma omp parallel for schedule(static, threads_segment_y)
 		for(int y = 0; y < workers_lines_y; y += workers)
-#else /* TEMP_ON_HEAP */
-		#pragma omp parallel for private(temp) schedule(static, threads_segment_y)
-		for(int y = 0; y < workers_lines_y; y += workers)
-#endif /* TEMP_ON_HEAP */
 		{
-			assert( is_aligned_16(temp) );
+			assert( is_aligned_16(temp[omp_get_thread_num()]) );
 
 			dwt_cdf97_i_ex_stride_s(
 				addr2_s(ptr,y,0,stride_x,stride_y),
 				addr2_s(ptr,y,size_o_src_x,stride_x,stride_y),
 				addr2_s(ptr,y,0,stride_x,stride_y),
-				temp,
+				temp[omp_get_thread_num()] + 0,
 				size_i_dst_x,
 				stride_y);
 		}
@@ -10154,7 +10265,7 @@ void dwt_cdf97_2i_s(
 				addr2_s(ptr,y,0,stride_x,stride_y),
 				addr2_s(ptr,y,size_o_src_x,stride_x,stride_y),
 				addr2_s(ptr,y,0,stride_x,stride_y),
-				temp,
+				temp[omp_get_thread_num()] + 0,
 				size_i_dst_x,
 				stride_y);
 		}
@@ -10165,18 +10276,14 @@ void dwt_cdf97_2i_s(
 	{
 		set_data_step_s( stride_y );
 
-#ifdef TEMP_ON_HEAP
+		#pragma omp parallel for schedule(static, threads_segment_x)
 		for(int x = 0; x < workers_lines_x; x += workers)
-#else /* TEMP_ON_HEAP */
-		#pragma omp parallel for private(temp) schedule(static, threads_segment_x)
-		for(int x = 0; x < workers_lines_x; x += workers)
-#endif /* TEMP_ON_HEAP */
 		{
 			dwt_cdf97_i_ex_stride_s(
 				addr2_s(ptr,0,x,stride_x,stride_y),
 				addr2_s(ptr,size_o_src_y,x,stride_x,stride_y),
 				addr2_s(ptr,0,x,stride_x,stride_y),
-				temp,
+				temp[omp_get_thread_num()] + 0,
 				size_i_dst_y,
 				stride_x);
 		}
@@ -10187,7 +10294,7 @@ void dwt_cdf97_2i_s(
 				addr2_s(ptr,0,x,stride_x,stride_y),
 				addr2_s(ptr,size_o_src_y,x,stride_x,stride_y),
 				addr2_s(ptr,0,x,stride_x,stride_y),
-				temp,
+				temp[omp_get_thread_num()] + 0,
 				size_i_dst_y,
 				stride_x);
 		}
@@ -10215,13 +10322,7 @@ void dwt_cdf97_2i_s(
 		j--;
 	}
 
-#ifdef microblaze
-	free(temp);
-#endif
-
-#ifdef TEMP_ON_HEAP
-	free(temp);
-#endif
+	free_temp_s(threads, temp);
 
 	FUNC_END;
 }
@@ -11730,12 +11831,6 @@ float *dwt_util_allocate_16_vec_s(int size)
 	assert( is_aligned_16(addr) );
 
 	return addr;
-}
-
-static
-int is_pow2(int x)
-{
-	return 0 == (x & (x - 1));
 }
 
 float *dwt_util_allocate_vec_s(int size)

@@ -1886,6 +1886,8 @@ float dwt_util_band_maxidx_s(
  *
  * @returns The mean.
  *
+ * @todo This should be computed on magnitudes.
+ *
  * @warning experimental
  */
 float dwt_util_band_mean_s(
@@ -1900,6 +1902,8 @@ float dwt_util_band_mean_s(
  * @brief Median of a specific subband.
  *
  * @returns The median.
+ *
+ * @todo This should be computed on magnitudes.
  *
  * @warning experimental
  */
@@ -1917,6 +1921,8 @@ float dwt_util_band_med_s(
  * The @e n -th moment about the @e c value.
  *
  * @returns Moment.
+ *
+ * @todo This should be computed on magnitudes.
  *
  * @warning experimental
  */
@@ -1937,6 +1943,8 @@ float dwt_util_band_moment_s(
  *
  * @returns Moment.
  *
+ * @todo This should be computed on magnitudes.
+ *
  * @warning experimental
  */
 float dwt_util_band_cmoment_s(
@@ -1953,6 +1961,8 @@ float dwt_util_band_cmoment_s(
  *
  * @returns The variance.
  *
+ * @todo This should be computed on magnitudes.
+ *
  * @warning experimental
  */
 float dwt_util_band_var_s(
@@ -1967,6 +1977,8 @@ float dwt_util_band_var_s(
  * @brief Standard deviation.
  *
  * @returns The standard deviation.
+ *
+ * @todo This should be computed on magnitudes.
  *
  * @warning experimental
  */
@@ -1985,6 +1997,8 @@ float dwt_util_band_stdev_s(
  *
  * @returns Moment.
  *
+ * @todo This should be computed on magnitudes.
+ *
  * @warning experimental
  */
 float dwt_util_band_smoment_s(
@@ -2001,6 +2015,8 @@ float dwt_util_band_smoment_s(
  *
  * @returns The skewness.
  *
+ * @todo This should be computed on magnitudes.
+ *
  * @warning experimental
  */
 float dwt_util_band_skew_s(
@@ -2015,6 +2031,8 @@ float dwt_util_band_skew_s(
  * @brief Kurtosis.
  *
  * @returns The kurtosis.
+ *
+ * @todo This should be computed on magnitudes.
  *
  * @warning experimental
  */
@@ -2276,6 +2294,20 @@ void dwt_util_norm_s(
 	int size_i_big_y,	///< height of nested image (in elements)
 	int j_max,		///< the decomposition level of interest
 	float *fv		///< store feature vector here
+);
+
+/**
+ * @brief Gets necessary data alignment for the current platform.
+ *
+ * The memory alignment depends on the data type (size of this data type).
+ * For instance, some SSE instructions (MOVAPS) on x86_64 platform require correctly aligned data.
+ *
+ * @return Minimum required alignment (in bytes).
+ *
+ * @warning experimental
+ */
+size_t dwt_util_alignment(
+	size_t type_size	///< sizeof requested data type, e.g. sizeof(float)
 );
 
 /**
