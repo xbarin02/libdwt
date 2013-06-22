@@ -13,6 +13,7 @@
 //#define DISABLE_X
 //#define MEASURE_FACTOR 1000
 #define MEASURE_FACTOR 1
+#define FV_ON_MAGNITUDES
 
 #define STRING(x) #x
 
@@ -13713,6 +13714,12 @@ float dwt_util_band_med_s(
 
 	float *arr = dwt_util_allocate_vec_s(size);
 
+#ifdef FV_ON_MAGNITUDES
+	for(int y = 0; y < size_y; y++)
+		for(int x = 0; x < size_x; x++)
+			arr[y*size_x+x] = fabsf(
+				*dwt_util_addr_coeff_const_s(ptr, y, x, stride_x, stride_y) );
+#else
 	for(int y = 0; y < size_y; y++)
 		dwt_util_memcpy_stride_s(
 			&arr[y*size_x],
@@ -13720,6 +13727,7 @@ float dwt_util_band_med_s(
 			dwt_util_addr_coeff_const_s(ptr, y, 0, stride_x, stride_y),
 			stride_y,
 			size_x);
+#endif
 
 	qsort(arr, size, sizeof(float), cmp_s);
 
@@ -13872,8 +13880,11 @@ float dwt_util_band_mean_s(
 	for(int y = 0; y < size_y; y++)
 		for(int x = 0; x < size_x; x++)
 		{
+#ifdef FV_ON_MAGNITUDES
+			float coeff = fabsf(*dwt_util_addr_coeff_const_s(ptr, y, x, stride_x, stride_y));
+#else
 			float coeff = *dwt_util_addr_coeff_const_s(ptr, y, x, stride_x, stride_y);
-
+#endif
 			sum += coeff;
 		}
 
@@ -13899,8 +13910,11 @@ float dwt_util_band_moment_s(
 	for(int y = 0; y < size_y; y++)
 		for(int x = 0; x < size_x; x++)
 		{
+#ifdef FV_ON_MAGNITUDES
+			float coeff = fabsf(*dwt_util_addr_coeff_const_s(ptr, y, x, stride_x, stride_y));
+#else
 			float coeff = *dwt_util_addr_coeff_const_s(ptr, y, x, stride_x, stride_y);
-
+#endif
 			sum += powf(coeff - c, n);
 		}
 
