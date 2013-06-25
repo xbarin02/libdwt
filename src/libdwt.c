@@ -4856,7 +4856,7 @@ void accel_lift_op4s_main_sdl6_ref_s(
 			// *** init ***
 
 			float *addr = ASSUME_ALIGNED(calc_temp_offset2_s(arr, wrk, 0), 16);
-			assert( is_aligned_16(addr) );
+			assert( is_aligned_s(addr) );
 			float *base = addr;
 
 			// *** prolog2 ***
@@ -4999,7 +4999,7 @@ void accel_lift_op4s_main_sdl6_ref_s(
 			// *** init ***
 
 			float *addr = ASSUME_ALIGNED(calc_temp_offset2_s(arr, wrk, 0), 16);
-			assert( is_aligned_16(addr) );
+			assert( is_aligned_s(addr) );
 			float *base = addr;
 
 			// *** prolog2 ***
@@ -5182,7 +5182,7 @@ void accel_lift_op4s_main_sdl2_ref_s(
 			// *** init ***
 
 			float *addr = ASSUME_ALIGNED(calc_temp_offset2_s(arr, wrk, 0), 16);
-			assert( is_aligned_16(addr) );
+			assert( is_aligned_s(addr) );
 			float *base = addr;
 
 			// *** prolog2 ***
@@ -5289,7 +5289,7 @@ void accel_lift_op4s_main_sdl2_ref_s(
 			// *** init ***
 
 			float *addr = ASSUME_ALIGNED(calc_temp_offset2_s(arr, wrk, 0), 16);
-			assert( is_aligned_16(addr) );
+			assert( is_aligned_s(addr) );
 			float *base = addr;
 
 			// *** prolog2 ***
