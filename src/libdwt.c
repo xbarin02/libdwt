@@ -12958,6 +12958,32 @@ void dwt_util_copy_s(
 	FUNC_END;
 }
 
+void dwt_util_copy_d(
+	const void *src,
+	void *dst,
+	int stride_x,
+	int stride_y,
+	int size_i_big_x,
+	int size_i_big_y)
+{
+	FUNC_BEGIN;
+
+	assert( src != NULL && dst != NULL && size_i_big_x >= 0 && size_i_big_y >= 0 );
+
+	for(int y = 0; y < size_i_big_y; y++)
+	{
+		for(int x = 0; x < size_i_big_x; x++)
+		{
+			const double src_coeff = *addr2_const_d(src, y, x, stride_x, stride_y);
+			double *dst_coeff = addr2_d(dst, y, x, stride_x, stride_y);
+
+			*dst_coeff = src_coeff;
+		}
+	}
+
+	FUNC_END;
+}
+
 void dwt_util_copy_i(
 	const void *src,
 	void *dst,
@@ -14625,6 +14651,185 @@ int dwt_util_test_cdf97_2_s(
 
 	// compare
 	if( dwt_util_compare_s(data, copy, stride_x, stride_y, size_i_big_x, size_i_big_y) )
+		ret = 1;
+	else
+		ret = 0;
+	
+	dwt_util_free_image(&data);
+	dwt_util_free_image(&copy);
+
+	return ret;
+}
+
+int dwt_util_test_cdf97_2_d(
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	int decompose_one,
+	int zero_padding
+)
+{
+	int j = j_max;
+	void *data, *copy;
+
+	// allocate image
+	dwt_util_alloc_image(
+		&data,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y);
+
+	// allocate copy
+	dwt_util_alloc_image(
+		&copy,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y);
+
+	// fill with test pattern
+	dwt_util_test_image_fill_d(
+		data,
+		stride_x,
+		stride_y,
+		size_i_big_x,
+		size_i_big_y,
+		0);
+
+	// copy test the image into the copy
+	dwt_util_copy_d(
+		data,
+		copy,
+		stride_x,
+		stride_y,
+		size_i_big_x,
+		size_i_big_y);
+
+	// forward
+	dwt_cdf97_2f_d(
+		data,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y,
+		size_i_big_x,
+		size_i_big_y,
+		&j,
+		decompose_one,
+		zero_padding);
+
+	// inverse
+	dwt_cdf97_2i_d(
+		data,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y,
+		size_i_big_x,
+		size_i_big_y,
+		j,
+		decompose_one,
+		zero_padding);
+
+	int ret;
+
+	// compare
+	if( dwt_util_compare_d(data, copy, stride_x, stride_y, size_i_big_x, size_i_big_y) )
+		ret = 1;
+	else
+		ret = 0;
+	
+	dwt_util_free_image(&data);
+	dwt_util_free_image(&copy);
+
+	return ret;
+}
+
+
+int dwt_util_test_cdf97_2_i(
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	int decompose_one,
+	int zero_padding
+)
+{
+	int j = j_max;
+	void *data, *copy;
+
+	// allocate image
+	dwt_util_alloc_image(
+		&data,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y);
+
+	// allocate copy
+	dwt_util_alloc_image(
+		&copy,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y);
+
+	// fill with test pattern
+	dwt_util_test_image_fill_i(
+		data,
+		stride_x,
+		stride_y,
+		size_i_big_x,
+		size_i_big_y,
+		0);
+
+	// copy test the image into the copy
+	dwt_util_copy_i(
+		data,
+		copy,
+		stride_x,
+		stride_y,
+		size_i_big_x,
+		size_i_big_y);
+
+	// forward
+	dwt_cdf97_2f_i(
+		data,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y,
+		size_i_big_x,
+		size_i_big_y,
+		&j,
+		decompose_one,
+		zero_padding);
+
+	// inverse
+	dwt_cdf97_2i_i(
+		data,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y,
+		size_i_big_x,
+		size_i_big_y,
+		j,
+		decompose_one,
+		zero_padding);
+
+	int ret;
+
+	// compare
+	if( dwt_util_compare_i(data, copy, stride_x, stride_y, size_i_big_x, size_i_big_y) )
 		ret = 1;
 	else
 		ret = 0;
