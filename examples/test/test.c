@@ -10,7 +10,11 @@ int main()
 {
 	dwt_util_init();
 
+#ifdef microblaze
+	dwt_util_set_num_workers(2);
+#else
 	dwt_util_set_num_workers(4);
+#endif
 
 	const int x = 256, y = 256;
 

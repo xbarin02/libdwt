@@ -446,7 +446,7 @@
 #endif
 
 #ifdef microblaze
-static inline
+inline
 float powf(
 	float x,
 	float y
@@ -5688,7 +5688,7 @@ void accel_lift_op4s_main_sdl_ref_s(
 
 			float *addr = ASSUME_ALIGNED(calc_temp_offset2_s(arr, wrk, 0), 16);
 			float *base = addr+0;
-			assert( is_aligned_16(addr) );
+			assert( is_aligned_s(addr) );
 
 			// *** prolog2 ***
 
@@ -5757,7 +5757,7 @@ void accel_lift_op4s_main_sdl_ref_s(
 
 			float *addr = ASSUME_ALIGNED(calc_temp_offset2_s(arr, wrk, 0), 16);
 			float *base = addr+0;
-			assert( is_aligned_16(addr) );
+			assert( is_aligned_s(addr) );
 
 			// *** prolog2 ***
 
