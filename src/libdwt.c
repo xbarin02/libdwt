@@ -420,14 +420,6 @@
 #include <assert.h> // assert
 #include <stddef.h> // NULL, size_t
 
-#ifdef __x86_64__
-#ifndef __SSE__
-	 // HACK(x86): stdlib.h: error: SSE register return with SSE disabled
-	#warning INFO: Using ugly non-SSE workaround
-	#undef __USE_EXTERN_INLINES
-#endif /* __SSE__ */
-#endif /* __x86_64__ */
-
 #include <stdlib.h> // abort, malloc, free, qsort
 #include <limits.h> // CHAR_BIT
 // NOTE: -lm
@@ -455,7 +447,10 @@
 
 #ifdef microblaze
 static inline
-float powf(float x, float y)
+float powf(
+	float x,
+	float y
+)
 {
 	return __builtin_powf(x, y);
 }
@@ -487,7 +482,9 @@ int get_active_workers()
 }
 
 static
-void set_active_workers(int active_workers)
+void set_active_workers(
+	int active_workers
+)
 {
 	dwt_util_global_active_workers = active_workers;
 }
@@ -530,7 +527,7 @@ size_t dwt_util_alignment(
 static
 int is_aligned_s(
 	const void *ptr
-      	)
+)
 {
 	const size_t alignment = dwt_util_alignment(sizeof(float));
 
@@ -541,7 +538,7 @@ static
 void *align(
 	void *ptr,
 	size_t alignment
- 	)
+)
 {
 	return (void *)( ((intptr_t)ptr+(alignment-1)) & (~(alignment-1)) );
 }
@@ -556,7 +553,9 @@ ptrdiff_t get_data_step_s()
 }
 
 static
-void set_data_step_s(ptrdiff_t data_step)
+void set_data_step_s(
+	ptrdiff_t data_step
+)
 {
 	dwt_util_global_data_step = data_step;
 }
@@ -571,17 +570,15 @@ int get_temp_step()
 }
 
 static
-void set_temp_step(int temp_step)
+void set_temp_step(
+	int temp_step
+)
 {
 	dwt_util_global_temp_step = temp_step;
 }
 
 /** active firmware in all ASVP acceleration units */
 enum dwt_op dwt_util_global_active_op = DWT_OP_NONE;
-
-// non-SSE workaround
-#define DWT_CEIL_D(x) ((double)((int)((x)+1.0-DBL_EPSILON)))
-#define DWT_CEIL_S(x) ((float)((int)((x)+1.0f-FLT_EPSILON)))
 
 /** this PACKAGE_STRING macro must be defined via compiler's command line */
 #ifndef PACKAGE_STRING
@@ -616,7 +613,7 @@ static inline
 void flush_cache(
 	void *addr,	///< base address
 	size_t size	///< length of memory in bytes
-	)
+)
 {
 	FUNC_BEGIN;
 
@@ -682,7 +679,10 @@ void flush_cache_s(
 }
 
 #ifdef microblaze
-void wal_abort(const char *str, int res)
+void wal_abort(
+	const char *str,
+	int res
+)
 {
 #ifdef DEBUG_VERBOSE
 	dwt_util_log(LOG_DBG, "%s = ", str);
@@ -813,7 +813,8 @@ int is_pow2(
  */
 static
 int pow2_ceil_log2(
-	int x)
+	int x
+)
 {
 	assert( x > 0 );
 
@@ -837,7 +838,8 @@ int pow2_ceil_log2(
  */
 static
 int bits(
-	unsigned x)
+	unsigned x
+)
 {
 	x -= x >> 1 & (unsigned)~(unsigned)0/3;
 	x = (x & (unsigned)~(unsigned)0/15*3) + (x >> 2 & (unsigned)~(unsigned)0/15*3);
@@ -851,19 +853,22 @@ int bits(
  */
 static
 int ceil_log2(
-	int x)
+	int x
+)
 {
 	return bits(pow2_ceil_log2(x) - 1);
 }
 
 int dwt_util_ceil_log2(
-	int x)
+	int x
+)
 {
 	return ceil_log2(x);
 }
 
 int dwt_util_pow2_ceil_log2(
-	int x)
+	int x
+)
 {
 	return pow2_ceil_log2(x);
 }
@@ -874,14 +879,16 @@ int dwt_util_pow2_ceil_log2(
 static
 int ceil_div(
 	int x,
-	int y)
+	int y
+)
 {
 	return (x + y - 1) / y;
 }
 
 int dwt_util_ceil_div(
 	int x,
-	int y)
+	int y
+)
 {
 	return ceil_div(x, y);
 }
@@ -892,14 +899,16 @@ int dwt_util_ceil_div(
 static
 int floor_div(
 	int x,
-	int y)
+	int y
+)
 {
 	return x / y;
 }
 
 int dwt_util_floor_div(
 	int x,
-	int y)
+	int y
+)
 {
 	return floor_div(x, y);
 }
@@ -910,7 +919,8 @@ int dwt_util_floor_div(
 static
 int ceil_div_pow2(
 	int i,
-	int j)
+	int j
+)
 {
 	return (i + (1 << j) - 1) >> j;
 }
@@ -918,7 +928,8 @@ int ceil_div_pow2(
 /** @returns (int)floor(x/(double)2) */
 static
 int floor_div2(
-	int x)
+	int x
+)
 {
 	return x >> 1;
 }
@@ -926,7 +937,8 @@ int floor_div2(
 /** @returns (int)ceil(x/(double)2) */
 static
 int ceil_div2(
-	int x)
+	int x
+)
 {
 	return (x + 1) >> 1;
 }
@@ -937,7 +949,8 @@ int ceil_div2(
 static
 int min(
 	int a,
-	int b)
+	int b
+)
 {
 	return a > b ? b : a;
 }
@@ -948,7 +961,8 @@ int min(
 static
 int max(
 	int a,
-	int b)
+	int b
+)
 {
 	return a > b ? a : b;
 }
@@ -958,7 +972,8 @@ int max(
  */
 static
 int is_odd(
-	int x)
+	int x
+)
 {
 	return x & 1;
 }
@@ -968,7 +983,8 @@ int is_odd(
  */
 static
 int is_even(
-	int x)
+	int x
+)
 {
 	return 1 & ~x;
 }
@@ -978,13 +994,15 @@ int is_even(
  */
 static
 int to_even(
-	int x)
+	int x
+)
 {
 	return x & ~1;
 }
 
 int dwt_util_to_even(
-	int x)
+	int x
+)
 {
 	return to_even(x);
 }
@@ -994,87 +1012,100 @@ int dwt_util_to_even(
  */
 static
 int to_odd(
-	int x)
+	int x
+)
 {
 	return x - (1 & ~x);
 }
 
 int dwt_util_to_odd(
-	int x)
+	int x
+)
 {
 	return to_odd(x);
 }
 
 static
 int is_aligned_4(
-	const void *ptr)
+	const void *ptr
+)
 {
 	return ( (intptr_t)ptr&(intptr_t)(4-1) ) ? 0 : 1;
 }
 
 static
 int is_aligned_8(
-	const void *ptr)
+	const void *ptr
+)
 {
 	return ( (intptr_t)ptr&(intptr_t)(8-1) ) ? 0 : 1;
 }
 
 static
 int is_aligned_16(
-	const void *ptr)
+	const void *ptr
+)
 {
 	return ( (intptr_t)ptr&(intptr_t)(16-1) ) ? 0 : 1;
 }
 
 static
 intptr_t align_4(
-	intptr_t p)
+	intptr_t p
+)
 {
 	return (p+(4-1))&(~(4-1));
 }
 
 static
 intptr_t align_8(
-	intptr_t p)
+	intptr_t p
+)
 {
 	return (p+(8-1))&(~(8-1));
 }
 
 static
 intptr_t align_16(
-	intptr_t p)
+	intptr_t p
+)
 {
 	return (p+(16-1))&(~(16-1));
 }
 
 static
 intptr_t align_64(
-	intptr_t p)
+	intptr_t p
+)
 {
 	return (p+(64-1))&(~(64-1));
 }
 
 static
 intptr_t align_4096(
-	intptr_t p)
+	intptr_t p
+)
 {
 	return (p+(4096-1))&(~(4096-1));
 }
 
 intptr_t dwt_util_align_4(
-	intptr_t p)
+	intptr_t p
+)
 {
 	return align_4(p);
 }
 
 intptr_t dwt_util_align_8(
-	intptr_t p)
+	intptr_t p
+)
 {
 	return align_8(p);
 }
 
 intptr_t dwt_util_align_16(
-	intptr_t p)
+	intptr_t p
+)
 {
 	return align_16(p);
 }
@@ -1206,7 +1237,8 @@ static
 const double *addr1_const_d(
 	const void *ptr,
 	int i,
-	int stride)
+	int stride
+)
 {
 	return (const double *)((const char *)ptr+i*stride);
 }
@@ -1222,7 +1254,8 @@ static
 const float *addr1_const_s(
 	const void *ptr,
 	int i,
-	int stride)
+	int stride
+)
 {
 	return (const float *)((const char *)ptr+i*stride);
 }
@@ -1237,7 +1270,8 @@ static
 double *addr1_d(
 	void *ptr,
 	int i,
-	int stride)
+	int stride
+)
 {
 	return (double *)((char *)ptr+i*stride);
 }
@@ -1246,7 +1280,8 @@ static
 int *addr1_i(
 	void *ptr,
 	int i,
-	int stride)
+	int stride
+)
 {
 	return (int *)((char *)ptr+i*stride);
 }
@@ -1260,7 +1295,8 @@ static
 float *addr1_s(
 	void *ptr,
 	int i,
-	int stride)
+	int stride
+)
 {
 	return (float *)((char *)ptr+i*stride);
 }
@@ -1271,7 +1307,8 @@ void *addr2(
 	int y,
 	int x,
 	int stride_x,
-	int stride_y)
+	int stride_y
+)
 {
 	return (void *)((char *)ptr+y*stride_x+x*stride_y);
 }
@@ -1282,7 +1319,8 @@ const void *addr2_const(
 	int y,
 	int x,
 	int stride_x,
-	int stride_y)
+	int stride_y
+)
 {
 	return (const void *)((const char *)ptr+y*stride_x+x*stride_y);
 }
@@ -1298,7 +1336,8 @@ double *addr2_d(
 	int y,
 	int x,
 	int stride_x,
-	int stride_y)
+	int stride_y
+)
 {
 	return (double *)((char *)ptr+y*stride_x+x*stride_y);
 }
@@ -1314,7 +1353,8 @@ int *addr2_i(
 	int y,
 	int x,
 	int stride_x,
-	int stride_y)
+	int stride_y
+)
 {
 	return (int *)((char *)ptr+y*stride_x+x*stride_y);
 }
@@ -1330,7 +1370,8 @@ float *addr2_s(
 	int y,
 	int x,
 	int stride_x,
-	int stride_y)
+	int stride_y
+)
 {
 	return (float *)((char *)ptr+y*stride_x+x*stride_y);
 }
@@ -1341,7 +1382,8 @@ const int *addr2_const_i(
 	int y,
 	int x,
 	int stride_x,
-	int stride_y)
+	int stride_y
+)
 {
 	return (const int *)((const char *)ptr+y*stride_x+x*stride_y);
 }
@@ -1352,7 +1394,8 @@ const float *addr2_const_s(
 	int y,
 	int x,
 	int stride_x,
-	int stride_y)
+	int stride_y
+)
 {
 	return (const float *)((const char *)ptr+y*stride_x+x*stride_y);
 }
@@ -1373,7 +1416,8 @@ int *dwt_util_addr_coeff_i(
 	int y,
 	int x,
 	int stride_x,
-	int stride_y)
+	int stride_y
+)
 {
 	return addr2_i(ptr, y, x, stride_x, stride_y);
 }
@@ -1383,7 +1427,8 @@ float *dwt_util_addr_coeff_s(
 	int y,
 	int x,
 	int stride_x,
-	int stride_y)
+	int stride_y
+)
 {
 	return addr2_s(ptr, y, x, stride_x, stride_y);
 }
@@ -1393,7 +1438,8 @@ const float *dwt_util_addr_coeff_const_s(
 	int y,
 	int x,
 	int stride_x,
-	int stride_y)
+	int stride_y
+)
 {
 	return addr2_const_s(ptr, y, x, stride_x, stride_y);
 }
@@ -1403,7 +1449,8 @@ double *dwt_util_addr_coeff_d(
 	int y,
 	int x,
 	int stride_x,
-	int stride_y)
+	int stride_y
+)
 {
 	return addr2_d(ptr, y, x, stride_x, stride_y);
 }
@@ -1413,7 +1460,8 @@ void *dwt_util_addr_coeff(
 	int y,
 	int x,
 	int stride_x,
-	int stride_y)
+	int stride_y
+)
 {
 	return addr2(ptr, y, x, stride_x, stride_y);
 }
@@ -1434,7 +1482,7 @@ void *dwt_util_memcpy_stride_i(
 	const void *restrict src,
 	ssize_t stride_src,
 	size_t n		///< Number of ints to be copied, not number of bytes.
-	)
+)
 {
 	assert( NULL != dst && NULL != src );
 
@@ -1476,7 +1524,7 @@ void *dwt_util_memcpy_stride_s(
 	const void *restrict src,
 	ssize_t stride_src,
 	size_t n		///< Number of floats to be copied, not number of bytes.
-	)
+)
 {
 	assert( NULL != dst && NULL != src );
 
@@ -1518,7 +1566,7 @@ void *dwt_util_memcpy_stride_d(
 	const void *restrict src,
 	ssize_t stride_src,
 	size_t n		///< Number of doubles to be copied, not number of bytes.
-	)
+)
 {
 	assert( NULL != dst && NULL != src );
 
@@ -1553,7 +1601,8 @@ void dwt_util_test_image_value_i_d(
 	int x,
 	int y,
 	int rand,
-	int type)
+	int type
+)
 {
 	switch(type)
 	{
@@ -1582,7 +1631,8 @@ void dwt_util_test_image_value_i_i(
 	int x,
 	int y,
 	int rand,
-	int type)
+	int type
+)
 {
 	switch(type)
 	{
@@ -1612,7 +1662,8 @@ void dwt_util_test_image_value_i_s(
 	int x,
 	int y,
 	int rand,
-	int type)
+	int type
+)
 {
 	switch(type)
 	{
@@ -1642,7 +1693,8 @@ void dwt_util_test_image_fill_d(
 	int stride_y,
 	int size_i_big_x,
 	int size_i_big_y,
-	int rand)
+	int rand
+)
 {
 	assert( NULL != ptr );
 
@@ -1664,7 +1716,8 @@ void dwt_util_test_image_fill_i(
 	int stride_y,
 	int size_i_big_x,
 	int size_i_big_y,
-	int rand)
+	int rand
+)
 {
 	assert( NULL != ptr );
 
@@ -1686,7 +1739,8 @@ void dwt_util_test_image_fill_s(
 	int stride_y,
 	int size_i_big_x,
 	int size_i_big_y,
-	int rand)
+	int rand
+)
 {
 	FUNC_BEGIN;
 
@@ -1710,7 +1764,8 @@ void dwt_util_test_image_zero_s(
 	int stride_x,
 	int stride_y,
 	int size_i_big_x,
-	int size_i_big_y)
+	int size_i_big_y
+)
 {
 	assert( NULL != ptr );
 
@@ -1724,7 +1779,8 @@ size_t image_size(
 	int stride_x,
 	int stride_y,
 	int size_o_big_x,
-	int size_o_big_y)
+	int size_o_big_y
+)
 {
 	UNUSED(stride_y);
 	UNUSED(size_o_big_x);
@@ -1736,7 +1792,8 @@ size_t dwt_util_image_size(
 	int stride_x,
 	int stride_y,
 	int size_o_big_x,
-	int size_o_big_y)
+	int size_o_big_y
+)
 {
 	return image_size(
 		stride_x,
@@ -1750,7 +1807,8 @@ void dwt_util_alloc_image(
 	int stride_x,
 	int stride_y,
 	int size_o_big_x,
-	int size_o_big_y)
+	int size_o_big_y
+)
 {
 	FUNC_BEGIN;
 
@@ -1770,7 +1828,8 @@ void dwt_util_alloc_image(
 }
 
 void dwt_util_free_image(
-	void **pptr)
+	void **pptr
+)
 {
 	assert( pptr != NULL );
 
@@ -1784,7 +1843,8 @@ int dwt_util_compare_d(
 	int stride_x,
 	int stride_y,
 	int size_i_big_x,
-	int size_i_big_y)
+	int size_i_big_y
+)
 {
 	assert( ptr1 != NULL && ptr2 != NULL && size_i_big_x >= 0 && size_i_big_y >= 0 );
 
@@ -1812,7 +1872,8 @@ int dwt_util_compare_i(
 	int stride_x,
 	int stride_y,
 	int size_i_big_x,
-	int size_i_big_y)
+	int size_i_big_y
+)
 {
 	assert( ptr1 != NULL && ptr2 != NULL && size_i_big_x >= 0 && size_i_big_y >= 0 );
 
@@ -1840,7 +1901,8 @@ int dwt_util_compare_s(
 	int stride_x,
 	int stride_y,
 	int size_i_big_x,
-	int size_i_big_y)
+	int size_i_big_y
+)
 {
 	assert( ptr1 != NULL && ptr2 != NULL && size_i_big_x >= 0 && size_i_big_y >= 0 );
 
@@ -1866,7 +1928,8 @@ void dwt_cdf97_f_d(
 	const double *src,
 	double *dst,
 	double *tmp,
-	int N)
+	int N
+)
 {
 	dwt_cdf97_f_ex_d(
 		src,
@@ -1881,7 +1944,8 @@ void dwt_cdf53_f_d(
 	const double *src,
 	double *dst,
 	double *tmp,
-	int N)
+	int N
+)
 {
 	dwt_cdf53_f_ex_d(
 		src,
@@ -1896,7 +1960,8 @@ void dwt_cdf97_f_s(
 	const float *src,
 	float *dst,
 	float *tmp,
-	int N)
+	int N
+)
 {
 	dwt_cdf97_f_ex_s(
 		src,
@@ -1911,7 +1976,8 @@ void dwt_cdf53_f_s(
 	const float *src,
 	float *dst,
 	float *tmp,
-	int N)
+	int N
+)
 {
 	dwt_cdf53_f_ex_s(
 		src,
@@ -1926,7 +1992,8 @@ void dwt_cdf97_i_d(
 	const double *src,
 	double *dst,
 	double *tmp,
-	int N)
+	int N
+)
 {
 	dwt_cdf97_i_ex_d(
 		src,
@@ -1941,7 +2008,8 @@ void dwt_cdf53_i_d(
 	const double *src,
 	double *dst,
 	double *tmp,
-	int N)
+	int N
+)
 {
 	dwt_cdf53_i_ex_d(
 		src,
@@ -1956,7 +2024,8 @@ void dwt_cdf97_i_s(
 	const float *src,
 	float *dst,
 	float *tmp,
-	int N)
+	int N
+)
 {
 	dwt_cdf97_i_ex_s(
 		src,
@@ -1971,7 +2040,8 @@ void dwt_cdf53_i_s(
 	const float *src,
 	float *dst,
 	float *tmp,
-	int N)
+	int N
+)
 {
 	dwt_cdf53_i_ex_s(
 		src,
@@ -1987,7 +2057,8 @@ void dwt_cdf97_f_ex_d(
 	double *dst_l,
 	double *dst_h,
 	double *tmp,
-	int N)
+	int N
+)
 {
 	dwt_cdf97_f_ex_stride_d(
 		src,
@@ -2004,7 +2075,8 @@ void dwt_cdf53_f_ex_d(
 	double *dst_l,
 	double *dst_h,
 	double *tmp,
-	int N)
+	int N
+)
 {
 	dwt_cdf53_f_ex_stride_d(
 		src,
@@ -2021,7 +2093,8 @@ void dwt_cdf97_f_ex_s(
 	float *dst_l,
 	float *dst_h,
 	float *tmp,
-	int N)
+	int N
+)
 {
 	dwt_cdf97_f_ex_stride_s(
 		src,
@@ -2038,7 +2111,8 @@ void dwt_cdf53_f_ex_i(
 	int *dst_l,
 	int *dst_h,
 	int *tmp,
-	int N)
+	int N
+)
 {
 	dwt_cdf53_f_ex_stride_i(
 		src,
@@ -2055,7 +2129,8 @@ void dwt_cdf53_f_ex_s(
 	float *dst_l,
 	float *dst_h,
 	float *tmp,
-	int N)
+	int N
+)
 {
 	dwt_cdf53_f_ex_stride_s(
 		src,
@@ -2073,7 +2148,8 @@ void dwt_cdf97_f_ex_stride_d(
 	double *dst_h,
 	double *tmp,
 	int N,
-	int stride)
+	int stride
+)
 {
 	assert( N >= 0 && NULL != src && NULL != dst_l && NULL != dst_h && NULL != tmp && 0 != stride );
 
@@ -2133,7 +2209,8 @@ void dwt_cdf53_f_ex_stride_d(
 	double *dst_h,
 	double *tmp,
 	int N,
-	int stride)
+	int stride
+)
 {
 	assert( N >= 0 && NULL != src && NULL != dst_l && NULL != dst_h && NULL != tmp && 0 != stride );
 
@@ -9600,14 +9677,10 @@ void dwt_cdf97_2f_s2(
 	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
 	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
 
-#ifdef microblaze
-	#define TEMP_OFFSET 1
-#else /* AMD64 or ARM */
-	#define TEMP_OFFSET 3
-#endif
+	const int offset = 1;
 
 	float **temp = alloc_temp_s(threads,
-		calc_and_set_temp_size(size_o_big_max)
+		calc_and_set_temp_size_s(size_o_big_max, offset)
 	);
 
 	int j = 0;
@@ -9617,6 +9690,7 @@ void dwt_cdf97_2f_s2(
 	if( *j_max_ptr < 0 || *j_max_ptr > j_limit )
 		*j_max_ptr = j_limit;
 
+	// FIXME: this cannot work for j != 1 due to "src" is unaffected in the second iteration
 	for(;;)
 	{
 		if( *j_max_ptr == j )
@@ -9641,57 +9715,65 @@ void dwt_cdf97_2f_s2(
 		const int workers_lines_y = workers_segment_y * workers;
 		const int workers_lines_x = workers_segment_x * workers;
 
-		set_data_step_s( stride_x );
+#ifndef DISABLE_Y
+		if( lines_x > 1 )
+		{
+			set_data_step_s( stride_x );
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < workers_lines_y; y += workers)
+			{
+				dwt_cdf97_f_ex_stride_s(
+					addr2_const_s(src,y,0,stride_x,stride_y),
+					addr2_s(dst,y,0,stride_x,stride_y),
+					addr2_s(dst,y,size_o_dst_x,stride_x,stride_y),
+					temp[omp_get_thread_num()],
+					size_i_src_x,
+					stride_y);
+			}
+			dwt_util_set_num_workers(1);
+			for(int y = workers_lines_y; y < lines_y; y++)
+			{
+				dwt_cdf97_f_ex_stride_s(
+					addr2_const_s(src,y,0,stride_x,stride_y),
+					addr2_s(dst,y,0,stride_x,stride_y),
+					addr2_s(dst,y,size_o_dst_x,stride_x,stride_y),
+					temp[omp_get_thread_num()],
+					size_i_src_x,
+					stride_y);
+			}
+			dwt_util_set_num_workers(workers);
+		}
+#endif
 
-		#pragma omp parallel for schedule(static, threads_segment_y)
-		for(int y = 0; y < workers_lines_y; y += workers)
+#ifndef DISABLE_X
+		if( lines_y > 1 )
 		{
-			dwt_cdf97_f_ex_stride_s(
-				addr2_const_s(src,y,0,stride_x,stride_y),
-				addr2_s(dst,y,0,stride_x,stride_y),
-				addr2_s(dst,y,size_o_dst_x,stride_x,stride_y),
-				temp[omp_get_thread_num()] + TEMP_OFFSET, // HACK: +1
-				size_i_src_x,
-				stride_y);
+			set_data_step_s( stride_y );
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < workers_lines_x; x += workers)
+			{
+				dwt_cdf97_f_ex_stride_s(
+					addr2_s(dst,0,x,stride_x,stride_y),
+					addr2_s(dst,0,x,stride_x,stride_y),
+					addr2_s(dst,size_o_dst_y,x,stride_x,stride_y),
+					temp[omp_get_thread_num()],
+					size_i_src_y,
+					stride_x);
+			}
+			dwt_util_set_num_workers(1);
+			for(int x = workers_lines_x; x < lines_x; x++)
+			{
+				dwt_cdf97_f_ex_stride_s(
+					addr2_s(dst,0,x,stride_x,stride_y),
+					addr2_s(dst,0,x,stride_x,stride_y),
+					addr2_s(dst,size_o_dst_y,x,stride_x,stride_y),
+					temp[omp_get_thread_num()],
+					size_i_src_y,
+					stride_x);
+			}
+			dwt_util_set_num_workers(workers);
 		}
-		dwt_util_set_num_workers(1);
-		for(int y = workers_lines_y; y < lines_y; y++)
-		{
-			dwt_cdf97_f_ex_stride_s(
-				addr2_const_s(src,y,0,stride_x,stride_y),
-				addr2_s(dst,y,0,stride_x,stride_y),
-				addr2_s(dst,y,size_o_dst_x,stride_x,stride_y),
-				temp[omp_get_thread_num()] + TEMP_OFFSET, // HACK: +1
-				size_i_src_x,
-				stride_y);
-		}
-		dwt_util_set_num_workers(workers);
-
-		set_data_step_s( stride_y );
-
-		#pragma omp parallel for schedule(static, threads_segment_x)
-		for(int x = 0; x < workers_lines_x; x += workers)
-		{
-			dwt_cdf97_f_ex_stride_s(
-				addr2_s(dst,0,x,stride_x,stride_y),
-				addr2_s(dst,0,x,stride_x,stride_y),
-				addr2_s(dst,size_o_dst_y,x,stride_x,stride_y),
-				temp[omp_get_thread_num()] + TEMP_OFFSET, // HACK: +1
-				size_i_src_y,
-				stride_x);
-		}
-		dwt_util_set_num_workers(1);
-		for(int x = workers_lines_x; x < lines_x; x++)
-		{
-			dwt_cdf97_f_ex_stride_s(
-				addr2_s(dst,0,x,stride_x,stride_y),
-				addr2_s(dst,0,x,stride_x,stride_y),
-				addr2_s(dst,size_o_dst_y,x,stride_x,stride_y),
-				temp[omp_get_thread_num()] + TEMP_OFFSET, // HACK: +1
-				size_i_src_y,
-				stride_x);
-		}
-		dwt_util_set_num_workers(workers);
+#endif
 
 		if(zero_padding)
 		{
@@ -9717,8 +9799,6 @@ void dwt_cdf97_2f_s2(
 
 		j++;
 	}
-
-#undef TEMP_OFFSET
 
 	free_temp_s(threads, temp);
 
@@ -9751,11 +9831,6 @@ void dwt_cdf97_2f_s(
 	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
 
 	const int offset = 1;
-#ifdef microblaze
-	#define TEMP_OFFSET 1
-#else /* AMD64 or ARM */
-	#define TEMP_OFFSET 3
-#endif
 
 	float **temp = alloc_temp_s(threads,
 		calc_and_set_temp_size_s(size_o_big_max, offset)
@@ -9793,65 +9868,63 @@ void dwt_cdf97_2f_s(
 		const int workers_lines_x = workers_segment_x * workers;
 
 #ifndef DISABLE_Y
-	if( lines_x > 1 )
-	{
-		set_data_step_s( stride_x );
-		#pragma omp parallel for schedule(static, threads_segment_y)
-		for(int y = 0; y < workers_lines_y; y += workers)
+		if( lines_x > 1 )
 		{
-			assert( is_aligned_16(temp[omp_get_thread_num()]) );
-
-			dwt_cdf97_f_ex_stride_s(
-				addr2_s(ptr,y,0,stride_x,stride_y),
-				addr2_s(ptr,y,0,stride_x,stride_y),
-				addr2_s(ptr,y,size_o_dst_x,stride_x,stride_y),
-				temp[omp_get_thread_num()] /*+ TEMP_OFFSET*/, // HACK: +1
-				size_i_src_x,
-				stride_y);
+			set_data_step_s( stride_x );
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < workers_lines_y; y += workers)
+			{
+				dwt_cdf97_f_ex_stride_s(
+					addr2_s(ptr,y,0,stride_x,stride_y),
+					addr2_s(ptr,y,0,stride_x,stride_y),
+					addr2_s(ptr,y,size_o_dst_x,stride_x,stride_y),
+					temp[omp_get_thread_num()],
+					size_i_src_x,
+					stride_y);
+			}
+			dwt_util_set_num_workers(1);
+			for(int y = workers_lines_y; y < lines_y; y++)
+			{
+				dwt_cdf97_f_ex_stride_s(
+					addr2_s(ptr,y,0,stride_x,stride_y),
+					addr2_s(ptr,y,0,stride_x,stride_y),
+					addr2_s(ptr,y,size_o_dst_x,stride_x,stride_y),
+					temp[omp_get_thread_num()],
+					size_i_src_x,
+					stride_y);
+			}
+			dwt_util_set_num_workers(workers);
 		}
-		dwt_util_set_num_workers(1);
-		for(int y = workers_lines_y; y < lines_y; y++)
-		{
-			dwt_cdf97_f_ex_stride_s(
-				addr2_s(ptr,y,0,stride_x,stride_y),
-				addr2_s(ptr,y,0,stride_x,stride_y),
-				addr2_s(ptr,y,size_o_dst_x,stride_x,stride_y),
-				temp[omp_get_thread_num()] /*+ TEMP_OFFSET*/, // HACK: +1
-				size_i_src_x,
-				stride_y);
-		}
-		dwt_util_set_num_workers(workers);
-	}
 #endif
 
 #ifndef DISABLE_X
-	if( lines_y > 1 )
-	{
-		set_data_step_s( stride_y );
-		#pragma omp parallel for schedule(static, threads_segment_x)
-		for(int x = 0; x < workers_lines_x; x += workers)
+		if( lines_y > 1 )
 		{
-			dwt_cdf97_f_ex_stride_s(
-				addr2_s(ptr,0,x,stride_x,stride_y),
-				addr2_s(ptr,0,x,stride_x,stride_y),
-				addr2_s(ptr,size_o_dst_y,x,stride_x,stride_y),
-				temp[omp_get_thread_num()] /*+ TEMP_OFFSET*/, // HACK: +1
-				size_i_src_y,
-				stride_x);
+			set_data_step_s( stride_y );
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < workers_lines_x; x += workers)
+			{
+				dwt_cdf97_f_ex_stride_s(
+					addr2_s(ptr,0,x,stride_x,stride_y),
+					addr2_s(ptr,0,x,stride_x,stride_y),
+					addr2_s(ptr,size_o_dst_y,x,stride_x,stride_y),
+					temp[omp_get_thread_num()],
+					size_i_src_y,
+					stride_x);
+			}
+			dwt_util_set_num_workers(1);
+			for(int x = workers_lines_x; x < lines_x; x++)
+			{
+				dwt_cdf97_f_ex_stride_s(
+					addr2_s(ptr,0,x,stride_x,stride_y),
+					addr2_s(ptr,0,x,stride_x,stride_y),
+					addr2_s(ptr,size_o_dst_y,x,stride_x,stride_y),
+					temp[omp_get_thread_num()],
+					size_i_src_y,
+					stride_x);
+			}
+			dwt_util_set_num_workers(workers);
 		}
-		dwt_util_set_num_workers(1);
-		for(int x = workers_lines_x; x < lines_x; x++)
-		{
-			dwt_cdf97_f_ex_stride_s(
-				addr2_s(ptr,0,x,stride_x,stride_y),
-				addr2_s(ptr,0,x,stride_x,stride_y),
-				addr2_s(ptr,size_o_dst_y,x,stride_x,stride_y),
-				temp[omp_get_thread_num()] /*+ TEMP_OFFSET*/, // HACK: +1
-				size_i_src_y,
-				stride_x);
-		}
-		dwt_util_set_num_workers(workers);
-	}
 #endif
 
 		if(zero_padding)
@@ -9878,8 +9951,6 @@ void dwt_cdf97_2f_s(
 
 		j++;
 	}
-
-#undef TEMP_OFFSET
 
 	free_temp_s(threads, temp);
 
@@ -13311,7 +13382,8 @@ void dwt_util_get_sizes_i(
 	int *size_o_big_x,
 	int *size_o_big_y,
 	int *size_i_big_x,
-	int *size_i_big_y)
+	int *size_i_big_y
+)
 {
 	FUNC_BEGIN;
 
@@ -13353,7 +13425,8 @@ void dwt_util_get_sizes_s(
 	int *size_o_big_x,
 	int *size_o_big_y,
 	int *size_i_big_x,
-	int *size_i_big_y)
+	int *size_i_big_y
+)
 {
 	FUNC_BEGIN;
 
@@ -13395,7 +13468,8 @@ void dwt_util_get_sizes_d(
 	int *size_o_big_x,
 	int *size_o_big_y,
 	int *size_i_big_x,
-	int *size_i_big_y)
+	int *size_i_big_y
+)
 {
 	FUNC_BEGIN;
 
@@ -13457,7 +13531,7 @@ void dwt_util_measure_perf_cdf97_1_s(
 	const float growth_factor = g_growth_factor_s;
 
 	// for x = min_x to max_x
-	for(int x = min_x; x <= max_x; x = /*ceilf*/DWT_CEIL_S(x * growth_factor))
+	for(int x = min_x; x <= max_x; x = ceilf(x * growth_factor))
 	{
 		// fixed y
 		const int y = 1;
@@ -13545,7 +13619,7 @@ void dwt_util_measure_perf_cdf97_1_d(
 	const double growth_factor = g_growth_factor_d;
 
 	// for x = min_x to max_x
-	for(int x = min_x; x <= max_x; x = /*ceil*/DWT_CEIL_D(x * growth_factor))
+	for(int x = min_x; x <= max_x; x = ceil(x * growth_factor))
 	{
 		// fixed y
 		const int y = 1;
@@ -13628,7 +13702,7 @@ void dwt_util_measure_perf_cdf97_2_s(
 	const float growth_factor = g_growth_factor_s;
 
 	// for x = min_x to max_x
-	for(int x = min_x; x <= max_x; x = /*ceilf*/DWT_CEIL_S(x * growth_factor))
+	for(int x = min_x; x <= max_x; x = ceilf(x * growth_factor))
 	{
 		// y is equal to x
 		const int y = x;
@@ -13717,7 +13791,7 @@ void dwt_util_measure_perf_cdf97_2_d(
 	const double growth_factor = g_growth_factor_d;
 
 	// for x = min_x to max_x
-	for(int x = min_x; x <= max_x; x = /*ceil*/DWT_CEIL_D(x * growth_factor))
+	for(int x = min_x; x <= max_x; x = ceil(x * growth_factor))
 	{
 		// y is equal to x
 		const int y = x;
@@ -13804,7 +13878,10 @@ float dwt_util_band_wps_s(
 }
 
 static
-int cmp_s(const void *p1, const void *p2)
+int cmp_s(
+	const void *p1,
+	const void *p2
+)
 {
 	return (const float *)p1 > (const float *)p2;
 }
