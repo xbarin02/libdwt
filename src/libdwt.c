@@ -9630,9 +9630,7 @@ void dwt_cdf97_2f_s2(
 {
 	FUNC_BEGIN;
 
-#ifdef _OPENMP
 	const int threads = dwt_util_get_num_threads();
-#endif
 	const int workers = dwt_util_get_num_workers();
 
 #ifdef microblaze
@@ -9690,7 +9688,7 @@ void dwt_cdf97_2f_s2(
 					addr2_const_s(src,y,0,stride_x,stride_y),
 					addr2_s(dst,y,0,stride_x,stride_y),
 					addr2_s(dst,y,size_o_dst_x,stride_x,stride_y),
-					temp[omp_get_thread_num()],
+					temp[dwt_util_get_thread_num()],
 					size_i_src_x,
 					stride_y);
 			}
@@ -9701,7 +9699,7 @@ void dwt_cdf97_2f_s2(
 					addr2_const_s(src,y,0,stride_x,stride_y),
 					addr2_s(dst,y,0,stride_x,stride_y),
 					addr2_s(dst,y,size_o_dst_x,stride_x,stride_y),
-					temp[omp_get_thread_num()],
+					temp[dwt_util_get_thread_num()],
 					size_i_src_x,
 					stride_y);
 			}
@@ -9720,7 +9718,7 @@ void dwt_cdf97_2f_s2(
 					addr2_s(dst,0,x,stride_x,stride_y),
 					addr2_s(dst,0,x,stride_x,stride_y),
 					addr2_s(dst,size_o_dst_y,x,stride_x,stride_y),
-					temp[omp_get_thread_num()],
+					temp[dwt_util_get_thread_num()],
 					size_i_src_y,
 					stride_x);
 			}
@@ -9731,7 +9729,7 @@ void dwt_cdf97_2f_s2(
 					addr2_s(dst,0,x,stride_x,stride_y),
 					addr2_s(dst,0,x,stride_x,stride_y),
 					addr2_s(dst,size_o_dst_y,x,stride_x,stride_y),
-					temp[omp_get_thread_num()],
+					temp[dwt_util_get_thread_num()],
 					size_i_src_y,
 					stride_x);
 			}
@@ -9783,9 +9781,7 @@ void dwt_cdf97_2f_s(
 {
 	FUNC_BEGIN;
 
-#ifdef _OPENMP
 	const int threads = dwt_util_get_num_threads();
-#endif
 	const int workers = dwt_util_get_num_workers();
 
 #ifdef microblaze
@@ -9842,7 +9838,7 @@ void dwt_cdf97_2f_s(
 					addr2_s(ptr,y,0,stride_x,stride_y),
 					addr2_s(ptr,y,0,stride_x,stride_y),
 					addr2_s(ptr,y,size_o_dst_x,stride_x,stride_y),
-					temp[omp_get_thread_num()],
+					temp[dwt_util_get_thread_num()],
 					size_i_src_x,
 					stride_y);
 			}
@@ -9853,7 +9849,7 @@ void dwt_cdf97_2f_s(
 					addr2_s(ptr,y,0,stride_x,stride_y),
 					addr2_s(ptr,y,0,stride_x,stride_y),
 					addr2_s(ptr,y,size_o_dst_x,stride_x,stride_y),
-					temp[omp_get_thread_num()],
+					temp[dwt_util_get_thread_num()],
 					size_i_src_x,
 					stride_y);
 			}
@@ -9872,7 +9868,7 @@ void dwt_cdf97_2f_s(
 					addr2_s(ptr,0,x,stride_x,stride_y),
 					addr2_s(ptr,0,x,stride_x,stride_y),
 					addr2_s(ptr,size_o_dst_y,x,stride_x,stride_y),
-					temp[omp_get_thread_num()],
+					temp[dwt_util_get_thread_num()],
 					size_i_src_y,
 					stride_x);
 			}
@@ -9883,7 +9879,7 @@ void dwt_cdf97_2f_s(
 					addr2_s(ptr,0,x,stride_x,stride_y),
 					addr2_s(ptr,0,x,stride_x,stride_y),
 					addr2_s(ptr,size_o_dst_y,x,stride_x,stride_y),
-					temp[omp_get_thread_num()],
+					temp[dwt_util_get_thread_num()],
 					size_i_src_y,
 					stride_x);
 			}
@@ -10338,9 +10334,7 @@ void dwt_cdf97_2i_s(
 {
 	FUNC_BEGIN;
 
-#ifdef _OPENMP
 	const int threads = dwt_util_get_num_threads();
-#endif
 	const int workers = dwt_util_get_num_workers();
 
 	const int offset = 0;
@@ -10391,13 +10385,11 @@ void dwt_cdf97_2i_s(
 		#pragma omp parallel for schedule(static, threads_segment_y)
 		for(int y = 0; y < workers_lines_y; y += workers)
 		{
-			assert( is_aligned_16(temp[omp_get_thread_num()]) );
-
 			dwt_cdf97_i_ex_stride_s(
 				addr2_s(ptr,y,0,stride_x,stride_y),
 				addr2_s(ptr,y,size_o_src_x,stride_x,stride_y),
 				addr2_s(ptr,y,0,stride_x,stride_y),
-				temp[omp_get_thread_num()] + 0,
+				temp[dwt_util_get_thread_num()] + 0,
 				size_i_dst_x,
 				stride_y);
 		}
@@ -10408,7 +10400,7 @@ void dwt_cdf97_2i_s(
 				addr2_s(ptr,y,0,stride_x,stride_y),
 				addr2_s(ptr,y,size_o_src_x,stride_x,stride_y),
 				addr2_s(ptr,y,0,stride_x,stride_y),
-				temp[omp_get_thread_num()] + 0,
+				temp[dwt_util_get_thread_num()] + 0,
 				size_i_dst_x,
 				stride_y);
 		}
@@ -10426,7 +10418,7 @@ void dwt_cdf97_2i_s(
 				addr2_s(ptr,0,x,stride_x,stride_y),
 				addr2_s(ptr,size_o_src_y,x,stride_x,stride_y),
 				addr2_s(ptr,0,x,stride_x,stride_y),
-				temp[omp_get_thread_num()] + 0,
+				temp[dwt_util_get_thread_num()] + 0,
 				size_i_dst_y,
 				stride_x);
 		}
@@ -10437,7 +10429,7 @@ void dwt_cdf97_2i_s(
 				addr2_s(ptr,0,x,stride_x,stride_y),
 				addr2_s(ptr,size_o_src_y,x,stride_x,stride_y),
 				addr2_s(ptr,0,x,stride_x,stride_y),
-				temp[omp_get_thread_num()] + 0,
+				temp[dwt_util_get_thread_num()] + 0,
 				size_i_dst_y,
 				stride_x);
 		}
