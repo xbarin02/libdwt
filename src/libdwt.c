@@ -510,7 +510,8 @@ size_t alignment(
 
 #ifdef __arm__
 	// http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0301h/Cdfifaec.html
-	return type_size;
+	// FIXME: according to manual, should be "type_size" only. however, this fails on RasPi atleast (for floats, doubles and int are OK)
+	return 2*type_size;
 #endif
 
 	// fallback: unaligned data
