@@ -1110,44 +1110,6 @@ intptr_t dwt_util_align_16(
 	return align_16(p);
 }
 
-#if 0
-/**
- * Calc offset in temp[] array for current worker. Preserves alignment on 8 bytes.
- */
-static
-float *calc_temp_offset_s(
-	float *addr,	///< pointer to array assigned to worker 0
-	int worker_id	///< identifier of current worker
-)
-{
-	dwt_util_error("obsolete\n");
-}
-#endif
-
-#if 1
-/**
- * @note in elements (floats), not in bytes!
- */
-static
-int calc_and_set_temp_size(
-	int temp_step
-)
-{
-	dwt_util_log(LOG_WARN, "obsolete\n");
-#ifdef microblaze
-	set_temp_step(temp_step);
-
-	return 2 + to_even( 2 + (temp_step+2) * get_active_workers() );
-#else
-	set_temp_step(temp_step);
-	// HACK: + 3*float => 16-align
-	// FIXME: is this calculation correct regarding to alignment?
-	// HACK: + 2 due to segfault
-	return 3 + align_16(temp_step * get_active_workers()) + 2;
-#endif
-}
-#endif
-
 static
 intptr_t align_int(
 	intptr_t addr,
