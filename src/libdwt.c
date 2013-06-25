@@ -13,7 +13,7 @@
 //#define DISABLE_X
 //#define MEASURE_FACTOR 1000
 #define MEASURE_FACTOR 1
-#define FV_ON_MAGNITUDES
+//#define FV_ON_MAGNITUDES
 
 #define STRING(x) #x
 
@@ -454,8 +454,8 @@
 #endif
 
 #ifdef microblaze
-static
-inline float powf(float x, float y)
+static inline
+float powf(float x, float y)
 {
 	return __builtin_powf(x, y);
 }
@@ -500,7 +500,7 @@ size_t alignment(
 	assert( type_size );
 
 #ifdef microblaze
-	// FIXME: DMA memory transfers seems to need alignment of 2*sizeof(float) = 8
+	// DMA memory transfers seems to need alignment of 2*sizeof(float) = 8
 	// http://www.xilinx.com/support/documentation/sw_manuals/mb_ref_guide.pdf => Memory Architecture
 	return 8;
 #endif
@@ -596,7 +596,7 @@ static
 float *calc_data_offset_s(
 	float *addr,	///< pointer to array assigned to worker 0
 	int worker_id	///< identifier of current worker
-       )
+)
 {
 	return (float *)( (intptr_t)addr + (get_data_step_s() * worker_id) );
 }
@@ -606,7 +606,7 @@ static
 const float *calc_data_offset_const_s(
 	const float *addr,	///< pointer to array assigned to worker 0
 	int worker_id		///< identifier of current worker
-       )
+)
 {
 	return (const float *)( (intptr_t)addr + (get_data_step_s() * worker_id) );
 }
@@ -643,7 +643,7 @@ static inline
 void flush_cache(
 	void *addr,	///< base address
 	size_t size	///< length of memory in bytes
-	)
+)
 {
 	FUNC_BEGIN;
 
@@ -666,7 +666,7 @@ static inline
 void flush_cache(
 	void *addr,	///< base address
 	size_t size	///< length of memory in bytes
-	)
+)
 {
 	__builtin___clear_cache(addr, (char *)addr+size);
 }
@@ -676,7 +676,7 @@ static inline
 void flush_cache_s(
 	float *addr,
 	size_t size
-	)
+)
 {
 	flush_cache( (void *)addr, size * sizeof(float) );
 }
@@ -742,7 +742,9 @@ const char *dwt_util_arch()
 int dwt_util_global_accel_type = 0;
 
 static
-void set_accel_type(int accel_type)
+void set_accel_type(
+	int accel_type
+)
 {
 	dwt_util_global_accel_type = accel_type;
 }
@@ -751,6 +753,11 @@ static
 int get_accel_type()
 {
 	return dwt_util_global_accel_type;
+}
+
+int dwt_util_get_accel()
+{
+	return get_accel_type();
 }
 
 /**
@@ -794,7 +801,9 @@ static const double dwt_cdf53_s2_d =    0.70710678118654752440; // FIXME: unnece
 /**@}*/
 
 static
-int is_pow2(int x)
+int is_pow2(
+	int x
+)
 {
 	return 0 == (x & (x - 1));
 }
@@ -1070,30 +1079,30 @@ intptr_t dwt_util_align_16(
 	return align_16(p);
 }
 
-/** Calc offset in temp[] array for current worker. Preserves alignment on 8 bytes. */
+#if 0
+/**
+ * Calc offset in temp[] array for current worker. Preserves alignment on 8 bytes.
+ */
 static
 float *calc_temp_offset_s(
 	float *addr,	///< pointer to array assigned to worker 0
 	int worker_id	///< identifier of current worker
-	)
+)
 {
-#ifdef microblaze
-	return addr + to_even( 2 + (get_temp_step()+2) * worker_id );
-#else
-	// FIXME: could be alignment to 16 bytes threated here instead of +1 in cdf97_2{f|i}_s function call?
-	// FIXME: is this calculation correct regarding to alignment?
-	// FIXME: to align_16 has no sence here due to units are sizeof(float) = 4
-	return addr + align_16( get_temp_step() * worker_id );
-#endif
+	dwt_util_error("obsolete\n");
 }
+#endif
 
+#if 1
 /**
  * @note in elements (floats), not in bytes!
  */
 static
 int calc_and_set_temp_size(
-	int temp_step)
+	int temp_step
+)
 {
+	dwt_util_log(LOG_WARN, "obsolete\n");
 #ifdef microblaze
 	set_temp_step(temp_step);
 
@@ -1105,6 +1114,86 @@ int calc_and_set_temp_size(
 	// HACK: + 2 due to segfault
 	return 3 + align_16(temp_step * get_active_workers()) + 2;
 #endif
+}
+#endif
+
+static
+intptr_t align_int(
+	intptr_t addr,
+	size_t alignment
+)
+{
+	return (intptr_t)align((void *)addr, alignment);
+}
+
+static
+int temp_calc_internal(
+	int alignment,	///< in bytes
+	int elem_size,	///< in bytes
+	int offset,	///< in elements
+	int elements,	///< the number of elements
+	int worker	///< worker_id or total_workers
+)
+{
+	const int padding = 1; // elements
+	const int offset1 = offset*elem_size; // bytes
+	const int offset2 = (alignment-offset1) + align_int(padding*elem_size, alignment); // bytes
+	const int size = elements*elem_size; // bytes
+	const int block_size = align_int(offset2 + size + padding*elem_size, alignment); // bytes
+
+	const int total_bytes = block_size * worker + offset2; // bytes
+	const int total_elems = total_bytes/elem_size; // elements
+
+	return total_elems;
+}
+
+/**
+ * @note should return in bytes, only for compatibility in elements
+ * @returns in elements
+ */
+static
+int calc_and_set_temp_size_s(
+	int elements,		///< number of elements (floats)
+	int offset		///< in elements, e.g. +1 float
+)
+{
+	const int elem_size = sizeof(float); // bytes
+	const int workers = get_active_workers(); // workers
+	const int alignment = dwt_util_alignment(sizeof(float)); // bytes
+
+	set_temp_step(elements); // elements
+
+	return temp_calc_internal(alignment, elem_size, offset, elements, workers);
+}
+
+static
+float *calc_temp_offset2_s(
+	float *addr,	///< pointer to temp[] or temp[]+offset
+	int worker_id,	///< identifier of current worker
+	int offset	///< offset
+)
+{
+	const int elem_size = sizeof(float); // bytes
+	const int alignment = dwt_util_alignment(sizeof(float)); // bytes
+
+	int return_offset = 0; // elements
+
+	// correct the alignment
+	if( (intptr_t)addr & (alignment-1) )
+	{
+		float *old = addr;
+		addr = (float *)( (intptr_t)addr & ~(alignment-1) );
+		return_offset = ((intptr_t)old - (intptr_t)addr)/elem_size;
+	}
+
+	if( 0 == offset && 0 != return_offset )
+	{
+		offset = return_offset;
+	}
+
+	const int elements = get_temp_step(); // elements
+
+	return addr + temp_calc_internal(alignment, elem_size, offset, elements, worker_id) + return_offset;
 }
 
 #if 0
@@ -2116,7 +2205,7 @@ void accel_lift_op4s_main_nosse_s(
 		// inv
 		for(int w = 0; w < dwt_util_get_num_workers(); w++)
 		{
-			float *arr_local = calc_temp_offset_s(arr, w);
+			float *arr_local = calc_temp_offset2_s(arr, w, 0);
 
 			// constants
 			const float w[4] = { delta, gamma, beta, alpha };
@@ -2153,7 +2242,7 @@ void accel_lift_op4s_main_nosse_s(
 		// fwd
 		for(int w = 0; w < dwt_util_get_num_workers(); w++)
 		{
-			float *arr_local = calc_temp_offset_s(arr, w);
+			float *arr_local = calc_temp_offset2_s(arr, w, 0);
 
 			// constants
 			const float w[4] = { delta, gamma, beta, alpha };
@@ -2226,15 +2315,15 @@ void accel_lift_op4s_main_s(
 
 	assert( steps >= 0 );
 
-	// FIXME: ASSUME_ALIGNED(..., 16) implies is_aligned_16(...)
-	assert( is_aligned_16(calc_temp_offset_s(arr, 0)) );
-
 	if( scaling < 0 )
 	{
 		// inv
 		for(int w = 0; w < dwt_util_get_num_workers(); w++)
 		{
-			float *arr_local = ASSUME_ALIGNED(calc_temp_offset_s(arr, w), 16);
+			// TODO: ASSUME_ALIGNED
+			float *arr_local = calc_temp_offset2_s(arr, w, 0);
+			
+			assert( is_aligned_s(arr_local) );
 
 			// constants
 			const float w[4] = { delta, gamma, beta, alpha };
@@ -2271,7 +2360,10 @@ void accel_lift_op4s_main_s(
 		// fwd
 		for(int w = 0; w < dwt_util_get_num_workers(); w++)
 		{
-			float *arr_local = ASSUME_ALIGNED(calc_temp_offset_s(arr, w), 16);
+			// TODO: ASSUME_ALIGNED
+			float *arr_local = calc_temp_offset2_s(arr, w, 0);
+
+			assert( is_aligned_s(arr_local) );
 
 			// constants
 			const float w[4] = { delta, gamma, beta, alpha };
@@ -2351,7 +2443,7 @@ void accel_lift_op4s_main_ml4_s(
 		// pointers
 		for(int worker = 0; worker < 4; worker++)
 		{
-			arr_local[worker] = calc_temp_offset_s(arr, worker);
+			arr_local[worker] = calc_temp_offset2_s(arr, worker, 0);
 		}
 
 		// buffer
@@ -2461,7 +2553,7 @@ void accel_lift_op4s_main_ml4_s(
 		// pointers
 		for(int worker = 0; worker < 4; worker++)
 		{
-			arr_local[worker] = calc_temp_offset_s(arr, worker);
+			arr_local[worker] = calc_temp_offset2_s(arr, worker, 0);
 		}
 
 		// buffer
@@ -4372,8 +4464,6 @@ void accel_lift_op4s_main_sdl6_sse_s(
 	// 6+ coeffs implies 3+ steps
 	assert( steps >= 3 );
 
-	assert( is_aligned_16(arr) );
-
 	const __m128 w = { delta, gamma, beta, alpha };
 	const __m128 v = { 1/zeta, zeta, 1/zeta, zeta };
 	__m128 l;
@@ -4391,282 +4481,286 @@ void accel_lift_op4s_main_sdl6_sse_s(
 	{
 		// ****** inverse transform ******
 
-		// FIXME: support for several workers
-		assert( 1 == dwt_util_get_num_workers() );
-
-		// *** init ***
-
-		float *addr = ASSUME_ALIGNED(arr, 16);
-
-		// *** prolog2 ***
-
-		// prolog2: import-preload
-		op4s_sdl6_preload_prolog_s_sse(w, v, l, r, z, in, out, &addr);
-
-		// prolog2: import(3)
-		op4s_sdl6_import_s_sse(l, 3, out);
-
-		// prolog2: pass-prolog-full
-		op4s_sdl6_pass_inv_prolog_full_s_sse(w, v, l, r, z, in, out, &addr);
-
-		// prolog2: import(2)
-		op4s_sdl6_import_s_sse(l, 2, out);
-
-		// prolog2: pass-prolog-light
-		op4s_sdl6_pass_inv_prolog_light_s_sse(w, v, l, r, z, in, out, &addr);
-
-		// prolog2: import(1)
-		op4s_sdl6_import_s_sse(l, 1, out);
-
-		// prolog2: pass-prolog-full
-		op4s_sdl6_pass_inv_prolog_full_s_sse(w, v, l, r, z, in, out, &addr);
-
-		// prolog2: import(0)
-		op4s_sdl6_import_s_sse(l, 0, out);
-
-		// *** core ***
-
-		// core: for u = 0 to U
-		for(int u = 0; u < U; u++)
+		for(int wrk = 0; wrk < dwt_util_get_num_workers(); wrk++)
 		{
-			// NOTE: l, r, z
+			// *** init ***
 
-			// core: pass1-core-light
-			op4s_sdl6_pass_inv_core_light_s_sse(w, v, /*l*/l, /*r*/r, /*z*/z, in, out, &addr);
+			float *addr = ASSUME_ALIGNED(calc_temp_offset2_s(arr, wrk, 0), 16);
+			assert( is_aligned_16(addr) );
+			float *base = addr;
 
-			// NOTE: z => l, l => r, r => z
+			// *** prolog2 ***
 
-			// core: pass1-core-full
-			op4s_sdl6_pass_inv_core_full_s_sse(w, v, /*l*/r, /*r*/z, /*z*/l, in, out, &addr);
+			// prolog2: import-preload
+			op4s_sdl6_preload_prolog_s_sse(w, v, l, r, z, in, out, &addr);
 
-			// NOTE: (r => z) => l, (z => l) => r, (l => r) => z
+			// prolog2: import(3)
+			op4s_sdl6_import_s_sse(l, 3, out);
 
-			// core: pass2-core-light
-			op4s_sdl6_pass_inv_core_light_s_sse(w, v, /*l*/z, /*r*/l, /*z*/r, in, out, &addr);
+			// prolog2: pass-prolog-full
+			op4s_sdl6_pass_inv_prolog_full_s_sse(w, v, l, r, z, in, out, &addr);
 
-			// NOTE: ((l => r) => z) => l, ((r => z) => l) => r, ((z => l) => r) => z
+			// prolog2: import(2)
+			op4s_sdl6_import_s_sse(l, 2, out);
 
-			// core: pass2-core-full
-			op4s_sdl6_pass_inv_core_full_s_sse(w, v, /*l*/l, /*r*/r, /*z*/z, in, out, &addr);
+			// prolog2: pass-prolog-light
+			op4s_sdl6_pass_inv_prolog_light_s_sse(w, v, l, r, z, in, out, &addr);
 
-			// NOTE: z => l, l => r, r => z
+			// prolog2: import(1)
+			op4s_sdl6_import_s_sse(l, 1, out);
 
-			// core: pass3-core-light
-			op4s_sdl6_pass_inv_core_light_s_sse(w, v, /*l*/r, /*r*/z, /*z*/l, in, out, &addr);
+			// prolog2: pass-prolog-full
+			op4s_sdl6_pass_inv_prolog_full_s_sse(w, v, l, r, z, in, out, &addr);
 
-			// NOTE: (r => z) => l, (z => l) => r, (l => r) => z
+			// prolog2: import(0)
+			op4s_sdl6_import_s_sse(l, 0, out);
 
-			// core: pass3-core-full
-			op4s_sdl6_pass_inv_core_full_s_sse(w, v, /*l*/z, /*r*/l, /*z*/r, in, out, &addr);
+			// *** core ***
 
-			// NOTE: ((l => r) => z) => l, ((r => z) => l) => r, ((z => l) => r) => z
-		}
+			// core: for u = 0 to U
+			for(int u = 0; u < U; u++)
+			{
+				// NOTE: l, r, z
 
-		// core: for t = 0 to T do
-		for(int t = 0; t < T; t++)
-		{
-			// core: pass-core-light
-			op4s_sdl6_pass_inv_postcore_light_s_sse(w, v, l, r, z, in, out, &addr);
+				// core: pass1-core-light
+				op4s_sdl6_pass_inv_core_light_s_sse(w, v, /*l*/l, /*r*/r, /*z*/z, in, out, &addr);
 
-			// core: pass-core-full
-			op4s_sdl6_pass_inv_postcore_full_s_sse(w, v, l, r, z, in, out, &addr);
-		}
+				// NOTE: z => l, l => r, r => z
 
-		// core: if odd then
-		if( is_odd(S) )
-		{
-			// core: pass-core-light
-			op4s_sdl6_pass_inv_postcore_light_s_sse(w, v, l, r, z, in, out, &addr);
-		}
+				// core: pass1-core-full
+				op4s_sdl6_pass_inv_core_full_s_sse(w, v, /*l*/r, /*r*/z, /*z*/l, in, out, &addr);
 
-		// *** epilog2 ***
+				// NOTE: (r => z) => l, (z => l) => r, (l => r) => z
 
-		if( is_odd(S) )
-		{
-			// epilog2: export(3)
-			op4s_sdl6_export_s_sse(l, &arr[2*steps], 3);
+				// core: pass2-core-light
+				op4s_sdl6_pass_inv_core_light_s_sse(w, v, /*l*/z, /*r*/l, /*z*/r, in, out, &addr);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl6_pass_inv_epilog_full_s_sse(w, v, l, r, z, in, out, &addr);
+				// NOTE: ((l => r) => z) => l, ((r => z) => l) => r, ((z => l) => r) => z
 
-			// epilog2: export(2)
-			op4s_sdl6_export_s_sse(l, &arr[2*steps], 2);
+				// core: pass2-core-full
+				op4s_sdl6_pass_inv_core_full_s_sse(w, v, /*l*/l, /*r*/r, /*z*/z, in, out, &addr);
 
-			// epilog2: pass-epilog-light
-			op4s_sdl6_pass_inv_epilog_light_s_sse(w, v, l, r, z, in, out, &addr);
+				// NOTE: z => l, l => r, r => z
 
-			// epilog2: export(1)
-			op4s_sdl6_export_s_sse(l, &arr[2*steps], 1);
+				// core: pass3-core-light
+				op4s_sdl6_pass_inv_core_light_s_sse(w, v, /*l*/r, /*r*/z, /*z*/l, in, out, &addr);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl6_pass_inv_epilog_full_s_sse(w, v, l, r, z, in, out, &addr);
+				// NOTE: (r => z) => l, (z => l) => r, (l => r) => z
 
-			// epilog2: export(0)
-			op4s_sdl6_export_s_sse(l, &arr[2*steps], 0);
-		}
-		else
-		{
-			// epilog2: export(3)
-			op4s_sdl6_export_s_sse(l, &arr[2*steps], 3);
+				// core: pass3-core-full
+				op4s_sdl6_pass_inv_core_full_s_sse(w, v, /*l*/z, /*r*/l, /*z*/r, in, out, &addr);
 
-			// epilog2: pass-epilog-light
-			op4s_sdl6_pass_inv_epilog_light_s_sse(w, v, l, r, z, in, out, &addr);
+				// NOTE: ((l => r) => z) => l, ((r => z) => l) => r, ((z => l) => r) => z
+			}
 
-			// epilog2: export(2)
-			op4s_sdl6_export_s_sse(l, &arr[2*steps], 2);
+			// core: for t = 0 to T do
+			for(int t = 0; t < T; t++)
+			{
+				// core: pass-core-light
+				op4s_sdl6_pass_inv_postcore_light_s_sse(w, v, l, r, z, in, out, &addr);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl6_pass_inv_epilog_full_s_sse(w, v, l, r, z, in, out, &addr);
+				// core: pass-core-full
+				op4s_sdl6_pass_inv_postcore_full_s_sse(w, v, l, r, z, in, out, &addr);
+			}
 
-			// epilog2: export(1)
-			op4s_sdl6_export_s_sse(l, &arr[2*steps], 1);
+			// core: if odd then
+			if( is_odd(S) )
+			{
+				// core: pass-core-light
+				op4s_sdl6_pass_inv_postcore_light_s_sse(w, v, l, r, z, in, out, &addr);
+			}
 
-			// epilog2: pass-epilog-flush
-			op4s_sdl6_pass_inv_epilog_flush_s_sse(w, v, l, r, z, in, out, &addr);
+			// *** epilog2 ***
 
-			// epilog2: export(0)
-			op4s_sdl6_export_s_sse(l, &arr[2*steps], 0);
+			if( is_odd(S) )
+			{
+				// epilog2: export(3)
+				op4s_sdl6_export_s_sse(l, &base[2*steps], 3);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl6_pass_inv_epilog_full_s_sse(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(2)
+				op4s_sdl6_export_s_sse(l, &base[2*steps], 2);
+
+				// epilog2: pass-epilog-light
+				op4s_sdl6_pass_inv_epilog_light_s_sse(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(1)
+				op4s_sdl6_export_s_sse(l, &base[2*steps], 1);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl6_pass_inv_epilog_full_s_sse(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(0)
+				op4s_sdl6_export_s_sse(l, &base[2*steps], 0);
+			}
+			else
+			{
+				// epilog2: export(3)
+				op4s_sdl6_export_s_sse(l, &base[2*steps], 3);
+
+				// epilog2: pass-epilog-light
+				op4s_sdl6_pass_inv_epilog_light_s_sse(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(2)
+				op4s_sdl6_export_s_sse(l, &base[2*steps], 2);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl6_pass_inv_epilog_full_s_sse(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(1)
+				op4s_sdl6_export_s_sse(l, &base[2*steps], 1);
+
+				// epilog2: pass-epilog-flush
+				op4s_sdl6_pass_inv_epilog_flush_s_sse(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(0)
+				op4s_sdl6_export_s_sse(l, &base[2*steps], 0);
+			}
 		}
 	}
 	else if ( scaling > 0 )
 	{
 		// ****** forward transform ******
 
-		// FIXME: support for several workers
-		assert( 1 == dwt_util_get_num_workers() );
-
-		// *** init ***
-
-		float *addr = ASSUME_ALIGNED(arr, 16);
-
-		// *** prolog2 ***
-
-		// prolog2: import-preload
-		op4s_sdl6_preload_prolog_s_sse(w, v, l, r, z, in, out, &addr);
-
-		// prolog2: import(3)
-		op4s_sdl6_import_s_sse(l, 3, out);
-
-		// prolog2: pass-prolog-full
-		op4s_sdl6_pass_fwd_prolog_full_s_sse(w, v, l, r, z, in, out, &addr);
-
-		// prolog2: import(2)
-		op4s_sdl6_import_s_sse(l, 2, out);
-
-		// prolog2: pass-prolog-light
-		op4s_sdl6_pass_fwd_prolog_light_s_sse(w, v, l, r, z, in, out, &addr);
-
-		// prolog2: import(1)
-		op4s_sdl6_import_s_sse(l, 1, out);
-
-		// prolog2: pass-prolog-full
-		op4s_sdl6_pass_fwd_prolog_full_s_sse(w, v, l, r, z, in, out, &addr);
-
-		// prolog2: import(0)
-		op4s_sdl6_import_s_sse(l, 0, out);
-
-		// *** core ***
-
-		// core: for u = 0 to U
-		for(int u = 0; u < U; u++)
+		for(int wrk = 0; wrk < dwt_util_get_num_workers(); wrk++)
 		{
-			// NOTE: l, r, z
+			// *** init ***
 
-			// core: pass1-core-light
-			op4s_sdl6_pass_fwd_core_light_s_sse(w, v, /*l*/l, /*r*/r, /*z*/z, in, out, &addr);
+			float *addr = ASSUME_ALIGNED(calc_temp_offset2_s(arr, wrk, 0), 16);
+			assert( is_aligned_16(addr) );
+			float *base = addr;
 
-			// NOTE: z => l, l => r, r => z
+			// *** prolog2 ***
 
-			// core: pass1-core-full
-			op4s_sdl6_pass_fwd_core_full_s_sse(w, v, /*l*/r, /*r*/z, /*z*/l, in, out, &addr);
+			// prolog2: import-preload
+			op4s_sdl6_preload_prolog_s_sse(w, v, l, r, z, in, out, &addr);
 
-			// NOTE: (r => z) => l, (z => l) => r, (l => r) => z
+			// prolog2: import(3)
+			op4s_sdl6_import_s_sse(l, 3, out);
 
-			// core: pass2-core-light
-			op4s_sdl6_pass_fwd_core_light_s_sse(w, v, /*l*/z, /*r*/l, /*z*/r, in, out, &addr);
+			// prolog2: pass-prolog-full
+			op4s_sdl6_pass_fwd_prolog_full_s_sse(w, v, l, r, z, in, out, &addr);
 
-			// NOTE: ((l => r) => z) => l, ((r => z) => l) => r, ((z => l) => r) => z
+			// prolog2: import(2)
+			op4s_sdl6_import_s_sse(l, 2, out);
 
-			// core: pass2-core-full
-			op4s_sdl6_pass_fwd_core_full_s_sse(w, v, /*l*/l, /*r*/r, /*z*/z, in, out, &addr);
+			// prolog2: pass-prolog-light
+			op4s_sdl6_pass_fwd_prolog_light_s_sse(w, v, l, r, z, in, out, &addr);
 
-			// NOTE: z => l, l => r, r => z
+			// prolog2: import(1)
+			op4s_sdl6_import_s_sse(l, 1, out);
 
-			// core: pass3-core-light
-			op4s_sdl6_pass_fwd_core_light_s_sse(w, v, /*l*/r, /*r*/z, /*z*/l, in, out, &addr);
+			// prolog2: pass-prolog-full
+			op4s_sdl6_pass_fwd_prolog_full_s_sse(w, v, l, r, z, in, out, &addr);
 
-			// NOTE: (r => z) => l, (z => l) => r, (l => r) => z
+			// prolog2: import(0)
+			op4s_sdl6_import_s_sse(l, 0, out);
 
-			// core: pass3-core-full
-			op4s_sdl6_pass_fwd_core_full_s_sse(w, v, /*l*/z, /*r*/l, /*z*/r, in, out, &addr);
+			// *** core ***
 
-			// NOTE: ((l => r) => z) => l, ((r => z) => l) => r, ((z => l) => r) => z
-		}
+			// core: for u = 0 to U
+			for(int u = 0; u < U; u++)
+			{
+				// NOTE: l, r, z
 
-		// core: for t = 0 to T do
-		for(int t = 0; t < T; t++)
-		{
-			// core: pass-core-light
-			op4s_sdl6_pass_fwd_postcore_light_s_sse(w, v, l, r, z, in, out, &addr);
+				// core: pass1-core-light
+				op4s_sdl6_pass_fwd_core_light_s_sse(w, v, /*l*/l, /*r*/r, /*z*/z, in, out, &addr);
 
-			// core: pass-core-full
-			op4s_sdl6_pass_fwd_postcore_full_s_sse(w, v, l, r, z, in, out, &addr);
-		}
+				// NOTE: z => l, l => r, r => z
 
-		// core: if odd then
-		if( is_odd(S) )
-		{
-			// core: pass-core-light
-			op4s_sdl6_pass_fwd_postcore_light_s_sse(w, v, l, r, z, in, out, &addr);
-		}
+				// core: pass1-core-full
+				op4s_sdl6_pass_fwd_core_full_s_sse(w, v, /*l*/r, /*r*/z, /*z*/l, in, out, &addr);
 
-		// *** epilog2 ***
+				// NOTE: (r => z) => l, (z => l) => r, (l => r) => z
 
-		if( is_odd(S) )
-		{
-			// epilog2: export(3)
-			op4s_sdl6_export_s_sse(l, &arr[2*steps], 3);
+				// core: pass2-core-light
+				op4s_sdl6_pass_fwd_core_light_s_sse(w, v, /*l*/z, /*r*/l, /*z*/r, in, out, &addr);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl6_pass_fwd_epilog_full_s_sse(w, v, l, r, z, in, out, &addr);
+				// NOTE: ((l => r) => z) => l, ((r => z) => l) => r, ((z => l) => r) => z
 
-			// epilog2: export(2)
-			op4s_sdl6_export_s_sse(l, &arr[2*steps], 2);
+				// core: pass2-core-full
+				op4s_sdl6_pass_fwd_core_full_s_sse(w, v, /*l*/l, /*r*/r, /*z*/z, in, out, &addr);
 
-			// epilog2: pass-epilog-light
-			op4s_sdl6_pass_fwd_epilog_light_s_sse(w, v, l, r, z, in, out, &addr);
+				// NOTE: z => l, l => r, r => z
 
-			// epilog2: export(1)
-			op4s_sdl6_export_s_sse(l, &arr[2*steps], 1);
+				// core: pass3-core-light
+				op4s_sdl6_pass_fwd_core_light_s_sse(w, v, /*l*/r, /*r*/z, /*z*/l, in, out, &addr);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl6_pass_fwd_epilog_full_s_sse(w, v, l, r, z, in, out, &addr);
+				// NOTE: (r => z) => l, (z => l) => r, (l => r) => z
 
-			// epilog2: export(0)
-			op4s_sdl6_export_s_sse(l, &arr[2*steps], 0);
-		}
-		else
-		{
-			// epilog2: export(3)
-			op4s_sdl6_export_s_sse(l, &arr[2*steps], 3);
+				// core: pass3-core-full
+				op4s_sdl6_pass_fwd_core_full_s_sse(w, v, /*l*/z, /*r*/l, /*z*/r, in, out, &addr);
 
-			// epilog2: pass-epilog-light
-			op4s_sdl6_pass_fwd_epilog_light_s_sse(w, v, l, r, z, in, out, &addr);
+				// NOTE: ((l => r) => z) => l, ((r => z) => l) => r, ((z => l) => r) => z
+			}
 
-			// epilog2: export(2)
-			op4s_sdl6_export_s_sse(l, &arr[2*steps], 2);
+			// core: for t = 0 to T do
+			for(int t = 0; t < T; t++)
+			{
+				// core: pass-core-light
+				op4s_sdl6_pass_fwd_postcore_light_s_sse(w, v, l, r, z, in, out, &addr);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl6_pass_fwd_epilog_full_s_sse(w, v, l, r, z, in, out, &addr);
+				// core: pass-core-full
+				op4s_sdl6_pass_fwd_postcore_full_s_sse(w, v, l, r, z, in, out, &addr);
+			}
 
-			// epilog2: export(1)
-			op4s_sdl6_export_s_sse(l, &arr[2*steps], 1);
+			// core: if odd then
+			if( is_odd(S) )
+			{
+				// core: pass-core-light
+				op4s_sdl6_pass_fwd_postcore_light_s_sse(w, v, l, r, z, in, out, &addr);
+			}
 
-			// epilog2: pass-epilog-flush
-			op4s_sdl6_pass_fwd_epilog_flush_s_sse(w, v, l, r, z, in, out, &addr);
+			// *** epilog2 ***
 
-			// epilog2: export(0)
-			op4s_sdl6_export_s_sse(l, &arr[2*steps], 0);
+			if( is_odd(S) )
+			{
+				// epilog2: export(3)
+				op4s_sdl6_export_s_sse(l, &base[2*steps], 3);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl6_pass_fwd_epilog_full_s_sse(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(2)
+				op4s_sdl6_export_s_sse(l, &base[2*steps], 2);
+
+				// epilog2: pass-epilog-light
+				op4s_sdl6_pass_fwd_epilog_light_s_sse(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(1)
+				op4s_sdl6_export_s_sse(l, &base[2*steps], 1);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl6_pass_fwd_epilog_full_s_sse(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(0)
+				op4s_sdl6_export_s_sse(l, &base[2*steps], 0);
+			}
+			else
+			{
+				// epilog2: export(3)
+				op4s_sdl6_export_s_sse(l, &base[2*steps], 3);
+
+				// epilog2: pass-epilog-light
+				op4s_sdl6_pass_fwd_epilog_light_s_sse(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(2)
+				op4s_sdl6_export_s_sse(l, &base[2*steps], 2);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl6_pass_fwd_epilog_full_s_sse(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(1)
+				op4s_sdl6_export_s_sse(l, &base[2*steps], 1);
+
+				// epilog2: pass-epilog-flush
+				op4s_sdl6_pass_fwd_epilog_flush_s_sse(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(0)
+				op4s_sdl6_export_s_sse(l, &base[2*steps], 0);
+			}
 		}
 	}
 	else
@@ -4699,8 +4793,6 @@ void accel_lift_op4s_main_sdl6_ref_s(
 	// 6+ coeffs implies 3+ steps
 	assert( steps >= 3 );
 
-	assert( is_aligned_16(arr) );
-
 	const float w[4] = { delta, gamma, beta, alpha };
 	const float v[4] = { 1/zeta, zeta, 1/zeta, zeta };
 	float l[4];
@@ -4718,282 +4810,286 @@ void accel_lift_op4s_main_sdl6_ref_s(
 	{
 		// ****** inverse transform ******
 
-		// FIXME: support for several workers
-		assert( 1 == dwt_util_get_num_workers() );
-
-		// *** init ***
-
-		float *addr = ASSUME_ALIGNED(arr, 16);
-
-		// *** prolog2 ***
-
-		// prolog2: import-preload
-		op4s_sdl6_preload_prolog_s_ref(w, v, l, r, z, in, out, &addr);
-
-		// prolog2: import(3)
-		op4s_sdl6_import_s_ref(l, 3, out);
-
-		// prolog2: pass-prolog-full
-		op4s_sdl6_pass_inv_prolog_full_s_ref(w, v, l, r, z, in, out, &addr);
-
-		// prolog2: import(2)
-		op4s_sdl6_import_s_ref(l, 2, out);
-
-		// prolog2: pass-prolog-light
-		op4s_sdl6_pass_inv_prolog_light_s_ref(w, v, l, r, z, in, out, &addr);
-
-		// prolog2: import(1)
-		op4s_sdl6_import_s_ref(l, 1, out);
-
-		// prolog2: pass-prolog-full
-		op4s_sdl6_pass_inv_prolog_full_s_ref(w, v, l, r, z, in, out, &addr);
-
-		// prolog2: import(0)
-		op4s_sdl6_import_s_ref(l, 0, out);
-
-		// *** core ***
-
-		// core: for u = 0 to U
-		for(int u = 0; u < U; u++)
+		for(int wrk = 0; wrk < dwt_util_get_num_workers(); wrk++)
 		{
-			// NOTE: l, r, z
+			// *** init ***
 
-			// core: pass1-core-light
-			op4s_sdl6_pass_inv_core_light_s_ref(w, v, /*l*/l, /*r*/r, /*z*/z, in, out, &addr);
+			float *addr = ASSUME_ALIGNED(calc_temp_offset2_s(arr, wrk, 0), 16);
+			assert( is_aligned_16(addr) );
+			float *base = addr;
 
-			// NOTE: z => l, l => r, r => z
+			// *** prolog2 ***
 
-			// core: pass1-core-full
-			op4s_sdl6_pass_inv_core_full_s_ref(w, v, /*l*/r, /*r*/z, /*z*/l, in, out, &addr);
+			// prolog2: import-preload
+			op4s_sdl6_preload_prolog_s_ref(w, v, l, r, z, in, out, &addr);
 
-			// NOTE: (r => z) => l, (z => l) => r, (l => r) => z
+			// prolog2: import(3)
+			op4s_sdl6_import_s_ref(l, 3, out);
 
-			// core: pass2-core-light
-			op4s_sdl6_pass_inv_core_light_s_ref(w, v, /*l*/z, /*r*/l, /*z*/r, in, out, &addr);
+			// prolog2: pass-prolog-full
+			op4s_sdl6_pass_inv_prolog_full_s_ref(w, v, l, r, z, in, out, &addr);
 
-			// NOTE: ((l => r) => z) => l, ((r => z) => l) => r, ((z => l) => r) => z
+			// prolog2: import(2)
+			op4s_sdl6_import_s_ref(l, 2, out);
 
-			// core: pass2-core-full
-			op4s_sdl6_pass_inv_core_full_s_ref(w, v, /*l*/l, /*r*/r, /*z*/z, in, out, &addr);
+			// prolog2: pass-prolog-light
+			op4s_sdl6_pass_inv_prolog_light_s_ref(w, v, l, r, z, in, out, &addr);
 
-			// NOTE: z => l, l => r, r => z
+			// prolog2: import(1)
+			op4s_sdl6_import_s_ref(l, 1, out);
 
-			// core: pass3-core-light
-			op4s_sdl6_pass_inv_core_light_s_ref(w, v, /*l*/r, /*r*/z, /*z*/l, in, out, &addr);
+			// prolog2: pass-prolog-full
+			op4s_sdl6_pass_inv_prolog_full_s_ref(w, v, l, r, z, in, out, &addr);
 
-			// NOTE: (r => z) => l, (z => l) => r, (l => r) => z
+			// prolog2: import(0)
+			op4s_sdl6_import_s_ref(l, 0, out);
 
-			// core: pass3-core-full
-			op4s_sdl6_pass_inv_core_full_s_ref(w, v, /*l*/z, /*r*/l, /*z*/r, in, out, &addr);
+			// *** core ***
 
-			// NOTE: ((l => r) => z) => l, ((r => z) => l) => r, ((z => l) => r) => z
-		}
+			// core: for u = 0 to U
+			for(int u = 0; u < U; u++)
+			{
+				// NOTE: l, r, z
 
-		// core: for t = 0 to T do
-		for(int t = 0; t < T; t++)
-		{
-			// core: pass-core-light
-			op4s_sdl6_pass_inv_postcore_light_s_ref(w, v, l, r, z, in, out, &addr);
+				// core: pass1-core-light
+				op4s_sdl6_pass_inv_core_light_s_ref(w, v, /*l*/l, /*r*/r, /*z*/z, in, out, &addr);
 
-			// core: pass-core-full
-			op4s_sdl6_pass_inv_postcore_full_s_ref(w, v, l, r, z, in, out, &addr);
-		}
+				// NOTE: z => l, l => r, r => z
 
-		// core: if odd then
-		if( is_odd(S) )
-		{
-			// core: pass-core-light
-			op4s_sdl6_pass_inv_postcore_light_s_ref(w, v, l, r, z, in, out, &addr);
-		}
+				// core: pass1-core-full
+				op4s_sdl6_pass_inv_core_full_s_ref(w, v, /*l*/r, /*r*/z, /*z*/l, in, out, &addr);
 
-		// *** epilog2 ***
+				// NOTE: (r => z) => l, (z => l) => r, (l => r) => z
 
-		if( is_odd(S) )
-		{
-			// epilog2: export(3)
-			op4s_sdl6_export_s_ref(l, &arr[2*steps], 3);
+				// core: pass2-core-light
+				op4s_sdl6_pass_inv_core_light_s_ref(w, v, /*l*/z, /*r*/l, /*z*/r, in, out, &addr);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl6_pass_inv_epilog_full_s_ref(w, v, l, r, z, in, out, &addr);
+				// NOTE: ((l => r) => z) => l, ((r => z) => l) => r, ((z => l) => r) => z
 
-			// epilog2: export(2)
-			op4s_sdl6_export_s_ref(l, &arr[2*steps], 2);
+				// core: pass2-core-full
+				op4s_sdl6_pass_inv_core_full_s_ref(w, v, /*l*/l, /*r*/r, /*z*/z, in, out, &addr);
 
-			// epilog2: pass-epilog-light
-			op4s_sdl6_pass_inv_epilog_light_s_ref(w, v, l, r, z, in, out, &addr);
+				// NOTE: z => l, l => r, r => z
 
-			// epilog2: export(1)
-			op4s_sdl6_export_s_ref(l, &arr[2*steps], 1);
+				// core: pass3-core-light
+				op4s_sdl6_pass_inv_core_light_s_ref(w, v, /*l*/r, /*r*/z, /*z*/l, in, out, &addr);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl6_pass_inv_epilog_full_s_ref(w, v, l, r, z, in, out, &addr);
+				// NOTE: (r => z) => l, (z => l) => r, (l => r) => z
 
-			// epilog2: export(0)
-			op4s_sdl6_export_s_ref(l, &arr[2*steps], 0);
-		}
-		else
-		{
-			// epilog2: export(3)
-			op4s_sdl6_export_s_ref(l, &arr[2*steps], 3);
+				// core: pass3-core-full
+				op4s_sdl6_pass_inv_core_full_s_ref(w, v, /*l*/z, /*r*/l, /*z*/r, in, out, &addr);
 
-			// epilog2: pass-epilog-light
-			op4s_sdl6_pass_inv_epilog_light_s_ref(w, v, l, r, z, in, out, &addr);
+				// NOTE: ((l => r) => z) => l, ((r => z) => l) => r, ((z => l) => r) => z
+			}
 
-			// epilog2: export(2)
-			op4s_sdl6_export_s_ref(l, &arr[2*steps], 2);
+			// core: for t = 0 to T do
+			for(int t = 0; t < T; t++)
+			{
+				// core: pass-core-light
+				op4s_sdl6_pass_inv_postcore_light_s_ref(w, v, l, r, z, in, out, &addr);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl6_pass_inv_epilog_full_s_ref(w, v, l, r, z, in, out, &addr);
+				// core: pass-core-full
+				op4s_sdl6_pass_inv_postcore_full_s_ref(w, v, l, r, z, in, out, &addr);
+			}
 
-			// epilog2: export(1)
-			op4s_sdl6_export_s_ref(l, &arr[2*steps], 1);
+			// core: if odd then
+			if( is_odd(S) )
+			{
+				// core: pass-core-light
+				op4s_sdl6_pass_inv_postcore_light_s_ref(w, v, l, r, z, in, out, &addr);
+			}
 
-			// epilog2: pass-epilog-flush
-			op4s_sdl6_pass_inv_epilog_flush_s_ref(w, v, l, r, z, in, out, &addr);
+			// *** epilog2 ***
 
-			// epilog2: export(0)
-			op4s_sdl6_export_s_ref(l, &arr[2*steps], 0);
+			if( is_odd(S) )
+			{
+				// epilog2: export(3)
+				op4s_sdl6_export_s_ref(l, &base[2*steps], 3);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl6_pass_inv_epilog_full_s_ref(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(2)
+				op4s_sdl6_export_s_ref(l, &base[2*steps], 2);
+
+				// epilog2: pass-epilog-light
+				op4s_sdl6_pass_inv_epilog_light_s_ref(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(1)
+				op4s_sdl6_export_s_ref(l, &base[2*steps], 1);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl6_pass_inv_epilog_full_s_ref(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(0)
+				op4s_sdl6_export_s_ref(l, &base[2*steps], 0);
+			}
+			else
+			{
+				// epilog2: export(3)
+				op4s_sdl6_export_s_ref(l, &base[2*steps], 3);
+
+				// epilog2: pass-epilog-light
+				op4s_sdl6_pass_inv_epilog_light_s_ref(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(2)
+				op4s_sdl6_export_s_ref(l, &base[2*steps], 2);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl6_pass_inv_epilog_full_s_ref(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(1)
+				op4s_sdl6_export_s_ref(l, &base[2*steps], 1);
+
+				// epilog2: pass-epilog-flush
+				op4s_sdl6_pass_inv_epilog_flush_s_ref(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(0)
+				op4s_sdl6_export_s_ref(l, &base[2*steps], 0);
+			}
 		}
 	}
 	else if ( scaling > 0 )
 	{
 		// ****** forward transform ******
 
-		// FIXME: support for several workers
-		assert( 1 == dwt_util_get_num_workers() );
-
-		// *** init ***
-
-		float *addr = ASSUME_ALIGNED(arr, 16);
-
-		// *** prolog2 ***
-
-		// prolog2: import-preload
-		op4s_sdl6_preload_prolog_s_ref(w, v, l, r, z, in, out, &addr);
-
-		// prolog2: import(3)
-		op4s_sdl6_import_s_ref(l, 3, out);
-
-		// prolog2: pass-prolog-full
-		op4s_sdl6_pass_fwd_prolog_full_s_ref(w, v, l, r, z, in, out, &addr);
-
-		// prolog2: import(2)
-		op4s_sdl6_import_s_ref(l, 2, out);
-
-		// prolog2: pass-prolog-light
-		op4s_sdl6_pass_fwd_prolog_light_s_ref(w, v, l, r, z, in, out, &addr);
-
-		// prolog2: import(1)
-		op4s_sdl6_import_s_ref(l, 1, out);
-
-		// prolog2: pass-prolog-full
-		op4s_sdl6_pass_fwd_prolog_full_s_ref(w, v, l, r, z, in, out, &addr);
-
-		// prolog2: import(0)
-		op4s_sdl6_import_s_ref(l, 0, out);
-
-		// *** core ***
-
-		// core: for u = 0 to U
-		for(int u = 0; u < U; u++)
+		for(int wrk = 0; wrk < dwt_util_get_num_workers(); wrk++)
 		{
-			// NOTE: l, r, z
+			// *** init ***
 
-			// core: pass1-core-light
-			op4s_sdl6_pass_fwd_core_light_s_ref(w, v, /*l*/l, /*r*/r, /*z*/z, in, out, &addr);
+			float *addr = ASSUME_ALIGNED(calc_temp_offset2_s(arr, wrk, 0), 16);
+			assert( is_aligned_16(addr) );
+			float *base = addr;
 
-			// NOTE: z => l, l => r, r => z
+			// *** prolog2 ***
 
-			// core: pass1-core-full
-			op4s_sdl6_pass_fwd_core_full_s_ref(w, v, /*l*/r, /*r*/z, /*z*/l, in, out, &addr);
+			// prolog2: import-preload
+			op4s_sdl6_preload_prolog_s_ref(w, v, l, r, z, in, out, &addr);
 
-			// NOTE: (r => z) => l, (z => l) => r, (l => r) => z
+			// prolog2: import(3)
+			op4s_sdl6_import_s_ref(l, 3, out);
 
-			// core: pass2-core-light
-			op4s_sdl6_pass_fwd_core_light_s_ref(w, v, /*l*/z, /*r*/l, /*z*/r, in, out, &addr);
+			// prolog2: pass-prolog-full
+			op4s_sdl6_pass_fwd_prolog_full_s_ref(w, v, l, r, z, in, out, &addr);
 
-			// NOTE: ((l => r) => z) => l, ((r => z) => l) => r, ((z => l) => r) => z
+			// prolog2: import(2)
+			op4s_sdl6_import_s_ref(l, 2, out);
 
-			// core: pass2-core-full
-			op4s_sdl6_pass_fwd_core_full_s_ref(w, v, /*l*/l, /*r*/r, /*z*/z, in, out, &addr);
+			// prolog2: pass-prolog-light
+			op4s_sdl6_pass_fwd_prolog_light_s_ref(w, v, l, r, z, in, out, &addr);
 
-			// NOTE: z => l, l => r, r => z
+			// prolog2: import(1)
+			op4s_sdl6_import_s_ref(l, 1, out);
 
-			// core: pass3-core-light
-			op4s_sdl6_pass_fwd_core_light_s_ref(w, v, /*l*/r, /*r*/z, /*z*/l, in, out, &addr);
+			// prolog2: pass-prolog-full
+			op4s_sdl6_pass_fwd_prolog_full_s_ref(w, v, l, r, z, in, out, &addr);
 
-			// NOTE: (r => z) => l, (z => l) => r, (l => r) => z
+			// prolog2: import(0)
+			op4s_sdl6_import_s_ref(l, 0, out);
 
-			// core: pass3-core-full
-			op4s_sdl6_pass_fwd_core_full_s_ref(w, v, /*l*/z, /*r*/l, /*z*/r, in, out, &addr);
+			// *** core ***
 
-			// NOTE: ((l => r) => z) => l, ((r => z) => l) => r, ((z => l) => r) => z
-		}
+			// core: for u = 0 to U
+			for(int u = 0; u < U; u++)
+			{
+				// NOTE: l, r, z
 
-		// core: for t = 0 to T do
-		for(int t = 0; t < T; t++)
-		{
-			// core: pass-core-light
-			op4s_sdl6_pass_fwd_postcore_light_s_ref(w, v, l, r, z, in, out, &addr);
+				// core: pass1-core-light
+				op4s_sdl6_pass_fwd_core_light_s_ref(w, v, /*l*/l, /*r*/r, /*z*/z, in, out, &addr);
 
-			// core: pass-core-full
-			op4s_sdl6_pass_fwd_postcore_full_s_ref(w, v, l, r, z, in, out, &addr);
-		}
+				// NOTE: z => l, l => r, r => z
 
-		// core: if odd then
-		if( is_odd(S) )
-		{
-			// core: pass-core-light
-			op4s_sdl6_pass_fwd_postcore_light_s_ref(w, v, l, r, z, in, out, &addr);
-		}
+				// core: pass1-core-full
+				op4s_sdl6_pass_fwd_core_full_s_ref(w, v, /*l*/r, /*r*/z, /*z*/l, in, out, &addr);
 
-		// *** epilog2 ***
+				// NOTE: (r => z) => l, (z => l) => r, (l => r) => z
 
-		if( is_odd(S) )
-		{
-			// epilog2: export(3)
-			op4s_sdl6_export_s_ref(l, &arr[2*steps], 3);
+				// core: pass2-core-light
+				op4s_sdl6_pass_fwd_core_light_s_ref(w, v, /*l*/z, /*r*/l, /*z*/r, in, out, &addr);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl6_pass_fwd_epilog_full_s_ref(w, v, l, r, z, in, out, &addr);
+				// NOTE: ((l => r) => z) => l, ((r => z) => l) => r, ((z => l) => r) => z
 
-			// epilog2: export(2)
-			op4s_sdl6_export_s_ref(l, &arr[2*steps], 2);
+				// core: pass2-core-full
+				op4s_sdl6_pass_fwd_core_full_s_ref(w, v, /*l*/l, /*r*/r, /*z*/z, in, out, &addr);
 
-			// epilog2: pass-epilog-light
-			op4s_sdl6_pass_fwd_epilog_light_s_ref(w, v, l, r, z, in, out, &addr);
+				// NOTE: z => l, l => r, r => z
 
-			// epilog2: export(1)
-			op4s_sdl6_export_s_ref(l, &arr[2*steps], 1);
+				// core: pass3-core-light
+				op4s_sdl6_pass_fwd_core_light_s_ref(w, v, /*l*/r, /*r*/z, /*z*/l, in, out, &addr);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl6_pass_fwd_epilog_full_s_ref(w, v, l, r, z, in, out, &addr);
+				// NOTE: (r => z) => l, (z => l) => r, (l => r) => z
 
-			// epilog2: export(0)
-			op4s_sdl6_export_s_ref(l, &arr[2*steps], 0);
-		}
-		else
-		{
-			// epilog2: export(3)
-			op4s_sdl6_export_s_ref(l, &arr[2*steps], 3);
+				// core: pass3-core-full
+				op4s_sdl6_pass_fwd_core_full_s_ref(w, v, /*l*/z, /*r*/l, /*z*/r, in, out, &addr);
 
-			// epilog2: pass-epilog-light
-			op4s_sdl6_pass_fwd_epilog_light_s_ref(w, v, l, r, z, in, out, &addr);
+				// NOTE: ((l => r) => z) => l, ((r => z) => l) => r, ((z => l) => r) => z
+			}
 
-			// epilog2: export(2)
-			op4s_sdl6_export_s_ref(l, &arr[2*steps], 2);
+			// core: for t = 0 to T do
+			for(int t = 0; t < T; t++)
+			{
+				// core: pass-core-light
+				op4s_sdl6_pass_fwd_postcore_light_s_ref(w, v, l, r, z, in, out, &addr);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl6_pass_fwd_epilog_full_s_ref(w, v, l, r, z, in, out, &addr);
+				// core: pass-core-full
+				op4s_sdl6_pass_fwd_postcore_full_s_ref(w, v, l, r, z, in, out, &addr);
+			}
 
-			// epilog2: export(1)
-			op4s_sdl6_export_s_ref(l, &arr[2*steps], 1);
+			// core: if odd then
+			if( is_odd(S) )
+			{
+				// core: pass-core-light
+				op4s_sdl6_pass_fwd_postcore_light_s_ref(w, v, l, r, z, in, out, &addr);
+			}
 
-			// epilog2: pass-epilog-flush
-			op4s_sdl6_pass_fwd_epilog_flush_s_ref(w, v, l, r, z, in, out, &addr);
+			// *** epilog2 ***
 
-			// epilog2: export(0)
-			op4s_sdl6_export_s_ref(l, &arr[2*steps], 0);
+			if( is_odd(S) )
+			{
+				// epilog2: export(3)
+				op4s_sdl6_export_s_ref(l, &base[2*steps], 3);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl6_pass_fwd_epilog_full_s_ref(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(2)
+				op4s_sdl6_export_s_ref(l, &base[2*steps], 2);
+
+				// epilog2: pass-epilog-light
+				op4s_sdl6_pass_fwd_epilog_light_s_ref(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(1)
+				op4s_sdl6_export_s_ref(l, &base[2*steps], 1);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl6_pass_fwd_epilog_full_s_ref(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(0)
+				op4s_sdl6_export_s_ref(l, &base[2*steps], 0);
+			}
+			else
+			{
+				// epilog2: export(3)
+				op4s_sdl6_export_s_ref(l, &base[2*steps], 3);
+
+				// epilog2: pass-epilog-light
+				op4s_sdl6_pass_fwd_epilog_light_s_ref(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(2)
+				op4s_sdl6_export_s_ref(l, &base[2*steps], 2);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl6_pass_fwd_epilog_full_s_ref(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(1)
+				op4s_sdl6_export_s_ref(l, &base[2*steps], 1);
+
+				// epilog2: pass-epilog-flush
+				op4s_sdl6_pass_fwd_epilog_flush_s_ref(w, v, l, r, z, in, out, &addr);
+
+				// epilog2: export(0)
+				op4s_sdl6_export_s_ref(l, &base[2*steps], 0);
+			}
 		}
 	}
 	else
@@ -5024,8 +5120,6 @@ void accel_lift_op4s_main_sdl2_ref_s(
 	// 6+ coeffs implies 3+ steps
 	assert( steps >= 3 );
 
-	assert( is_aligned_16(arr) );
-
 	const float w[4] = { delta, gamma, beta, alpha };
 	const float v[4] = { 1/zeta, zeta, 1/zeta, zeta };
 	float l[4];
@@ -5042,210 +5136,214 @@ void accel_lift_op4s_main_sdl2_ref_s(
 	{
 		// ****** inverse transform ******
 
-		// FIXME: support for several workers
-		assert( 1 == dwt_util_get_num_workers() );
-
-		// *** init ***
-
-		float *restrict addr = arr;
-
-		// *** prolog2 ***
-
-		// prolog2: import-preload
-		op4s_sdl2_preload_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(3)
-		op4s_sdl2_import_s_ref(l, 3, out);
-
-		// prolog2: pass-prolog-full
-		op4s_sdl2_pass_inv_prolog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(2)
-		op4s_sdl2_import_s_ref(l, 2, out);
-
-		// prolog2: pass-prolog-light
-		op4s_sdl2_pass_inv_prolog_light_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(1)
-		op4s_sdl2_import_s_ref(l, 1, out);
-
-		// prolog2: pass-prolog-full
-		op4s_sdl2_pass_inv_prolog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(0)
-		op4s_sdl2_import_s_ref(l, 0, out);
-
-		// *** core ***
-
-		// core: for t = 0 to T do
-		for(int t = 0; t < T; t++)
+		for(int wrk = 0; wrk < dwt_util_get_num_workers(); wrk++)
 		{
-			// core: pass-core-light
-			op4s_sdl2_pass_inv_core_light_s_ref(w, v, l, c, r, z, in, out, &addr);
+			// *** init ***
 
-			// core: pass-core-full
-			op4s_sdl2_pass_inv_core_full_s_ref(w, v, l, c, r, z, in, out, &addr);
-		}
+			float *addr = ASSUME_ALIGNED(calc_temp_offset2_s(arr, wrk, 0), 16);
+			assert( is_aligned_16(addr) );
+			float *base = addr;
 
-		// core: if odd then
-		if( is_odd(S) )
-		{
-			// core: pass-core-light
-			op4s_sdl2_pass_inv_core_light_s_ref(w, v, l, c, r, z, in, out, &addr);
-		}
+			// *** prolog2 ***
 
-		// *** epilog2 ***
+			// prolog2: import-preload
+			op4s_sdl2_preload_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
 
-		if( is_odd(S) )
-		{
-			// epilog2: export(3)
-			op4s_sdl2_export_s_ref(l, &arr[2*steps], 3);
+			// prolog2: import(3)
+			op4s_sdl2_import_s_ref(l, 3, out);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl2_pass_inv_epilog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
+			// prolog2: pass-prolog-full
+			op4s_sdl2_pass_inv_prolog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
 
-			// epilog2: export(2)
-			op4s_sdl2_export_s_ref(l, &arr[2*steps], 2);
+			// prolog2: import(2)
+			op4s_sdl2_import_s_ref(l, 2, out);
 
-			// epilog2: pass-epilog-light
-			op4s_sdl2_pass_inv_epilog_light_s_ref(w, v, l, c, r, z, in, out, &addr);
+			// prolog2: pass-prolog-light
+			op4s_sdl2_pass_inv_prolog_light_s_ref(w, v, l, c, r, z, in, out, &addr);
 
-			// epilog2: export(1)
-			op4s_sdl2_export_s_ref(l, &arr[2*steps], 1);
+			// prolog2: import(1)
+			op4s_sdl2_import_s_ref(l, 1, out);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl2_pass_inv_epilog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
+			// prolog2: pass-prolog-full
+			op4s_sdl2_pass_inv_prolog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
 
-			// epilog2: export(0)
-			op4s_sdl2_export_s_ref(l, &arr[2*steps], 0);
-		}
-		else
-		{
-			// epilog2: export(3)
-			op4s_sdl2_export_s_ref(l, &arr[2*steps], 3);
+			// prolog2: import(0)
+			op4s_sdl2_import_s_ref(l, 0, out);
 
-			// epilog2: pass-epilog-light
-			op4s_sdl2_pass_inv_epilog_light_s_ref(w, v, l, c, r, z, in, out, &addr);
+			// *** core ***
 
-			// epilog2: export(2)
-			op4s_sdl2_export_s_ref(l, &arr[2*steps], 2);
+			// core: for t = 0 to T do
+			for(int t = 0; t < T; t++)
+			{
+				// core: pass-core-light
+				op4s_sdl2_pass_inv_core_light_s_ref(w, v, l, c, r, z, in, out, &addr);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl2_pass_inv_epilog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
+				// core: pass-core-full
+				op4s_sdl2_pass_inv_core_full_s_ref(w, v, l, c, r, z, in, out, &addr);
+			}
 
-			// epilog2: export(1)
-			op4s_sdl2_export_s_ref(l, &arr[2*steps], 1);
+			// core: if odd then
+			if( is_odd(S) )
+			{
+				// core: pass-core-light
+				op4s_sdl2_pass_inv_core_light_s_ref(w, v, l, c, r, z, in, out, &addr);
+			}
 
-			// epilog2: pass-epilog-flush
-			op4s_sdl2_pass_inv_epilog_flush_s_ref(w, v, l, c, r, z, in, out, &addr);
+			// *** epilog2 ***
 
-			// epilog2: export(0)
-			op4s_sdl2_export_s_ref(l, &arr[2*steps], 0);
+			if( is_odd(S) )
+			{
+				// epilog2: export(3)
+				op4s_sdl2_export_s_ref(l, &base[2*steps], 3);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl2_pass_inv_epilog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(2)
+				op4s_sdl2_export_s_ref(l, &base[2*steps], 2);
+
+				// epilog2: pass-epilog-light
+				op4s_sdl2_pass_inv_epilog_light_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(1)
+				op4s_sdl2_export_s_ref(l, &base[2*steps], 1);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl2_pass_inv_epilog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(0)
+				op4s_sdl2_export_s_ref(l, &base[2*steps], 0);
+			}
+			else
+			{
+				// epilog2: export(3)
+				op4s_sdl2_export_s_ref(l, &base[2*steps], 3);
+
+				// epilog2: pass-epilog-light
+				op4s_sdl2_pass_inv_epilog_light_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(2)
+				op4s_sdl2_export_s_ref(l, &base[2*steps], 2);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl2_pass_inv_epilog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(1)
+				op4s_sdl2_export_s_ref(l, &base[2*steps], 1);
+
+				// epilog2: pass-epilog-flush
+				op4s_sdl2_pass_inv_epilog_flush_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(0)
+				op4s_sdl2_export_s_ref(l, &base[2*steps], 0);
+			}
 		}
 	}
 	else if ( scaling > 0 )
 	{
 		// ****** forward transform ******
 
-		// FIXME: support for several workers
-		assert( 1 == dwt_util_get_num_workers() );
-
-		// *** init ***
-
-		float *restrict addr = arr;
-
-		// *** prolog2 ***
-
-		// prolog2: import-preload
-		op4s_sdl2_preload_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(3)
-		op4s_sdl2_import_s_ref(l, 3, out);
-
-		// prolog2: pass-prolog-full
-		op4s_sdl2_pass_fwd_prolog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(2)
-		op4s_sdl2_import_s_ref(l, 2, out);
-
-		// prolog2: pass-prolog-light
-		op4s_sdl2_pass_fwd_prolog_light_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(1)
-		op4s_sdl2_import_s_ref(l, 1, out);
-
-		// prolog2: pass-prolog-full
-		op4s_sdl2_pass_fwd_prolog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(0)
-		op4s_sdl2_import_s_ref(l, 0, out);
-
-		// *** core ***
-
-		// core: for t = 0 to T do
-		for(int t = 0; t < T; t++)
+		for(int wrk = 0; wrk < dwt_util_get_num_workers(); wrk++)
 		{
-			// core: pass-core-light
-			op4s_sdl2_pass_fwd_core_light_s_ref(w, v, l, c, r, z, in, out, &addr);
+			// *** init ***
 
-			// core: pass-core-full
-			op4s_sdl2_pass_fwd_core_full_s_ref(w, v, l, c, r, z, in, out, &addr);
-		}
+			float *addr = ASSUME_ALIGNED(calc_temp_offset2_s(arr, wrk, 0), 16);
+			assert( is_aligned_16(addr) );
+			float *base = addr;
 
-		// core: if odd then
-		if( is_odd(S) )
-		{
-			// core: pass-core-light
-			op4s_sdl2_pass_fwd_core_light_s_ref(w, v, l, c, r, z, in, out, &addr);
-		}
+			// *** prolog2 ***
 
-		// *** epilog2 ***
+			// prolog2: import-preload
+			op4s_sdl2_preload_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
 
-		if( is_odd(S) )
-		{
-			// epilog2: export(3)
-			op4s_sdl2_export_s_ref(l, &arr[2*steps], 3);
+			// prolog2: import(3)
+			op4s_sdl2_import_s_ref(l, 3, out);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl2_pass_fwd_epilog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
+			// prolog2: pass-prolog-full
+			op4s_sdl2_pass_fwd_prolog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
 
-			// epilog2: export(2)
-			op4s_sdl2_export_s_ref(l, &arr[2*steps], 2);
+			// prolog2: import(2)
+			op4s_sdl2_import_s_ref(l, 2, out);
 
-			// epilog2: pass-epilog-light
-			op4s_sdl2_pass_fwd_epilog_light_s_ref(w, v, l, c, r, z, in, out, &addr);
+			// prolog2: pass-prolog-light
+			op4s_sdl2_pass_fwd_prolog_light_s_ref(w, v, l, c, r, z, in, out, &addr);
 
-			// epilog2: export(1)
-			op4s_sdl2_export_s_ref(l, &arr[2*steps], 1);
+			// prolog2: import(1)
+			op4s_sdl2_import_s_ref(l, 1, out);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl2_pass_fwd_epilog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
+			// prolog2: pass-prolog-full
+			op4s_sdl2_pass_fwd_prolog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
 
-			// epilog2: export(0)
-			op4s_sdl2_export_s_ref(l, &arr[2*steps], 0);
-		}
-		else
-		{
-			// epilog2: export(3)
-			op4s_sdl2_export_s_ref(l, &arr[2*steps], 3);
+			// prolog2: import(0)
+			op4s_sdl2_import_s_ref(l, 0, out);
 
-			// epilog2: pass-epilog-light
-			op4s_sdl2_pass_fwd_epilog_light_s_ref(w, v, l, c, r, z, in, out, &addr);
+			// *** core ***
 
-			// epilog2: export(2)
-			op4s_sdl2_export_s_ref(l, &arr[2*steps], 2);
+			// core: for t = 0 to T do
+			for(int t = 0; t < T; t++)
+			{
+				// core: pass-core-light
+				op4s_sdl2_pass_fwd_core_light_s_ref(w, v, l, c, r, z, in, out, &addr);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl2_pass_fwd_epilog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
+				// core: pass-core-full
+				op4s_sdl2_pass_fwd_core_full_s_ref(w, v, l, c, r, z, in, out, &addr);
+			}
 
-			// epilog2: export(1)
-			op4s_sdl2_export_s_ref(l, &arr[2*steps], 1);
+			// core: if odd then
+			if( is_odd(S) )
+			{
+				// core: pass-core-light
+				op4s_sdl2_pass_fwd_core_light_s_ref(w, v, l, c, r, z, in, out, &addr);
+			}
 
-			// epilog2: pass-epilog-flush
-			op4s_sdl2_pass_fwd_epilog_flush_s_ref(w, v, l, c, r, z, in, out, &addr);
+			// *** epilog2 ***
 
-			// epilog2: export(0)
-			op4s_sdl2_export_s_ref(l, &arr[2*steps], 0);
+			if( is_odd(S) )
+			{
+				// epilog2: export(3)
+				op4s_sdl2_export_s_ref(l, &base[2*steps], 3);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl2_pass_fwd_epilog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(2)
+				op4s_sdl2_export_s_ref(l, &base[2*steps], 2);
+
+				// epilog2: pass-epilog-light
+				op4s_sdl2_pass_fwd_epilog_light_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(1)
+				op4s_sdl2_export_s_ref(l, &base[2*steps], 1);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl2_pass_fwd_epilog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(0)
+				op4s_sdl2_export_s_ref(l, &base[2*steps], 0);
+			}
+			else
+			{
+				// epilog2: export(3)
+				op4s_sdl2_export_s_ref(l, &base[2*steps], 3);
+
+				// epilog2: pass-epilog-light
+				op4s_sdl2_pass_fwd_epilog_light_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(2)
+				op4s_sdl2_export_s_ref(l, &base[2*steps], 2);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl2_pass_fwd_epilog_full_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(1)
+				op4s_sdl2_export_s_ref(l, &base[2*steps], 1);
+
+				// epilog2: pass-epilog-flush
+				op4s_sdl2_pass_fwd_epilog_flush_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(0)
+				op4s_sdl2_export_s_ref(l, &base[2*steps], 0);
+			}
 		}
 	}
 	else
@@ -5272,8 +5370,6 @@ void accel_lift_op4s_main_sdl2_sse_s(
 	// 6+ coeffs implies 3+ steps
 	assert( steps >= 3 );
 
-	assert( is_aligned_16(arr) );
-
 	// FIXME: make global variables?
 	const __m128 w = { delta, gamma, beta, alpha };
 	const __m128 v = { 1/zeta, zeta, 1/zeta, zeta };
@@ -5291,210 +5387,214 @@ void accel_lift_op4s_main_sdl2_sse_s(
 	{
 		// ****** inverse transform ******
 
-		// FIXME: support for several workers
-		assert( 1 == dwt_util_get_num_workers() );
-
-		// *** init ***
-
-		float *restrict addr = arr;
-
-		// *** prolog2 ***
-
-		// prolog2: import-preload
-		op4s_sdl2_preload_prolog_s_sse(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(3)
-		op4s_sdl2_import_s_sse(l, 3, out);
-
-		// prolog2: pass-prolog-full
-		op4s_sdl2_pass_inv_prolog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(2)
-		op4s_sdl2_import_s_sse(l, 2, out);
-
-		// prolog2: pass-prolog-light
-		op4s_sdl2_pass_inv_prolog_light_s_sse(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(1)
-		op4s_sdl2_import_s_sse(l, 1, out);
-
-		// prolog2: pass-prolog-full
-		op4s_sdl2_pass_inv_prolog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(0)
-		op4s_sdl2_import_s_sse(l, 0, out);
-
-		// *** core ***
-
-		// core: for t = 0 to T do
-		for(int t = 0; t < T; t++)
+		for(int wrk = 0; wrk < dwt_util_get_num_workers(); wrk++)
 		{
-			// core: pass-core-light
-			op4s_sdl2_pass_inv_core_light_s_sse(w, v, l, c, r, z, in, out, &addr);
+			// *** init ***
 
-			// core: pass-core-full
-			op4s_sdl2_pass_inv_core_full_s_sse(w, v, l, c, r, z, in, out, &addr);
-		}
+			float *addr = ASSUME_ALIGNED(calc_temp_offset2_s(arr, wrk, 0), 16);
+			assert( is_aligned_16(addr) );
+			float *base = addr;
 
-		// core: if odd then
-		if( is_odd(S) )
-		{
-			// core: pass-core-light
-			op4s_sdl2_pass_inv_core_light_s_sse(w, v, l, c, r, z, in, out, &addr);
-		}
+			// *** prolog2 ***
 
-		// *** epilog2 ***
+			// prolog2: import-preload
+			op4s_sdl2_preload_prolog_s_sse(w, v, l, c, r, z, in, out, &addr);
 
-		if( is_odd(S) )
-		{
-			// epilog2: export(3)
-			op4s_sdl2_export_s_sse(l, &arr[2*steps], 3);
+			// prolog2: import(3)
+			op4s_sdl2_import_s_sse(l, 3, out);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl2_pass_inv_epilog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
+			// prolog2: pass-prolog-full
+			op4s_sdl2_pass_inv_prolog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
 
-			// epilog2: export(2)
-			op4s_sdl2_export_s_sse(l, &arr[2*steps], 2);
+			// prolog2: import(2)
+			op4s_sdl2_import_s_sse(l, 2, out);
 
-			// epilog2: pass-epilog-light
-			op4s_sdl2_pass_inv_epilog_light_s_sse(w, v, l, c, r, z, in, out, &addr);
+			// prolog2: pass-prolog-light
+			op4s_sdl2_pass_inv_prolog_light_s_sse(w, v, l, c, r, z, in, out, &addr);
 
-			// epilog2: export(1)
-			op4s_sdl2_export_s_sse(l, &arr[2*steps], 1);
+			// prolog2: import(1)
+			op4s_sdl2_import_s_sse(l, 1, out);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl2_pass_inv_epilog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
+			// prolog2: pass-prolog-full
+			op4s_sdl2_pass_inv_prolog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
 
-			// epilog2: export(0)
-			op4s_sdl2_export_s_sse(l, &arr[2*steps], 0);
-		}
-		else
-		{
-			// epilog2: export(3)
-			op4s_sdl2_export_s_sse(l, &arr[2*steps], 3);
+			// prolog2: import(0)
+			op4s_sdl2_import_s_sse(l, 0, out);
 
-			// epilog2: pass-epilog-light
-			op4s_sdl2_pass_inv_epilog_light_s_sse(w, v, l, c, r, z, in, out, &addr);
+			// *** core ***
 
-			// epilog2: export(2)
-			op4s_sdl2_export_s_sse(l, &arr[2*steps], 2);
+			// core: for t = 0 to T do
+			for(int t = 0; t < T; t++)
+			{
+				// core: pass-core-light
+				op4s_sdl2_pass_inv_core_light_s_sse(w, v, l, c, r, z, in, out, &addr);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl2_pass_inv_epilog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
+				// core: pass-core-full
+				op4s_sdl2_pass_inv_core_full_s_sse(w, v, l, c, r, z, in, out, &addr);
+			}
 
-			// epilog2: export(1)
-			op4s_sdl2_export_s_sse(l, &arr[2*steps], 1);
+			// core: if odd then
+			if( is_odd(S) )
+			{
+				// core: pass-core-light
+				op4s_sdl2_pass_inv_core_light_s_sse(w, v, l, c, r, z, in, out, &addr);
+			}
 
-			// epilog2: pass-epilog-flush
-			op4s_sdl2_pass_inv_epilog_flush_s_sse(w, v, l, c, r, z, in, out, &addr);
+			// *** epilog2 ***
 
-			// epilog2: export(0)
-			op4s_sdl2_export_s_sse(l, &arr[2*steps], 0);
+			if( is_odd(S) )
+			{
+				// epilog2: export(3)
+				op4s_sdl2_export_s_sse(l, &base[2*steps], 3);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl2_pass_inv_epilog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(2)
+				op4s_sdl2_export_s_sse(l, &base[2*steps], 2);
+
+				// epilog2: pass-epilog-light
+				op4s_sdl2_pass_inv_epilog_light_s_sse(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(1)
+				op4s_sdl2_export_s_sse(l, &base[2*steps], 1);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl2_pass_inv_epilog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(0)
+				op4s_sdl2_export_s_sse(l, &base[2*steps], 0);
+			}
+			else
+			{
+				// epilog2: export(3)
+				op4s_sdl2_export_s_sse(l, &base[2*steps], 3);
+
+				// epilog2: pass-epilog-light
+				op4s_sdl2_pass_inv_epilog_light_s_sse(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(2)
+				op4s_sdl2_export_s_sse(l, &base[2*steps], 2);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl2_pass_inv_epilog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(1)
+				op4s_sdl2_export_s_sse(l, &base[2*steps], 1);
+
+				// epilog2: pass-epilog-flush
+				op4s_sdl2_pass_inv_epilog_flush_s_sse(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(0)
+				op4s_sdl2_export_s_sse(l, &base[2*steps], 0);
+			}
 		}
 	}
 	else if ( scaling > 0 )
 	{
 		// ****** forward transform ******
 
-		// FIXME: support for several workers
-		assert( 1 == dwt_util_get_num_workers() );
-
-		// *** init ***
-
-		float *restrict addr = arr;
-
-		// *** prolog2 ***
-
-		// prolog2: import-preload
-		op4s_sdl2_preload_prolog_s_sse(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(3)
-		op4s_sdl2_import_s_sse(l, 3, out);
-
-		// prolog2: pass-prolog-full
-		op4s_sdl2_pass_fwd_prolog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(2)
-		op4s_sdl2_import_s_sse(l, 2, out);
-
-		// prolog2: pass-prolog-light
-		op4s_sdl2_pass_fwd_prolog_light_s_sse(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(1)
-		op4s_sdl2_import_s_sse(l, 1, out);
-
-		// prolog2: pass-prolog-full
-		op4s_sdl2_pass_fwd_prolog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(0)
-		op4s_sdl2_import_s_sse(l, 0, out);
-
-		// *** core ***
-
-		// core: for t = 0 to T do
-		for(int t = 0; t < T; t++)
+		for(int wrk = 0; wrk < dwt_util_get_num_workers(); wrk++)
 		{
-			// core: pass-core-light
-			op4s_sdl2_pass_fwd_core_light_s_sse(w, v, l, c, r, z, in, out, &addr);
+			// *** init ***
 
-			// core: pass-core-full
-			op4s_sdl2_pass_fwd_core_full_s_sse(w, v, l, c, r, z, in, out, &addr);
-		}
+			float *addr = ASSUME_ALIGNED(calc_temp_offset2_s(arr, wrk, 0), 16);
+			assert( is_aligned_16(addr) );
+			float *base = addr;
 
-		// core: if odd then
-		if( is_odd(S) )
-		{
-			// core: pass-core-light
-			op4s_sdl2_pass_fwd_core_light_s_sse(w, v, l, c, r, z, in, out, &addr);
-		}
+			// *** prolog2 ***
 
-		// *** epilog2 ***
+			// prolog2: import-preload
+			op4s_sdl2_preload_prolog_s_sse(w, v, l, c, r, z, in, out, &addr);
 
-		if( is_odd(S) )
-		{
-			// epilog2: export(3)
-			op4s_sdl2_export_s_sse(l, &arr[2*steps], 3);
+			// prolog2: import(3)
+			op4s_sdl2_import_s_sse(l, 3, out);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl2_pass_fwd_epilog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
+			// prolog2: pass-prolog-full
+			op4s_sdl2_pass_fwd_prolog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
 
-			// epilog2: export(2)
-			op4s_sdl2_export_s_sse(l, &arr[2*steps], 2);
+			// prolog2: import(2)
+			op4s_sdl2_import_s_sse(l, 2, out);
 
-			// epilog2: pass-epilog-light
-			op4s_sdl2_pass_fwd_epilog_light_s_sse(w, v, l, c, r, z, in, out, &addr);
+			// prolog2: pass-prolog-light
+			op4s_sdl2_pass_fwd_prolog_light_s_sse(w, v, l, c, r, z, in, out, &addr);
 
-			// epilog2: export(1)
-			op4s_sdl2_export_s_sse(l, &arr[2*steps], 1);
+			// prolog2: import(1)
+			op4s_sdl2_import_s_sse(l, 1, out);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl2_pass_fwd_epilog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
+			// prolog2: pass-prolog-full
+			op4s_sdl2_pass_fwd_prolog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
 
-			// epilog2: export(0)
-			op4s_sdl2_export_s_sse(l, &arr[2*steps], 0);
-		}
-		else
-		{
-			// epilog2: export(3)
-			op4s_sdl2_export_s_sse(l, &arr[2*steps], 3);
+			// prolog2: import(0)
+			op4s_sdl2_import_s_sse(l, 0, out);
 
-			// epilog2: pass-epilog-light
-			op4s_sdl2_pass_fwd_epilog_light_s_sse(w, v, l, c, r, z, in, out, &addr);
+			// *** core ***
 
-			// epilog2: export(2)
-			op4s_sdl2_export_s_sse(l, &arr[2*steps], 2);
+			// core: for t = 0 to T do
+			for(int t = 0; t < T; t++)
+			{
+				// core: pass-core-light
+				op4s_sdl2_pass_fwd_core_light_s_sse(w, v, l, c, r, z, in, out, &addr);
 
-			// epilog2: pass-epilog-full
-			op4s_sdl2_pass_fwd_epilog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
+				// core: pass-core-full
+				op4s_sdl2_pass_fwd_core_full_s_sse(w, v, l, c, r, z, in, out, &addr);
+			}
 
-			// epilog2: export(1)
-			op4s_sdl2_export_s_sse(l, &arr[2*steps], 1);
+			// core: if odd then
+			if( is_odd(S) )
+			{
+				// core: pass-core-light
+				op4s_sdl2_pass_fwd_core_light_s_sse(w, v, l, c, r, z, in, out, &addr);
+			}
 
-			// epilog2: pass-epilog-flush
-			op4s_sdl2_pass_fwd_epilog_flush_s_sse(w, v, l, c, r, z, in, out, &addr);
+			// *** epilog2 ***
 
-			// epilog2: export(0)
-			op4s_sdl2_export_s_sse(l, &arr[2*steps], 0);
+			if( is_odd(S) )
+			{
+				// epilog2: export(3)
+				op4s_sdl2_export_s_sse(l, &base[2*steps], 3);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl2_pass_fwd_epilog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(2)
+				op4s_sdl2_export_s_sse(l, &base[2*steps], 2);
+
+				// epilog2: pass-epilog-light
+				op4s_sdl2_pass_fwd_epilog_light_s_sse(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(1)
+				op4s_sdl2_export_s_sse(l, &base[2*steps], 1);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl2_pass_fwd_epilog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(0)
+				op4s_sdl2_export_s_sse(l, &base[2*steps], 0);
+			}
+			else
+			{
+				// epilog2: export(3)
+				op4s_sdl2_export_s_sse(l, &base[2*steps], 3);
+
+				// epilog2: pass-epilog-light
+				op4s_sdl2_pass_fwd_epilog_light_s_sse(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(2)
+				op4s_sdl2_export_s_sse(l, &base[2*steps], 2);
+
+				// epilog2: pass-epilog-full
+				op4s_sdl2_pass_fwd_epilog_full_s_sse(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(1)
+				op4s_sdl2_export_s_sse(l, &base[2*steps], 1);
+
+				// epilog2: pass-epilog-flush
+				op4s_sdl2_pass_fwd_epilog_flush_s_sse(w, v, l, c, r, z, in, out, &addr);
+
+				// epilog2: export(0)
+				op4s_sdl2_export_s_sse(l, &base[2*steps], 0);
+			}
 		}
 	}
 	else
@@ -5526,8 +5626,6 @@ void accel_lift_op4s_main_sdl_ref_s(
 	// 6+ coeffs implies 3+ steps
 	assert( steps >= 3 );
 
-	assert( is_aligned_16(arr) );
-
 	const float w[4] = { delta, gamma, beta, alpha };
 	const float v[4] = { 1/zeta, zeta, 1/zeta, zeta };
 	float l[4];
@@ -5543,136 +5641,138 @@ void accel_lift_op4s_main_sdl_ref_s(
 	{
 		// ****** inverse transform ******
 
-		// FIXME: support for several workers
-		assert( 1 == dwt_util_get_num_workers() );
-
-		// *** init ***
-
-		// this pointer is needed because of use of arr[] in import and export functions
-		float *addr = ASSUME_ALIGNED(arr, 16);
-
-		// *** prolog2 ***
-
-		// prolog2: import(3)
-		op4s_sdl_import_s_ref(l, arr, 3);
-
-		// prolog2: pass-prolog
-		op4s_sdl_pass_inv_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
-	
-		// prolog2: import(2)
-		op4s_sdl_import_s_ref(l, arr, 2);
-
-		// prolog2: pass-prolog
-		op4s_sdl_pass_inv_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(1)
-		op4s_sdl_import_s_ref(l, arr, 1);
-
-		// prolog2: pass-prolog
-		op4s_sdl_pass_inv_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(0)
-		op4s_sdl_import_s_ref(l, arr, 0);
-
-		// *** core ***
-
-		// core: for s = 0 to S do
-		for(int s = 0; s < S; s++)
+		for(int wrk = 0; wrk < dwt_util_get_num_workers(); wrk++)
 		{
-			// core: pass-core
-			op4s_sdl_pass_inv_core_s_ref(w, v, l, c, r, z, in, out, &addr);
+			// *** init ***
 
+			float *addr = ASSUME_ALIGNED(calc_temp_offset2_s(arr, wrk, 0), 16);
+			float *base = addr+0;
+			assert( is_aligned_16(addr) );
+
+			// *** prolog2 ***
+
+			// prolog2: import(3)
+			op4s_sdl_import_s_ref(l, base, 3);
+
+			// prolog2: pass-prolog
+			op4s_sdl_pass_inv_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
+		
+			// prolog2: import(2)
+			op4s_sdl_import_s_ref(l, base, 2);
+
+			// prolog2: pass-prolog
+			op4s_sdl_pass_inv_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+			// prolog2: import(1)
+			op4s_sdl_import_s_ref(l, base, 1);
+
+			// prolog2: pass-prolog
+			op4s_sdl_pass_inv_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+			// prolog2: import(0)
+			op4s_sdl_import_s_ref(l, base, 0);
+
+			// *** core ***
+
+			// core: for s = 0 to S do
+			for(int s = 0; s < S; s++)
+			{
+				// core: pass-core
+				op4s_sdl_pass_inv_core_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+			}
+
+			// *** epilog2 ***
+
+			// epilog2: export(3)
+			op4s_sdl_export_s_ref(l, &base[2*steps], 3);
+
+			// epilog2: pass-epilog
+			op4s_sdl_pass_inv_epilog_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+			// epilog2: export(2)
+			op4s_sdl_export_s_ref(l, &base[2*steps], 2);
+
+			// epilog2: pass-epilog
+			op4s_sdl_pass_inv_epilog_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+			// epilog2: export(1)
+			op4s_sdl_export_s_ref(l, &base[2*steps], 1);
+
+			// epilog2: pass-epilog
+			op4s_sdl_pass_inv_epilog_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+			// epilog2: export(0)
+			op4s_sdl_export_s_ref(l, &base[2*steps], 0);
 		}
-
-		// *** epilog2 ***
-
-		// epilog2: export(3)
-		op4s_sdl_export_s_ref(l, &arr[2*steps], 3);
-
-		// epilog2: pass-epilog
-		op4s_sdl_pass_inv_epilog_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// epilog2: export(2)
-		op4s_sdl_export_s_ref(l, &arr[2*steps], 2);
-
-		// epilog2: pass-epilog
-		op4s_sdl_pass_inv_epilog_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// epilog2: export(1)
-		op4s_sdl_export_s_ref(l, &arr[2*steps], 1);
-
-		// epilog2: pass-epilog
-		op4s_sdl_pass_inv_epilog_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// epilog2: export(0)
-		op4s_sdl_export_s_ref(l, &arr[2*steps], 0);
 	}
 	else if ( scaling > 0 )
 	{
 		// ****** forward transform ******
 
-		// FIXME: support for several workers
-		assert( 1 == dwt_util_get_num_workers() );
-
-		// *** init ***
-
-		// this pointer is needed because of use of arr[] in import and export functions
-		float *addr = ASSUME_ALIGNED(arr, 16);
-
-		// *** prolog2 ***
-
-		// prolog2: import(3)
-		op4s_sdl_import_s_ref(l, arr, 3);
-
-		// prolog2: pass-prolog
-		op4s_sdl_pass_fwd_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
-	
-		// prolog2: import(2)
-		op4s_sdl_import_s_ref(l, arr, 2);
-
-		// prolog2: pass-prolog
-		op4s_sdl_pass_fwd_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(1)
-		op4s_sdl_import_s_ref(l, arr, 1);
-
-		// prolog2: pass-prolog
-		op4s_sdl_pass_fwd_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// prolog2: import(0)
-		op4s_sdl_import_s_ref(l, arr, 0);
-
-		// *** core ***
-
-		// core: for s = 0 to S do
-		for(int s = 0; s < S; s++)
+		for(int wrk = 0; wrk < dwt_util_get_num_workers(); wrk++)
 		{
-			// core: pass-core
-			op4s_sdl_pass_fwd_core_s_ref(w, v, l, c, r, z, in, out, &addr);
+			// *** init ***
+
+			float *addr = ASSUME_ALIGNED(calc_temp_offset2_s(arr, wrk, 0), 16);
+			float *base = addr+0;
+			assert( is_aligned_16(addr) );
+
+			// *** prolog2 ***
+
+			// prolog2: import(3)
+			op4s_sdl_import_s_ref(l, base, 3);
+
+			// prolog2: pass-prolog
+			op4s_sdl_pass_fwd_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
+		
+			// prolog2: import(2)
+			op4s_sdl_import_s_ref(l, base, 2);
+
+			// prolog2: pass-prolog
+			op4s_sdl_pass_fwd_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+			// prolog2: import(1)
+			op4s_sdl_import_s_ref(l, base, 1);
+
+			// prolog2: pass-prolog
+			op4s_sdl_pass_fwd_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+			// prolog2: import(0)
+			op4s_sdl_import_s_ref(l, base, 0);
+
+			// *** core ***
+
+			// core: for s = 0 to S do
+			for(int s = 0; s < S; s++)
+			{
+				// core: pass-core
+				op4s_sdl_pass_fwd_core_s_ref(w, v, l, c, r, z, in, out, &addr);
+			}
+
+			// *** epilog2 ***
+
+			// epilog2: export(3)
+			op4s_sdl_export_s_ref(l, &base[2*steps], 3);
+
+			// epilog2: pass-epilog
+			op4s_sdl_pass_fwd_epilog_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+			// epilog2: export(2)
+			op4s_sdl_export_s_ref(l, &base[2*steps], 2);
+
+			// epilog2: pass-epilog
+			op4s_sdl_pass_fwd_epilog_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+			// epilog2: export(1)
+			op4s_sdl_export_s_ref(l, &base[2*steps], 1);
+
+			// epilog2: pass-epilog
+			op4s_sdl_pass_fwd_epilog_s_ref(w, v, l, c, r, z, in, out, &addr);
+
+			// epilog2: export(0)
+			op4s_sdl_export_s_ref(l, &base[2*steps], 0);
 		}
-
-		// *** epilog2 ***
-
-		// epilog2: export(3)
-		op4s_sdl_export_s_ref(l, &arr[2*steps], 3);
-
-		// epilog2: pass-epilog
-		op4s_sdl_pass_fwd_epilog_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// epilog2: export(2)
-		op4s_sdl_export_s_ref(l, &arr[2*steps], 2);
-
-		// epilog2: pass-epilog
-		op4s_sdl_pass_fwd_epilog_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// epilog2: export(1)
-		op4s_sdl_export_s_ref(l, &arr[2*steps], 1);
-
-		// epilog2: pass-epilog
-		op4s_sdl_pass_fwd_epilog_s_ref(w, v, l, c, r, z, in, out, &addr);
-
-		// epilog2: export(0)
-		op4s_sdl_export_s_ref(l, &arr[2*steps], 0);
 	}
 	else
 	{
@@ -5714,7 +5814,7 @@ void accel_lift_op4s_main_dl_nosse_s(
 	{
 		for(int w = 0; w < dwt_util_get_num_workers(); w++)
 		{
-			float *arr_local = calc_temp_offset_s(arr, w);
+			float *arr_local = calc_temp_offset2_s(arr, w, 0);
 
 			// constants
 			const float w[4] = { delta, gamma, beta, alpha };
@@ -5788,7 +5888,7 @@ void accel_lift_op4s_main_dl_nosse_s(
 	{
 		for(int w = 0; w < dwt_util_get_num_workers(); w++)
 		{
-			float *arr_local = calc_temp_offset_s(arr, w);
+			float *arr_local = calc_temp_offset2_s(arr, w, 0);
 
 			// constants
 			const float w[4] = { delta, gamma, beta, alpha };
@@ -5886,7 +5986,7 @@ void accel_lift_op4s_main_dl_s(
 	{
 		for(int w = 0; w < dwt_util_get_num_workers(); w++)
 		{
-			float *arr_local = calc_temp_offset_s(arr, w);
+			float *arr_local = calc_temp_offset2_s(arr, w, 0);
 
 			// constants
 			const float w[4] = { delta, gamma, beta, alpha };
@@ -5960,7 +6060,7 @@ void accel_lift_op4s_main_dl_s(
 	{
 		for(int w = 0; w < dwt_util_get_num_workers(); w++)
 		{
-			float *arr_local = calc_temp_offset_s(arr, w);
+			float *arr_local = calc_temp_offset2_s(arr, w, 0);
 
 			// constants
 			const float w[4] = { delta, gamma, beta, alpha };
@@ -6058,7 +6158,7 @@ void accel_lift_op4s_main_dl4line_s(
 	{
 		for(int w = 0; w < dwt_util_get_num_workers(); w++)
 		{
-			float *arr_local = calc_temp_offset_s(arr, w);
+			float *arr_local = calc_temp_offset2_s(arr, w, 0);
 
 			// constants
 			const float w[4/*LIFT_STEPS*/] = { delta, gamma, beta, alpha };
@@ -6283,7 +6383,7 @@ void accel_lift_op4s_main_dl4line_s(
 	{
 		for(int w = 0; w < dwt_util_get_num_workers(); w++)
 		{
-			float *arr_local = calc_temp_offset_s(arr, w);
+			float *arr_local = calc_temp_offset2_s(arr, w, 0);
 
 			// constants
 			const float w[4/*LIFT_STEPS*/] = { delta, gamma, beta, alpha };
@@ -6537,7 +6637,7 @@ void accel_lift_op4s_main_dl4line_sse_s(
 	{
 		for(int w = 0; w < dwt_util_get_num_workers(); w++)
 		{
-			float *arr_local = ASSUME_ALIGNED(calc_temp_offset_s(arr, w), 16);
+			float *arr_local = ASSUME_ALIGNED(calc_temp_offset2_s(arr, w, 0), 16);
 
 			// intermediate results; force into registers
 			__m128 l0, l1, l2, l3;
@@ -6788,7 +6888,7 @@ void accel_lift_op4s_main_dl4line_sse_s(
 	{
 		for(int w = 0; w < dwt_util_get_num_workers(); w++)
 		{
-			float *arr_local = ASSUME_ALIGNED(calc_temp_offset_s(arr, w), 16);
+			float *arr_local = ASSUME_ALIGNED(calc_temp_offset2_s(arr, w, 0), 16);
 
 			// intermediate results, force into registers
 			__m128 l0, l1, l2, l3;
@@ -7080,7 +7180,7 @@ void accel_lift_op4s_main_dl4_s(
 		for(int worker = 0; worker < dwt_util_get_num_workers(); worker++)
 		{
 			// init
-			addr[worker] = calc_temp_offset_s(arr, worker);
+			addr[worker] = calc_temp_offset2_s(arr, worker, 0);
 
 			// import
 			l[worker][0] = addr[worker][0];
@@ -7164,7 +7264,7 @@ void accel_lift_op4s_main_dl4_s(
 		for(int worker = 0; worker < dwt_util_get_num_workers(); worker++)
 		{
 			// init
-			addr[worker] = calc_temp_offset_s(arr, worker);
+			addr[worker] = calc_temp_offset2_s(arr, worker, 0);
 
 			// import
 			l[worker][0] = addr[worker][0];
@@ -7456,7 +7556,7 @@ void accel_lift_op4s_main_dl4_sse_s(
 		// init
 		for(int worker = 0; worker < 4; worker++)
 		{
-			arr_local[worker] = calc_temp_offset_s(arr, worker);
+			arr_local[worker] = calc_temp_offset2_s(arr, worker, 0);
 		}
 
 		// buffer
@@ -7579,7 +7679,7 @@ void accel_lift_op4s_main_dl4_sse_s(
 		// init
 		for(int worker = 0; worker < 4; worker++)
 		{
-			arr_local[worker] = calc_temp_offset_s(arr, worker);
+			arr_local[worker] = calc_temp_offset2_s(arr, worker, 0);
 		}
 
 		// buffer
@@ -7732,14 +7832,13 @@ void accel_lift_op4s_main_pb_s(
 
 	const int size = 2*steps + 4;
 
-	assert( is_aligned_8(addr) );
 	assert( is_even(size) );
 
 	for(int w = 0; w < get_active_workers(); w++)
 	{
 		// FIXME(ASVP): channel w according to worker ID; but each worker has independent DMA channels, thus this is not necessary
 		const uint8_t ch = w;
-		float *addr_local = calc_temp_offset_s(addr, w);
+		float *addr_local = calc_temp_offset2_s(addr, w, 0);
 		
 		assert( is_aligned_8(addr_local) );
 
@@ -7770,13 +7869,12 @@ void accel_lift_op4s_main_pb_s(
 		WAL_CHECK( wal_pb2mb(worker[w], NULL) );
 	}
 
-	assert( is_aligned_8(addr) );
 	assert( is_even(size) );
 
 	for(int w = 0; w < get_active_workers(); w++)
 	{
 		const uint8_t ch = w;
-		float *addr_local = calc_temp_offset_s(addr, w);
+		float *addr_local = calc_temp_offset2_s(addr, w, 0);
 
 		assert( is_aligned_8(addr_local) );
 
@@ -7792,7 +7890,7 @@ void accel_lift_op4s_main_pb_s(
 
 	for(int w = 0; w < get_active_workers(); w++)
 	{
-		float *addr_local = calc_temp_offset_s(addr, w);
+		float *addr_local = calc_temp_offset2_s(addr, w, 0);
 
 		flush_cache_s(addr_local-1, size); // HACK(ASVP): why -1?
 	}
@@ -7824,7 +7922,7 @@ void accel_lift_op4s_prolog_s(
 
 	for(int w = 0; w < dwt_util_get_num_workers(); w++)
 	{
-		float *arr_local = calc_temp_offset_s(arr, w);
+		float *arr_local = calc_temp_offset2_s(arr, w, off);
 		
 		if(off)
 		{
@@ -7900,7 +7998,7 @@ void accel_lift_op4s_epilog_s(
 
 	for(int w = 0; w < dwt_util_get_num_workers(); w++)
 	{
-		float *arr_local = calc_temp_offset_s(arr, w);
+		float *arr_local = calc_temp_offset2_s(arr, w, off);
 
 		if( is_even(N-off) )
 		{
@@ -7988,7 +8086,7 @@ void accel_lift_op4s_short_s(
 
 	for(int w = 0; w < dwt_util_get_num_workers(); w++)
 	{
-		float *arr_local = calc_temp_offset_s(arr, w);
+		float *arr_local = calc_temp_offset2_s(arr, w, off);
 
 		if(off)
 		{
@@ -8211,7 +8309,6 @@ void accel_lift_op4s_s(
 		}
 		else if(3 == get_accel_type())
 		{
-			off = 0;
 			accel_lift_op4s_main_pb_s(arr+off, (to_even(len-off)-4)/2, alpha, beta, gamma, delta, zeta, scaling);
 		}
 		else if(4 == get_accel_type())
@@ -8351,6 +8448,8 @@ void dwt_cdf97_f_ex_stride_s(
 {
 	assert( N >= 0 && NULL != src && NULL != dst_l && NULL != dst_h && NULL != tmp && 0 != stride );
 
+	const int offset = 1;
+
 	// fix for small N
 	if(N < 2)
 	{
@@ -8362,7 +8461,7 @@ void dwt_cdf97_f_ex_stride_s(
 	// copy src into tmp
 	for(int w = 0; w < dwt_util_get_num_workers(); w++)
 	{
-		float *tmp_local = calc_temp_offset_s(tmp, w);
+		float *tmp_local = calc_temp_offset2_s(tmp, w, offset);
 		const float *src_local = calc_data_offset_const_s(src, w);
 
 #ifndef DISABLE_MEMCPY
@@ -8375,12 +8474,12 @@ void dwt_cdf97_f_ex_stride_s(
 #endif
 	}
 
-	accel_lift_op4s_s(tmp, 1, N, -dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1);
+	accel_lift_op4s_s(tmp, offset, N, -dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1);
 
 	// copy tmp into dst
 	for(int w = 0; w < dwt_util_get_num_workers(); w++)
 	{
-		float *tmp_local = calc_temp_offset_s(tmp, w);
+		float *tmp_local = calc_temp_offset2_s(tmp, w, offset);
 		float *dst_l_local = calc_data_offset_s(dst_l, w);
 		float *dst_h_local = calc_data_offset_s(dst_h, w);
 
@@ -8736,6 +8835,8 @@ void dwt_cdf97_i_ex_stride_s(
 {
 	assert( N >= 0 && NULL != src_l && NULL != src_h && NULL != dst && NULL != tmp && 0 != stride );
 
+	const int offset = 0;
+
 	// fix for small N
 	if(N < 2)
 	{
@@ -8747,7 +8848,7 @@ void dwt_cdf97_i_ex_stride_s(
 	// copy src into tmp
 	for(int w = 0; w < dwt_util_get_num_workers(); w++)
 	{
-		float *tmp_local = calc_temp_offset_s(tmp, w);
+		float *tmp_local = calc_temp_offset2_s(tmp, w, 0);
 		const float *src_l_local = calc_data_offset_const_s(src_l, w);
 		const float *src_h_local = calc_data_offset_const_s(src_h, w);
 
@@ -8755,12 +8856,12 @@ void dwt_cdf97_i_ex_stride_s(
 		dwt_util_memcpy_stride_s(tmp_local+1, 2*sizeof(float), src_h_local, stride, floor_div2(N));
 	}
 
-	accel_lift_op4s_s(tmp, 0, N, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1);
+	accel_lift_op4s_s(tmp, offset, N, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1);
 
 	// copy tmp into dst
 	for(int w = 0; w < dwt_util_get_num_workers(); w++)
 	{
-		float *tmp_local = calc_temp_offset_s(tmp, w);
+		float *tmp_local = calc_temp_offset2_s(tmp, w, 0);
 		float *dst_local = calc_data_offset_s(dst, w);
 
 		dwt_util_memcpy_stride_s(dst_local, stride, tmp_local, sizeof(float), N);
@@ -9506,7 +9607,8 @@ void dwt_cdf97_2f_s2(
 #endif
 
 	float **temp = alloc_temp_s(threads,
-		calc_and_set_temp_size(size_o_big_max));
+		calc_and_set_temp_size(size_o_big_max)
+	);
 
 	int j = 0;
 
@@ -9648,6 +9750,7 @@ void dwt_cdf97_2f_s(
 	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
 	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
 
+	const int offset = 1;
 #ifdef microblaze
 	#define TEMP_OFFSET 1
 #else /* AMD64 or ARM */
@@ -9655,7 +9758,8 @@ void dwt_cdf97_2f_s(
 #endif
 
 	float **temp = alloc_temp_s(threads,
-		calc_and_set_temp_size(size_o_big_max));
+		calc_and_set_temp_size_s(size_o_big_max, offset)
+	);
 
 	int j = 0;
 
@@ -9701,7 +9805,7 @@ void dwt_cdf97_2f_s(
 				addr2_s(ptr,y,0,stride_x,stride_y),
 				addr2_s(ptr,y,0,stride_x,stride_y),
 				addr2_s(ptr,y,size_o_dst_x,stride_x,stride_y),
-				temp[omp_get_thread_num()] + TEMP_OFFSET, // HACK: +1
+				temp[omp_get_thread_num()] /*+ TEMP_OFFSET*/, // HACK: +1
 				size_i_src_x,
 				stride_y);
 		}
@@ -9712,7 +9816,7 @@ void dwt_cdf97_2f_s(
 				addr2_s(ptr,y,0,stride_x,stride_y),
 				addr2_s(ptr,y,0,stride_x,stride_y),
 				addr2_s(ptr,y,size_o_dst_x,stride_x,stride_y),
-				temp[omp_get_thread_num()] + TEMP_OFFSET, // HACK: +1
+				temp[omp_get_thread_num()] /*+ TEMP_OFFSET*/, // HACK: +1
 				size_i_src_x,
 				stride_y);
 		}
@@ -9731,7 +9835,7 @@ void dwt_cdf97_2f_s(
 				addr2_s(ptr,0,x,stride_x,stride_y),
 				addr2_s(ptr,0,x,stride_x,stride_y),
 				addr2_s(ptr,size_o_dst_y,x,stride_x,stride_y),
-				temp[omp_get_thread_num()] + TEMP_OFFSET, // HACK: +1
+				temp[omp_get_thread_num()] /*+ TEMP_OFFSET*/, // HACK: +1
 				size_i_src_y,
 				stride_x);
 		}
@@ -9742,7 +9846,7 @@ void dwt_cdf97_2f_s(
 				addr2_s(ptr,0,x,stride_x,stride_y),
 				addr2_s(ptr,0,x,stride_x,stride_y),
 				addr2_s(ptr,size_o_dst_y,x,stride_x,stride_y),
-				temp[omp_get_thread_num()] + TEMP_OFFSET, // HACK: +1
+				temp[omp_get_thread_num()] /*+ TEMP_OFFSET*/, // HACK: +1
 				size_i_src_y,
 				stride_x);
 		}
@@ -10204,6 +10308,8 @@ void dwt_cdf97_2i_s(
 #endif
 	const int workers = dwt_util_get_num_workers();
 
+	const int offset = 0;
+
 #ifdef microblaze
 	dwt_util_switch_op(DWT_OP_LIFT4SB);
 #endif
@@ -10211,7 +10317,8 @@ void dwt_cdf97_2i_s(
 	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
 
 	float **temp = alloc_temp_s(threads,
-		calc_and_set_temp_size(size_o_big_max));
+		calc_and_set_temp_size_s(size_o_big_max, offset)
+	);
 
 	int j = ceil_log2( decompose_one ? size_o_big_max : size_o_big_min );
 

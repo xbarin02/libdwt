@@ -1090,6 +1090,15 @@ void dwt_util_set_accel(
 	int accel_type);
 
 /**
+ * @brief Get acceleration algorithm identifier.
+ *
+ * @returns Values set by @ref dwt_util_set_accel function.
+ *
+ * @warning experimental
+ */
+int dwt_util_get_accel();
+
+/**
  * @brief Initialize workers in UTIA ASVP platform.
  */
 void dwt_util_init();
