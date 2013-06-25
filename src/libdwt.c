@@ -2366,6 +2366,10 @@ void accel_lift_op4s_main_nosse_s(
 	#define ASSUME_ALIGNED(lvalueptr, align) (lvalueptr)
 #endif
 
+#define ASSUME_ALIGNED_S(lvalueptr) ASSUME_ALIGNED((lvalueptr), alignment(sizeof(float)))
+#define ASSUME_ALIGNED_D(lvalueptr) ASSUME_ALIGNED((lvalueptr), alignment(sizeof(double)))
+#define ASSUME_ALIGNED_I(lvalueptr) ASSUME_ALIGNED((lvalueptr), alignment(sizeof(int)))
+
 /**
  * @brief Non-accelerated PicoBlaze operation.
  *
@@ -2397,8 +2401,7 @@ void accel_lift_op4s_main_s(
 		// inv
 		for(int w = 0; w < dwt_util_get_num_workers(); w++)
 		{
-			// TODO: ASSUME_ALIGNED
-			float *arr_local = calc_temp_offset2_s(arr, w, 0);
+			float *arr_local = ASSUME_ALIGNED_S(calc_temp_offset2_s(arr, w, 0));
 			
 			assert( is_aligned_s(arr_local) );
 
@@ -2437,8 +2440,7 @@ void accel_lift_op4s_main_s(
 		// fwd
 		for(int w = 0; w < dwt_util_get_num_workers(); w++)
 		{
-			// TODO: ASSUME_ALIGNED
-			float *arr_local = calc_temp_offset2_s(arr, w, 0);
+			float *arr_local = ASSUME_ALIGNED_S(calc_temp_offset2_s(arr, w, 0));
 
 			assert( is_aligned_s(arr_local) );
 
@@ -13548,7 +13550,7 @@ void dwt_util_measure_perf_cdf97_1_s(
 			array_type,
 			x, y,
 			opt_stride,
-		        &stride_x,
+			&stride_x,
 			&stride_y,
 			&size_o_big_x,
 			&size_o_big_y,
@@ -13636,7 +13638,7 @@ void dwt_util_measure_perf_cdf97_1_d(
 			array_type,
 			x, y,
 			opt_stride,
-		        &stride_x,
+			&stride_x,
 			&stride_y,
 			&size_o_big_x,
 			&size_o_big_y,
@@ -13719,7 +13721,7 @@ void dwt_util_measure_perf_cdf97_2_s(
 			array_type,
 			x, y,
 			opt_stride,
-		        &stride_x,
+			&stride_x,
 			&stride_y,
 			&size_o_big_x,
 			&size_o_big_y,
@@ -13808,7 +13810,7 @@ void dwt_util_measure_perf_cdf97_2_d(
 			array_type,
 			x, y,
 			opt_stride,
-		        &stride_x,
+			&stride_x,
 			&stride_y,
 			&size_o_big_x,
 			&size_o_big_y,
@@ -14542,4 +14544,93 @@ void dwt_util_norm_s(
 		if( band_x && band_y )
 			fv[count++] = dwt_util_band_norm_s(band_ptr, stride_x, stride_y, band_x, band_y);
 	}
+}
+
+int dwt_util_test_cdf97_2_s(
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	int decompose_one,
+	int zero_padding
+)
+{
+	int j = j_max;
+	void *data, *copy;
+
+	// allocate image
+	dwt_util_alloc_image(
+		&data,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y);
+
+	// allocate copy
+	dwt_util_alloc_image(
+		&copy,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y);
+
+	// fill with test pattern
+	dwt_util_test_image_fill_s(
+		data,
+		stride_x,
+		stride_y,
+		size_i_big_x,
+		size_i_big_y,
+		0);
+
+	// copy test the image into the copy
+	dwt_util_copy_s(
+		data,
+		copy,
+		stride_x,
+		stride_y,
+		size_i_big_x,
+		size_i_big_y);
+
+	// forward
+	dwt_cdf97_2f_s(
+		data,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y,
+		size_i_big_x,
+		size_i_big_y,
+		&j,
+		decompose_one,
+		zero_padding);
+
+	// inverse
+	dwt_cdf97_2i_s(
+		data,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y,
+		size_i_big_x,
+		size_i_big_y,
+		j,
+		decompose_one,
+		zero_padding);
+
+	int ret;
+
+	// compare
+	if( dwt_util_compare_s(data, copy, stride_x, stride_y, size_i_big_x, size_i_big_y) )
+		ret = 1;
+	else
+		ret = 0;
+	
+	dwt_util_free_image(&data);
+	dwt_util_free_image(&copy);
+
+	return ret;
 }
