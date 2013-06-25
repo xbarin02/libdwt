@@ -26,6 +26,7 @@ int main()
 	dwt_util_log(LOG_INFO, "We are running on \"%s\" architecture.\n", dwt_util_arch());
 	dwt_util_log(LOG_INFO, "Node name is \"%s\".\n", dwt_util_node());
 	dwt_util_log(LOG_INFO, "Application name is \"%s\".\n", dwt_util_appname());
+	dwt_util_log(LOG_INFO, "Acceleration type is %i.\n", dwt_util_get_accel());
 	dwt_util_log(LOG_INFO, "Using %i threads.\n", dwt_util_get_num_threads());
 	dwt_util_log(LOG_INFO, "Using %i workers.\n", dwt_util_get_num_workers());
 	dwt_util_log(LOG_INFO, "Using image of size of %ix%i pixels.\n", x, y);
