@@ -16,8 +16,7 @@ int main()
 	dwt_util_set_accel(12);
 
 	// image size
-	//const int x = 1920, y = 1080;
-	const int x = 256, y = 256;
+	const int x = 1920, y = 1080;
 
 	// size of picture element
 	const int stride_y = sizeof(float);
