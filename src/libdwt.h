@@ -2371,6 +2371,48 @@ int dwt_util_test_cdf97_2_i(
 );
 
 /**
+ * @brief Test correct function of 2D DWT with CDF 9/7.
+ *
+ * @warning experimental
+ */
+int dwt_util_test2_cdf97_2_s(
+	enum dwt_array array_type,	///< how to extend the original image
+	int size_x,			///< width of original image
+	int size_y,			///< height of original image
+	int opt_stride,			///< use optimal stride
+	int j_max,			///< the number of intended decomposition levels (scales)
+	int decompose_one		///< should be row or column of size one pixel decomposed? zero value if not
+);
+
+/**
+ * @brief Test correct function of 2D DWT with CDF 9/7.
+ *
+ * @warning experimental
+ */
+int dwt_util_test2_cdf97_2_d(
+	enum dwt_array array_type,	///< how to extend the original image
+	int size_x,			///< width of original image
+	int size_y,			///< height of original image
+	int opt_stride,			///< use optimal stride
+	int j_max,			///< the number of intended decomposition levels (scales)
+	int decompose_one		///< should be row or column of size one pixel decomposed? zero value if not
+);
+
+/**
+ * @brief Test correct function of 2D DWT with CDF 9/7.
+ *
+ * @warning experimental
+ */
+int dwt_util_test2_cdf97_2_i(
+	enum dwt_array array_type,	///< how to extend the original image
+	int size_x,			///< width of original image
+	int size_y,			///< height of original image
+	int opt_stride,			///< use optimal stride
+	int j_max,			///< the number of intended decomposition levels (scales)
+	int decompose_one		///< should be row or column of size one pixel decomposed? zero value if not
+);
+
+/**
  * @}
  */
 

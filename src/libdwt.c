@@ -14839,3 +14839,132 @@ int dwt_util_test_cdf97_2_i(
 
 	return ret;
 }
+
+int dwt_util_test2_cdf97_2_s(
+	enum dwt_array array_type,
+	int size_x,
+	int size_y,
+	int opt_stride,
+	int j_max,
+	int decompose_one
+)
+{
+	int stride_x;
+	int stride_y;
+	int size_o_big_x;
+	int size_o_big_y;
+	int size_i_big_x;
+	int size_i_big_y;
+
+	// get sizes
+	dwt_util_get_sizes_s(
+		array_type,
+		size_x,
+		size_y,
+		opt_stride,
+		&stride_x,
+		&stride_y,
+		&size_o_big_x,
+		&size_o_big_y,
+		&size_i_big_x,
+		&size_i_big_y
+	);
+
+	return dwt_util_test_cdf97_2_s(
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y,
+		size_i_big_x,
+		size_i_big_y,
+		j_max,
+		decompose_one,
+		0
+	);
+}
+
+int dwt_util_test2_cdf97_2_d(
+	enum dwt_array array_type,
+	int size_x,
+	int size_y,
+	int opt_stride,
+	int j_max,
+	int decompose_one
+)
+{
+	int stride_x;
+	int stride_y;
+	int size_o_big_x;
+	int size_o_big_y;
+	int size_i_big_x;
+	int size_i_big_y;
+
+	// get sizes
+	dwt_util_get_sizes_d(
+		array_type,
+		size_x,
+		size_y,
+		opt_stride,
+		&stride_x,
+		&stride_y,
+		&size_o_big_x,
+		&size_o_big_y,
+		&size_i_big_x,
+		&size_i_big_y
+	);
+
+	return dwt_util_test_cdf97_2_d(
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y,
+		size_i_big_x,
+		size_i_big_y,
+		j_max,
+		decompose_one,
+		0
+	);
+}
+
+int dwt_util_test2_cdf97_2_i(
+	enum dwt_array array_type,
+	int size_x,
+	int size_y,
+	int opt_stride,
+	int j_max,
+	int decompose_one
+)
+{
+	int stride_x;
+	int stride_y;
+	int size_o_big_x;
+	int size_o_big_y;
+	int size_i_big_x;
+	int size_i_big_y;
+
+	// get sizes
+	dwt_util_get_sizes_i(
+		array_type,
+		size_x,
+		size_y,
+		opt_stride,
+		&stride_x,
+		&stride_y,
+		&size_o_big_x,
+		&size_o_big_y,
+		&size_i_big_x,
+		&size_i_big_y
+	);
+
+	return dwt_util_test_cdf97_2_i(
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y,
+		size_i_big_x,
+		size_i_big_y,
+		j_max,
+		decompose_one,
+		0
+	);
+}
