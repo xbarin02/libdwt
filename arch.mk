@@ -16,11 +16,19 @@ LDLIBS = -lm
 LDFLAGS = 
 
 # ASVP platform
-ifeq ($(ARCH),microblaze)
+ifeq ($(ARCH),asvp)
+	# asvp-demo_v0
 	CROSS_COMPILE = microblaze-uclinux-
 	CFLAGS += -mno-xl-soft-mul -mhard-float -mcpu=v8.00.b -DEMBED -Dlinux -D__linux__ -Dunix -D__uClinux__ -DLINUX -I$(ROOT)/api/22-mb-petalinux/libwal -I$(ROOT)/api/22-mb-petalinux/libbce_config_step4 -Wno-unknown-pragmas
-	LDFLAGS += -L$(ROOT)/api/22-mb-petalinux/libwal -L$(ROOT)/api/22-mb-petalinux/libbce_config_step4 # asvp-demo_v0
+	LDFLAGS += -L$(ROOT)/api/22-mb-petalinux/libwal -L$(ROOT)/api/22-mb-petalinux/libbce_config_step4
 	LDLIBS += -lwal -lbce_config
+endif
+
+# MicroBlaze
+ifeq ($(ARCH),microblaze)
+	CROSS_COMPILE = microblaze-uclinux-
+	# FIXME: remove unnecessary arguments
+	CFLAGS += -mno-xl-soft-mul -mhard-float -mcpu=v8.00.b -DEMBED -Dlinux -D__linux__ -Dunix -D__uClinux__ -DLINUX -Wno-unknown-pragmas
 endif
 
 # AMD64
