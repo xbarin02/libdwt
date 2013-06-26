@@ -87,7 +87,7 @@
 #endif
 
 /** UTIA ASVP/EdkDSP specific code */
-#ifdef microblaze
+#ifdef __asvp__
 	#define WAL_NATIVE_DMA
 	#include <wal.h>
 	#include <wal_bce_dma.h>
@@ -679,7 +679,7 @@ void flush_cache_s(
 	flush_cache( (void *)addr, size * sizeof(float) );
 }
 
-#ifdef microblaze
+#ifdef __asvp__
 void wal_abort(
 	const char *str,
 	int res
@@ -7884,7 +7884,7 @@ void accel_lift_op4s_main_pb_s(
 
 	assert( steps >= 0 );
 
-#ifdef microblaze
+#ifdef __asvp__
 	UNUSED(scaling);
 	UNUSED(alpha);
 	UNUSED(beta);
@@ -9240,7 +9240,7 @@ void dwt_util_switch_op(
 {
 	FUNC_BEGIN;
 
-#ifdef microblaze
+#ifdef __asvp__
 	if( op == dwt_util_global_active_op )
 		return;
 
@@ -11495,7 +11495,7 @@ void dwt_util_init()
 {
 	FUNC_BEGIN;
 
-#ifdef microblaze
+#ifdef __asvp__
 	for(int w = 0; w < get_total_workers(); w++)
 	{
 		WAL_CHECK( wal_init_worker(worker[w]) );
@@ -11523,13 +11523,9 @@ void dwt_util_finish()
 {
 	FUNC_BEGIN;
 
-#ifdef microblaze
+#ifdef __asvp__
 	for(int w = 0; w < get_total_workers(); w++)
 	{
-		//WAL_CHECK( wal_mb2pb(worker, 0) );
-
-		//WAL_CHECK( wal_bce_jk_sync_operation(worker) );
-
 		WAL_CHECK( wal_done_worker(worker[w]) );
 	}
 #endif
@@ -12213,7 +12209,7 @@ void dwt_util_test()
 		dwt_util_log(LOG_TEST, "ok\n");
 	}
 
-#ifdef microblaze
+#ifdef __asvp__
 	for(int w = 0; w < get_total_workers(); w++)
 	{
 		dwt_util_log(LOG_TEST, "worker %i: init worker...\n", w);
