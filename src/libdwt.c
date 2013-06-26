@@ -458,7 +458,7 @@ float powf(
 
 #define ASM_MARKER __asm volatile ("# MARKER: " QUOTE(__LINE__))
 
-#ifdef microblaze
+#ifdef __asvp__
 /** total number of workers available */
 const int dwt_util_global_total_workers = BCE_DMA_CFGTABLE_NUM_ITEMS;
 
@@ -469,7 +469,7 @@ static int get_total_workers()
 #endif
 
 /** how many workers use for computation (can be less than total number of workers) */
-#ifdef microblaze
+#ifdef __asvp__
 int dwt_util_global_active_workers = BCE_DMA_CFGTABLE_NUM_ITEMS;
 #else
 int dwt_util_global_active_workers = 1;
@@ -11442,7 +11442,7 @@ int dwt_util_get_max_threads()
 
 int dwt_util_get_max_workers()
 {
-#ifdef microblaze
+#ifdef __asvp__
 	return get_total_workers();
 #else /* microblaze */
 	return 1;
