@@ -1,6 +1,7 @@
 2013-06-XX David Barina <ibarina@fit.vutbr.cz>
 * Migrated to new temp[] buffer functions.
 * Added functions for testing of correctness of DWT functions.
+* Added new and fixed existing out-of-place DWT 9/7 functions.
 
 2013-06-20 David Barina <ibarina@fit.vutbr.cz>
 * Improved the support for ARM CPU families.
