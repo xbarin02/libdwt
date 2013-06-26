@@ -1122,11 +1122,11 @@ intptr_t align_int(
 
 static
 int temp_calc_internal(
-	int alignment,	///< in bytes
-	int elem_size,	///< in bytes
-	int offset,	///< in elements
-	int elements,	///< the number of elements
-	int worker	///< worker_id or total_workers
+	size_t alignment,	///< alignment (bytes)
+	size_t elem_size,	///< element size (bytes)
+	int offset,		///< offset (elements)
+	int elements,		///< number of elements (elements)
+	int worker		///< worker_id or total_workers (workers)
 )
 {
 	const int padding = 1; // elements
@@ -1151,13 +1151,33 @@ int calc_and_set_temp_size_s(
 	int offset		///< in elements, e.g. +1 float
 )
 {
-	const int elem_size = sizeof(float); // bytes
+	const size_t elem_size = sizeof(float); // bytes
 	const int workers = get_active_workers(); // workers
-	const int alignment = dwt_util_alignment(sizeof(float)); // bytes
+	const size_t alignment = dwt_util_alignment(sizeof(float)); // bytes
 
 	set_temp_step(elements); // elements
 
 	return temp_calc_internal(alignment, elem_size, offset, elements, workers);
+}
+
+static
+int is_aligned(
+	void *ptr,
+	size_t alignment
+)
+{
+	assert( is_pow2(alignment) );
+
+	return ( (intptr_t)ptr & (intptr_t)(alignment-1) ) ? 0 : 1;
+}
+
+static
+void *ptralign_down(
+	void *ptr,
+	size_t alignment
+)
+{
+	return (void *)( (intptr_t)ptr & ~(alignment-1) );
 }
 
 static
@@ -1167,19 +1187,21 @@ float *calc_temp_offset2_s(
 	int offset	///< offset
 )
 {
-	const int elem_size = sizeof(float); // bytes
-	const int alignment = dwt_util_alignment(sizeof(float)); // bytes
+	const size_t elem_size = sizeof(float); // bytes
+	const size_t alignment = dwt_util_alignment(sizeof(float)); // bytes
 
 	int return_offset = 0; // elements
 
 	// correct the alignment
-	if( (intptr_t)addr & (alignment-1) )
+	if( !is_aligned(addr, alignment) )
 	{
 		float *old = addr;
-		addr = (float *)( (intptr_t)addr & ~(alignment-1) );
-		return_offset = ((intptr_t)old - (intptr_t)addr)/elem_size;
+		addr = (float *)ptralign_down(addr, alignment);
+		ptrdiff_t ptrdiff = (intptr_t)old - (intptr_t)addr;
+		return_offset = ptrdiff / elem_size;
 	}
 
+	// if requested with offset then offset cannot be zero
 	if( 0 == offset && 0 != return_offset )
 	{
 		offset = return_offset;
@@ -9325,17 +9347,6 @@ void dwt_util_switch_op(
 #endif
 
 	FUNC_END;
-}
-
-static
-int is_aligned(
-	void *ptr,
-	size_t alignment
-)
-{
-	assert( is_pow2(alignment) );
-
-	return ( (intptr_t)ptr & (intptr_t)(alignment-1) ) ? 0 : 1;
 }
 
 /** allocated memory aligned on current platform for type of size of elem_size bytes */
