@@ -11537,7 +11537,7 @@ void dwt_util_abort()
 {
 	FUNC_BEGIN;
 
-#ifdef microblaze
+#ifdef __asvp__
 	for(int w = 0; w < get_total_workers(); w++)
 	{
 		// FIXME(ASVP): is this legal? although the operation was not running?
