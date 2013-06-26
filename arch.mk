@@ -27,8 +27,7 @@ endif
 # MicroBlaze
 ifeq ($(ARCH),microblaze)
 	CROSS_COMPILE = microblaze-uclinux-
-	# FIXME: remove unnecessary arguments
-	CFLAGS += -mno-xl-soft-mul -mhard-float -mcpu=v8.00.b -DEMBED -Dlinux -D__linux__ -Dunix -D__uClinux__ -DLINUX -Wno-unknown-pragmas
+	CFLAGS += -mno-xl-soft-mul -mhard-float -mcpu=v8.00.b -Wno-unknown-pragmas
 endif
 
 # AMD64
