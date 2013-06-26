@@ -9653,7 +9653,6 @@ void dwt_cdf97_2f_s2(
 	if( *j_max_ptr < 0 || *j_max_ptr > j_limit )
 		*j_max_ptr = j_limit;
 
-	// FIXME: this cannot work for j != 1 due to "src" is unaffected in the second iteration
 	for(;;)
 	{
 		if( *j_max_ptr == j )
@@ -9705,6 +9704,9 @@ void dwt_cdf97_2f_s2(
 					stride_y);
 			}
 			dwt_util_set_num_workers(workers);
+			// in the next iteration, the dst takes the role of src
+			// otherwise, the src will be unaffected in the second iteration
+			src = dst;
 		}
 #endif
 
@@ -9716,7 +9718,7 @@ void dwt_cdf97_2f_s2(
 			for(int x = 0; x < workers_lines_x; x += workers)
 			{
 				dwt_cdf97_f_ex_stride_s(
-					addr2_s(dst,0,x,stride_x,stride_y),
+					addr2_const_s(src,0,x,stride_x,stride_y),
 					addr2_s(dst,0,x,stride_x,stride_y),
 					addr2_s(dst,size_o_dst_y,x,stride_x,stride_y),
 					temp[dwt_util_get_thread_num()],
@@ -9727,7 +9729,7 @@ void dwt_cdf97_2f_s2(
 			for(int x = workers_lines_x; x < lines_x; x++)
 			{
 				dwt_cdf97_f_ex_stride_s(
-					addr2_s(dst,0,x,stride_x,stride_y),
+					addr2_const_s(src,0,x,stride_x,stride_y),
 					addr2_s(dst,0,x,stride_x,stride_y),
 					addr2_s(dst,size_o_dst_y,x,stride_x,stride_y),
 					temp[dwt_util_get_thread_num()],
@@ -9735,6 +9737,9 @@ void dwt_cdf97_2f_s2(
 					stride_x);
 			}
 			dwt_util_set_num_workers(workers);
+			// in the next iteration, the dst takes the role of src
+			// otherwise, the src will be unaffected in the second iteration
+			src = dst;
 		}
 #endif
 
@@ -10379,63 +10384,63 @@ void dwt_cdf97_2i_s(
 		const int workers_lines_y = workers_segment_y * workers;
 		const int workers_lines_x = workers_segment_x * workers;
 
-	if( lines_x > 1 )
-	{
-		set_data_step_s( stride_x );
+		if( lines_x > 1 )
+		{
+			set_data_step_s( stride_x );
 
-		#pragma omp parallel for schedule(static, threads_segment_y)
-		for(int y = 0; y < workers_lines_y; y += workers)
-		{
-			dwt_cdf97_i_ex_stride_s(
-				addr2_s(ptr,y,0,stride_x,stride_y),
-				addr2_s(ptr,y,size_o_src_x,stride_x,stride_y),
-				addr2_s(ptr,y,0,stride_x,stride_y),
-				temp[dwt_util_get_thread_num()] + 0,
-				size_i_dst_x,
-				stride_y);
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < workers_lines_y; y += workers)
+			{
+				dwt_cdf97_i_ex_stride_s(
+					addr2_s(ptr,y,0,stride_x,stride_y),
+					addr2_s(ptr,y,size_o_src_x,stride_x,stride_y),
+					addr2_s(ptr,y,0,stride_x,stride_y),
+					temp[dwt_util_get_thread_num()],
+					size_i_dst_x,
+					stride_y);
+			}
+			dwt_util_set_num_workers(1);
+			for(int y = workers_lines_y; y < lines_y; y++)
+			{
+				dwt_cdf97_i_ex_stride_s(
+					addr2_s(ptr,y,0,stride_x,stride_y),
+					addr2_s(ptr,y,size_o_src_x,stride_x,stride_y),
+					addr2_s(ptr,y,0,stride_x,stride_y),
+					temp[dwt_util_get_thread_num()],
+					size_i_dst_x,
+					stride_y);
+			}
+			dwt_util_set_num_workers(workers);
 		}
-		dwt_util_set_num_workers(1);
-		for(int y = workers_lines_y; y < lines_y; y++)
-		{
-			dwt_cdf97_i_ex_stride_s(
-				addr2_s(ptr,y,0,stride_x,stride_y),
-				addr2_s(ptr,y,size_o_src_x,stride_x,stride_y),
-				addr2_s(ptr,y,0,stride_x,stride_y),
-				temp[dwt_util_get_thread_num()] + 0,
-				size_i_dst_x,
-				stride_y);
-		}
-		dwt_util_set_num_workers(workers);
-	}
 
-	if( lines_y > 1 )
-	{
-		set_data_step_s( stride_y );
+		if( lines_y > 1 )
+		{
+			set_data_step_s( stride_y );
 
-		#pragma omp parallel for schedule(static, threads_segment_x)
-		for(int x = 0; x < workers_lines_x; x += workers)
-		{
-			dwt_cdf97_i_ex_stride_s(
-				addr2_s(ptr,0,x,stride_x,stride_y),
-				addr2_s(ptr,size_o_src_y,x,stride_x,stride_y),
-				addr2_s(ptr,0,x,stride_x,stride_y),
-				temp[dwt_util_get_thread_num()] + 0,
-				size_i_dst_y,
-				stride_x);
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < workers_lines_x; x += workers)
+			{
+				dwt_cdf97_i_ex_stride_s(
+					addr2_s(ptr,0,x,stride_x,stride_y),
+					addr2_s(ptr,size_o_src_y,x,stride_x,stride_y),
+					addr2_s(ptr,0,x,stride_x,stride_y),
+					temp[dwt_util_get_thread_num()],
+					size_i_dst_y,
+					stride_x);
+			}
+			dwt_util_set_num_workers(1);
+			for(int x = workers_lines_x; x < lines_x; x++)
+			{
+				dwt_cdf97_i_ex_stride_s(
+					addr2_s(ptr,0,x,stride_x,stride_y),
+					addr2_s(ptr,size_o_src_y,x,stride_x,stride_y),
+					addr2_s(ptr,0,x,stride_x,stride_y),
+					temp[dwt_util_get_thread_num()],
+					size_i_dst_y,
+					stride_x);
+			}
+			dwt_util_set_num_workers(workers);
 		}
-		dwt_util_set_num_workers(1);
-		for(int x = workers_lines_x; x < lines_x; x++)
-		{
-			dwt_cdf97_i_ex_stride_s(
-				addr2_s(ptr,0,x,stride_x,stride_y),
-				addr2_s(ptr,size_o_src_y,x,stride_x,stride_y),
-				addr2_s(ptr,0,x,stride_x,stride_y),
-				temp[dwt_util_get_thread_num()] + 0,
-				size_i_dst_y,
-				stride_x);
-		}
-		dwt_util_set_num_workers(workers);
-	}
 
 		if(zero_padding)
 		{
@@ -10450,6 +10455,158 @@ void dwt_cdf97_2i_s(
 			for(int x = 0; x < size_o_dst_x; x++)
 				dwt_zero_padding_i_stride_s(
 					addr2_s(ptr,0,x,stride_x,stride_y),
+					size_i_dst_y,
+					size_o_dst_y,
+					stride_x);
+		}
+
+		j--;
+	}
+
+	free_temp_s(threads, temp);
+
+	FUNC_END;
+}
+
+void dwt_cdf97_2i_s2(
+	const void *src,
+	void *dst,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	int decompose_one,
+	int zero_padding)
+{
+	FUNC_BEGIN;
+
+	// NOTE: this hack copies the input image into dst
+	dwt_util_copy_i(
+		src,
+		dst,
+		stride_x,
+		stride_y,
+		size_i_big_x,
+		size_i_big_y);
+
+	const int threads = dwt_util_get_num_threads();
+	const int workers = dwt_util_get_num_workers();
+
+	const int offset = 0;
+
+#ifdef microblaze
+	dwt_util_switch_op(DWT_OP_LIFT4SB);
+#endif
+	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
+	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
+
+	float **temp = alloc_temp_s(threads,
+		calc_and_set_temp_size_s(size_o_big_max, offset)
+	);
+
+	int j = ceil_log2( decompose_one ? size_o_big_max : size_o_big_min );
+
+	if( j_max >= 0 && j_max < j )
+		j = j_max;
+
+	for(;;)
+	{
+		if(0 == j)
+			break;
+
+		const int size_o_src_x = ceil_div_pow2(size_o_big_x, j  );
+		const int size_o_src_y = ceil_div_pow2(size_o_big_y, j  );
+		const int size_o_dst_x = ceil_div_pow2(size_o_big_x, j-1);
+		const int size_o_dst_y = ceil_div_pow2(size_o_big_y, j-1);
+		const int size_i_dst_x = ceil_div_pow2(size_i_big_x, j-1);
+		const int size_i_dst_y = ceil_div_pow2(size_i_big_y, j-1);
+
+		const int lines_y = size_o_dst_y;
+		const int lines_x = size_o_dst_x;
+
+		const int workers_segment_y = floor_div(lines_y, workers);
+		const int workers_segment_x = floor_div(lines_x, workers);
+#ifdef _OPENMP
+		const int threads_segment_y = ceil_div(workers_segment_y, threads);
+		const int threads_segment_x = ceil_div(workers_segment_x, threads);
+#endif
+		const int workers_lines_y = workers_segment_y * workers;
+		const int workers_lines_x = workers_segment_x * workers;
+
+		if( lines_x > 1 )
+		{
+			set_data_step_s( stride_x );
+
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < workers_lines_y; y += workers)
+			{
+				dwt_cdf97_i_ex_stride_s(
+					addr2_const_s(dst,y,0,stride_x,stride_y),
+					addr2_const_s(dst,y,size_o_src_x,stride_x,stride_y),
+					addr2_s(dst,y,0,stride_x,stride_y),
+					temp[dwt_util_get_thread_num()],
+					size_i_dst_x,
+					stride_y);
+			}
+			dwt_util_set_num_workers(1);
+			for(int y = workers_lines_y; y < lines_y; y++)
+			{
+				dwt_cdf97_i_ex_stride_s(
+					addr2_const_s(dst,y,0,stride_x,stride_y),
+					addr2_const_s(dst,y,size_o_src_x,stride_x,stride_y),
+					addr2_s(dst,y,0,stride_x,stride_y),
+					temp[dwt_util_get_thread_num()],
+					size_i_dst_x,
+					stride_y);
+			}
+			dwt_util_set_num_workers(workers);
+		}
+
+		if( lines_y > 1 )
+		{
+			set_data_step_s( stride_y );
+
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < workers_lines_x; x += workers)
+			{
+				dwt_cdf97_i_ex_stride_s(
+					addr2_s(dst,0,x,stride_x,stride_y),
+					addr2_s(dst,size_o_src_y,x,stride_x,stride_y),
+					addr2_s(dst,0,x,stride_x,stride_y),
+					temp[dwt_util_get_thread_num()],
+					size_i_dst_y,
+					stride_x);
+			}
+			dwt_util_set_num_workers(1);
+			for(int x = workers_lines_x; x < lines_x; x++)
+			{
+				dwt_cdf97_i_ex_stride_s(
+					addr2_s(dst,0,x,stride_x,stride_y),
+					addr2_s(dst,size_o_src_y,x,stride_x,stride_y),
+					addr2_s(dst,0,x,stride_x,stride_y),
+					temp[dwt_util_get_thread_num()],
+					size_i_dst_y,
+					stride_x);
+			}
+			dwt_util_set_num_workers(workers);
+		}
+
+		if(zero_padding)
+		{
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < size_o_dst_y; y++)
+				dwt_zero_padding_i_stride_s(
+					addr2_s(dst,y,0,stride_x,stride_y),
+					size_i_dst_x,
+					size_o_dst_x,
+					stride_y);
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_o_dst_x; x++)
+				dwt_zero_padding_i_stride_s(
+					addr2_s(dst,0,x,stride_x,stride_y),
 					size_i_dst_y,
 					size_o_dst_y,
 					stride_x);
@@ -14609,8 +14766,115 @@ int dwt_util_test_cdf97_2_s(
 		ret = 1;
 	else
 		ret = 0;
-	
+
 	dwt_util_free_image(&data);
+	dwt_util_free_image(&copy);
+
+	return ret;
+}
+
+int dwt_util_test_cdf97_2_s2(
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	int decompose_one,
+	int zero_padding
+)
+{
+	int j = j_max;
+	void *data1, *data2, *data3, *copy;
+
+	// allocate image
+	dwt_util_alloc_image(
+		&data1,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y);
+
+	dwt_util_alloc_image(
+		&data2,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y);
+
+	dwt_util_alloc_image(
+		&data3,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y);
+
+	// allocate copy
+	dwt_util_alloc_image(
+		&copy,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y);
+
+	// fill with test pattern
+	dwt_util_test_image_fill_s(
+		data1,
+		stride_x,
+		stride_y,
+		size_i_big_x,
+		size_i_big_y,
+		0);
+
+	// copy test the image into the copy
+	dwt_util_copy_s(
+		data1,
+		copy,
+		stride_x,
+		stride_y,
+		size_i_big_x,
+		size_i_big_y);
+
+	// forward
+	dwt_cdf97_2f_s2(
+		data1,
+		data2,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y,
+		size_i_big_x,
+		size_i_big_y,
+		&j,
+		decompose_one,
+		zero_padding);
+
+	// inverse
+	dwt_cdf97_2i_s2(
+		data2,
+		data3,
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y,
+		size_i_big_x,
+		size_i_big_y,
+		j,
+		decompose_one,
+		zero_padding);
+
+	int ret;
+
+	// compare
+	if( dwt_util_compare_s(data3, copy, stride_x, stride_y, size_i_big_x, size_i_big_y) )
+		ret = 1;
+	else
+		ret = 0;
+
+	dwt_util_free_image(&data1);
+	dwt_util_free_image(&data2);
+	dwt_util_free_image(&data3);
 	dwt_util_free_image(&copy);
 
 	return ret;
@@ -14698,7 +14962,7 @@ int dwt_util_test_cdf97_2_d(
 		ret = 1;
 	else
 		ret = 0;
-	
+
 	dwt_util_free_image(&data);
 	dwt_util_free_image(&copy);
 
@@ -14788,7 +15052,7 @@ int dwt_util_test_cdf97_2_i(
 		ret = 1;
 	else
 		ret = 0;
-	
+
 	dwt_util_free_image(&data);
 	dwt_util_free_image(&copy);
 
@@ -14826,6 +15090,49 @@ int dwt_util_test2_cdf97_2_s(
 	);
 
 	return dwt_util_test_cdf97_2_s(
+		stride_x,
+		stride_y,
+		size_o_big_x,
+		size_o_big_y,
+		size_i_big_x,
+		size_i_big_y,
+		j_max,
+		decompose_one,
+		0
+	);
+}
+
+int dwt_util_test2_cdf97_2_s2(
+	enum dwt_array array_type,
+	int size_x,
+	int size_y,
+	int opt_stride,
+	int j_max,
+	int decompose_one
+)
+{
+	int stride_x;
+	int stride_y;
+	int size_o_big_x;
+	int size_o_big_y;
+	int size_i_big_x;
+	int size_i_big_y;
+
+	// get sizes
+	dwt_util_get_sizes_s(
+		array_type,
+		size_x,
+		size_y,
+		opt_stride,
+		&stride_x,
+		&stride_y,
+		&size_o_big_x,
+		&size_o_big_y,
+		&size_i_big_x,
+		&size_i_big_y
+	);
+
+	return dwt_util_test_cdf97_2_s2(
 		stride_x,
 		stride_y,
 		size_o_big_x,
