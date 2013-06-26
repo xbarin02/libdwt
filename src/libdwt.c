@@ -9841,7 +9841,7 @@ void dwt_cdf97_2f_s(
 			for(int y = 0; y < workers_lines_y; y += workers)
 			{
 				dwt_cdf97_f_ex_stride_s(
-					addr2_s(ptr,y,0,stride_x,stride_y),
+					addr2_const_s(ptr,y,0,stride_x,stride_y),
 					addr2_s(ptr,y,0,stride_x,stride_y),
 					addr2_s(ptr,y,size_o_dst_x,stride_x,stride_y),
 					temp[dwt_util_get_thread_num()],
@@ -9852,7 +9852,7 @@ void dwt_cdf97_2f_s(
 			for(int y = workers_lines_y; y < lines_y; y++)
 			{
 				dwt_cdf97_f_ex_stride_s(
-					addr2_s(ptr,y,0,stride_x,stride_y),
+					addr2_const_s(ptr,y,0,stride_x,stride_y),
 					addr2_s(ptr,y,0,stride_x,stride_y),
 					addr2_s(ptr,y,size_o_dst_x,stride_x,stride_y),
 					temp[dwt_util_get_thread_num()],
@@ -9871,7 +9871,7 @@ void dwt_cdf97_2f_s(
 			for(int x = 0; x < workers_lines_x; x += workers)
 			{
 				dwt_cdf97_f_ex_stride_s(
-					addr2_s(ptr,0,x,stride_x,stride_y),
+					addr2_const_s(ptr,0,x,stride_x,stride_y),
 					addr2_s(ptr,0,x,stride_x,stride_y),
 					addr2_s(ptr,size_o_dst_y,x,stride_x,stride_y),
 					temp[dwt_util_get_thread_num()],
@@ -9882,7 +9882,7 @@ void dwt_cdf97_2f_s(
 			for(int x = workers_lines_x; x < lines_x; x++)
 			{
 				dwt_cdf97_f_ex_stride_s(
-					addr2_s(ptr,0,x,stride_x,stride_y),
+					addr2_const_s(ptr,0,x,stride_x,stride_y),
 					addr2_s(ptr,0,x,stride_x,stride_y),
 					addr2_s(ptr,size_o_dst_y,x,stride_x,stride_y),
 					temp[dwt_util_get_thread_num()],
@@ -10392,8 +10392,8 @@ void dwt_cdf97_2i_s(
 			for(int y = 0; y < workers_lines_y; y += workers)
 			{
 				dwt_cdf97_i_ex_stride_s(
-					addr2_s(ptr,y,0,stride_x,stride_y),
-					addr2_s(ptr,y,size_o_src_x,stride_x,stride_y),
+					addr2_const_s(ptr,y,0,stride_x,stride_y),
+					addr2_const_s(ptr,y,size_o_src_x,stride_x,stride_y),
 					addr2_s(ptr,y,0,stride_x,stride_y),
 					temp[dwt_util_get_thread_num()],
 					size_i_dst_x,
@@ -10403,8 +10403,8 @@ void dwt_cdf97_2i_s(
 			for(int y = workers_lines_y; y < lines_y; y++)
 			{
 				dwt_cdf97_i_ex_stride_s(
-					addr2_s(ptr,y,0,stride_x,stride_y),
-					addr2_s(ptr,y,size_o_src_x,stride_x,stride_y),
+					addr2_const_s(ptr,y,0,stride_x,stride_y),
+					addr2_const_s(ptr,y,size_o_src_x,stride_x,stride_y),
 					addr2_s(ptr,y,0,stride_x,stride_y),
 					temp[dwt_util_get_thread_num()],
 					size_i_dst_x,
@@ -10421,8 +10421,8 @@ void dwt_cdf97_2i_s(
 			for(int x = 0; x < workers_lines_x; x += workers)
 			{
 				dwt_cdf97_i_ex_stride_s(
-					addr2_s(ptr,0,x,stride_x,stride_y),
-					addr2_s(ptr,size_o_src_y,x,stride_x,stride_y),
+					addr2_const_s(ptr,0,x,stride_x,stride_y),
+					addr2_const_s(ptr,size_o_src_y,x,stride_x,stride_y),
 					addr2_s(ptr,0,x,stride_x,stride_y),
 					temp[dwt_util_get_thread_num()],
 					size_i_dst_y,
@@ -10432,8 +10432,8 @@ void dwt_cdf97_2i_s(
 			for(int x = workers_lines_x; x < lines_x; x++)
 			{
 				dwt_cdf97_i_ex_stride_s(
-					addr2_s(ptr,0,x,stride_x,stride_y),
-					addr2_s(ptr,size_o_src_y,x,stride_x,stride_y),
+					addr2_const_s(ptr,0,x,stride_x,stride_y),
+					addr2_const_s(ptr,size_o_src_y,x,stride_x,stride_y),
 					addr2_s(ptr,0,x,stride_x,stride_y),
 					temp[dwt_util_get_thread_num()],
 					size_i_dst_y,
@@ -10573,8 +10573,8 @@ void dwt_cdf97_2i_s2(
 			for(int x = 0; x < workers_lines_x; x += workers)
 			{
 				dwt_cdf97_i_ex_stride_s(
-					addr2_s(dst,0,x,stride_x,stride_y),
-					addr2_s(dst,size_o_src_y,x,stride_x,stride_y),
+					addr2_const_s(dst,0,x,stride_x,stride_y),
+					addr2_const_s(dst,size_o_src_y,x,stride_x,stride_y),
 					addr2_s(dst,0,x,stride_x,stride_y),
 					temp[dwt_util_get_thread_num()],
 					size_i_dst_y,
@@ -10584,8 +10584,8 @@ void dwt_cdf97_2i_s2(
 			for(int x = workers_lines_x; x < lines_x; x++)
 			{
 				dwt_cdf97_i_ex_stride_s(
-					addr2_s(dst,0,x,stride_x,stride_y),
-					addr2_s(dst,size_o_src_y,x,stride_x,stride_y),
+					addr2_const_s(dst,0,x,stride_x,stride_y),
+					addr2_const_s(dst,size_o_src_y,x,stride_x,stride_y),
 					addr2_s(dst,0,x,stride_x,stride_y),
 					temp[dwt_util_get_thread_num()],
 					size_i_dst_y,
