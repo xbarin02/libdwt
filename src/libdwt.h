@@ -700,6 +700,25 @@ void dwt_cdf97_2i_s(
 );
 
 /**
+ * @brief Inverse image fast wavelet transform using CDF 9/7 wavelet and lifting scheme, out-of-place version.
+ *
+ * This function works with single precision floating point numbers (i.e. float data type).
+ */
+void dwt_cdf97_2i_s2(
+	const void *src,	///< pointer to beginning of the source image data (keeps unaffected)
+	void *dst,		///< pointer to beginning of the destination image data (have to be allocated already)
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< pointer to the number of achieved decomposition levels (scales)
+	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+);
+
+/**
  * @brief Inverse image fast wavelet transform using CDF 5/3 wavelet and lifting scheme, in-place version.
  *
  * This function works with integers (i.e. int data type).
@@ -2337,6 +2356,23 @@ int dwt_util_test_cdf97_2_s(
 );
 
 /**
+ * @brief Test correct function of 2D DWT with CDF 9/7 (out-of-place transform).
+ *
+ * @warning experimental
+ */
+int dwt_util_test_cdf97_2_s2(
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< the number of intended decomposition levels (scales)
+	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+);
+
+/**
  * @brief Test correct function of 2D DWT with CDF 9/7.
  *
  * @warning experimental
@@ -2376,6 +2412,20 @@ int dwt_util_test_cdf97_2_i(
  * @warning experimental
  */
 int dwt_util_test2_cdf97_2_s(
+	enum dwt_array array_type,	///< how to extend the original image
+	int size_x,			///< width of original image
+	int size_y,			///< height of original image
+	int opt_stride,			///< use optimal stride
+	int j_max,			///< the number of intended decomposition levels (scales)
+	int decompose_one		///< should be row or column of size one pixel decomposed? zero value if not
+);
+
+/**
+ * @brief Test correct function of 2D DWT with CDF 9/7 (out-of-place transform).
+ *
+ * @warning experimental
+ */
+int dwt_util_test2_cdf97_2_s2(
 	enum dwt_array array_type,	///< how to extend the original image
 	int size_x,			///< width of original image
 	int size_y,			///< height of original image
