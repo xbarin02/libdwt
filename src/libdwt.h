@@ -1912,9 +1912,9 @@ float dwt_util_band_maxidx_s(
 /**
  * @brief The arithmetic mean for a specific subband.
  *
- * @returns The mean.
+ * This can be computed on magnitudes, see @ref dwt_util_abs_s function.
  *
- * @todo This should be computed on magnitudes.
+ * @returns The mean.
  *
  * @warning experimental
  */
@@ -1929,9 +1929,9 @@ float dwt_util_band_mean_s(
 /**
  * @brief Median of a specific subband.
  *
- * @returns The median.
+ * This can be computed on magnitudes, see @ref dwt_util_abs_s function.
  *
- * @todo This should be computed on magnitudes.
+ * @returns The median.
  *
  * @warning experimental
  */
@@ -1947,10 +1947,9 @@ float dwt_util_band_med_s(
  * @brief Moment.
  *
  * The @e n -th moment about the @e c value.
+ * This can be computed on magnitudes, see @ref dwt_util_abs_s function.
  *
  * @returns Moment.
- *
- * @todo This should be computed on magnitudes.
  *
  * @warning experimental
  */
@@ -1968,10 +1967,9 @@ float dwt_util_band_moment_s(
  * @brief Central moment.
  *
  * The @e n -th moment about the mean.
+ * This can be computed on magnitudes, see @ref dwt_util_abs_s function.
  *
  * @returns Moment.
- *
- * @todo This should be computed on magnitudes.
  *
  * @warning experimental
  */
@@ -1987,9 +1985,9 @@ float dwt_util_band_cmoment_s(
 /**
  * @brief Variance.
  *
- * @returns The variance.
+ * This can be computed on magnitudes, see @ref dwt_util_abs_s function.
  *
- * @todo This should be computed on magnitudes.
+ * @returns The variance.
  *
  * @warning experimental
  */
@@ -2004,9 +2002,9 @@ float dwt_util_band_var_s(
 /**
  * @brief Standard deviation.
  *
- * @returns The standard deviation.
+ * This can be computed on magnitudes, see @ref dwt_util_abs_s function.
  *
- * @todo This should be computed on magnitudes.
+ * @returns The standard deviation.
  *
  * @warning experimental
  */
@@ -2021,11 +2019,9 @@ float dwt_util_band_stdev_s(
 /**
  * @brief Standardized moment.
  *
- * The normalized/standardized n-th central moment.
+ * This can be computed on magnitudes, see @ref dwt_util_abs_s function.
  *
  * @returns Moment.
- *
- * @todo This should be computed on magnitudes.
  *
  * @warning experimental
  */
@@ -2041,9 +2037,9 @@ float dwt_util_band_smoment_s(
 /**
  * @brief Skewness.
  *
- * @returns The skewness.
+ * This can be computed on magnitudes, see @ref dwt_util_abs_s function.
  *
- * @todo This should be computed on magnitudes.
+ * @returns The skewness.
  *
  * @warning experimental
  */
@@ -2058,9 +2054,9 @@ float dwt_util_band_skew_s(
 /**
  * @brief Kurtosis.
  *
- * @returns The kurtosis.
+ * This can be computed on magnitudes, see @ref dwt_util_abs_s function.
  *
- * @todo This should be computed on magnitudes.
+ * @returns The kurtosis.
  *
  * @warning experimental
  */
@@ -2460,6 +2456,21 @@ int dwt_util_test2_cdf97_2_i(
 	int opt_stride,			///< use optimal stride
 	int j_max,			///< the number of intended decomposition levels (scales)
 	int decompose_one		///< should be row or column of size one pixel decomposed? zero value if not
+);
+
+/**
+ * @brief Absolute values of image.
+ *
+ * Calculate absolute values (magnitudes) of given subband or whole image/transform, in-place version.
+ *
+ * @warning experimental
+ */
+void dwt_util_abs_s(
+	void *ptr,		///< pointer to image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of the image
+	int size_y		///< height of the image
 );
 
 /**

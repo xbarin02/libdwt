@@ -15230,3 +15230,22 @@ int dwt_util_test2_cdf97_2_i(
 		0
 	);
 }
+
+void dwt_util_abs_s(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_x,
+	int size_y
+)
+{
+	assert( ptr );
+
+	for(int y = 0; y < size_y; y++)
+		for(int x = 0; x < size_x; x++)
+		{
+			float *c = dwt_util_addr_coeff_s(ptr, y, x, stride_x, stride_y);
+
+			*c = fabsf(*c);
+		}
+}
