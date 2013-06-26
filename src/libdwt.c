@@ -1822,6 +1822,16 @@ void dwt_util_free_image(
 	*pptr = NULL;
 }
 
+static
+int is_nan_or_inf_d(double x)
+{
+#ifdef microblaze
+	return ( ((*(uint32_t *)(void *)&x)>>20) & 0x7ff ) == 0x7ff;
+#else
+	return isnan(x) || isinf(x);
+#endif
+}
+
 int dwt_util_compare_d(
 	void *ptr1,
 	void *ptr2,
@@ -1841,7 +1851,7 @@ int dwt_util_compare_d(
 			const double a = *addr2_d(ptr1, y, x, stride_x, stride_y);
 			const double b = *addr2_d(ptr2, y, x, stride_x, stride_y);
 
-			if( isnan(a) || isinf(a) || isnan(b) || isinf(b) )
+			if( is_nan_or_inf_d(a) || is_nan_or_inf_d(b) )
 				return 1;
 
 			if( fabs(a - b) > eps )
@@ -9476,6 +9486,7 @@ void dwt_cdf97_2f_d(
 	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
 	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
 
+	// FIXME(microblaze): align on 8 bytes boundary (GCC's __attribure__ is ignored)
 	double temp[size_o_big_max];
 	if(NULL == temp)
 		abort();
@@ -9559,6 +9570,7 @@ void dwt_cdf53_2f_d(
 	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
 	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
 
+	// FIXME(microblaze): align on 8 bytes boundary (GCC's __attribure__ is ignored)
 	double temp[size_o_big_max];
 	if(NULL == temp)
 		abort();
@@ -10198,6 +10210,7 @@ void dwt_cdf97_2i_d(
 	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
 	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
 
+	// FIXME(microblaze): align on 8 bytes boundary (GCC's __attribure__ is ignored)
 	double temp[size_o_big_max];
 	if(NULL == temp)
 		abort();
@@ -10275,6 +10288,7 @@ void dwt_cdf53_2i_d(
 	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
 	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
 
+	// FIXME(microblaze): align on 8 bytes boundary (GCC's __attribure__ is ignored)
 	double temp[size_o_big_max];
 	if(NULL == temp)
 		abort();
