@@ -2019,6 +2019,7 @@ float dwt_util_band_stdev_s(
 /**
  * @brief Standardized moment.
  *
+ * The normalized/standardized n-th central moment.
  * This can be computed on magnitudes, see @ref dwt_util_abs_s function.
  *
  * @returns Moment.
