@@ -499,12 +499,14 @@ size_t alignment(
 #ifdef microblaze
 	// DMA memory transfers seems to need alignment of 2*sizeof(float) = 8
 	// http://www.xilinx.com/support/documentation/sw_manuals/mb_ref_guide.pdf => Memory Architecture
+	UNUSED(type_size);
 	return 8;
 #endif
 
 #ifdef __x86_64__
 	// due to SSE memory access sizeof(__m128) = 16
 	// FIXME: this should return proper value according to accel_type (not for each implementation the SSE alignment is needed)
+	UNUSED(type_size);
 	return 16;
 #endif
 
