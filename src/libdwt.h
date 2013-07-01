@@ -789,7 +789,7 @@ void dwt_cdf97_1f_s(
 );
 
 /**
- * @brief Serie of forward 1-D fast wavelet transforms using CDF 9/7 wavelet and lifting scheme, in-place version.
+ * @brief Series of forward 1-D fast wavelet transforms using CDF 9/7 wavelet and lifting scheme, in-place version.
  *
  * This function works with single precision floating point numbers (i.e. float data type).
  *
