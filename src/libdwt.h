@@ -1199,6 +1199,20 @@ int dwt_util_save_to_pgm_s(
 );
 
 /**
+ * @brief Save grayscale image into ASCII-type MAT file.
+ *
+ * @warning experimental
+ */
+int dwt_util_save_to_mat_s(
+	const char *path,	///< target file name, e.g. "output.dat"
+	const void *ptr,	///< pointer to beginning of image data
+	int size_x,		///< width of nested image (in elements)
+	int size_y,		///< height of nested image (in elements)
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y		///< difference between columns (in bytes)
+);
+
+/**
  * @brief Save grayscale image into ASCII-type PGM file.
  *
  * See <a href="http://netpbm.sourceforge.net/">the home page for Netpbm</a>.
@@ -1232,6 +1246,20 @@ int dwt_util_load_from_pgm_s(
 	int *pstride_y,		///< place the difference between columns (in bytes) at this address
 	int *psize_big_x,	///< place the width of the image (in elements) at this address
 	int *psize_big_y	///< place the height of the image (in elements) at this address
+);
+
+/**
+ * @brief Load grayscale image from ASCII-type MAT file.
+ *
+ * @warning experimental
+ */
+int dwt_util_load_from_mat_s(
+	const char *path,	///< input file name, e.g. "input.dat"
+	void **ptr,		///< place the pointer to beginning of image data at this address
+	int *size_x,		///< place the width of the image (in elements) at this address
+	int *size_y,		///< place the height of the image (in elements) at this address
+	int *stride_x,		///< place the difference between rows (in bytes) at this address
+	int *stride_y		///< place the difference between columns (in bytes) at this address
 );
 
 /**

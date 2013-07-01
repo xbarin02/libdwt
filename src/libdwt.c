@@ -445,6 +445,8 @@
 	#include <omp.h>
 #endif
 
+#define sizeof_arr(arr) ( sizeof(arr) / sizeof(*(arr)) )
+
 #ifdef microblaze
 inline
 float powf(
@@ -15373,4 +15375,343 @@ void dwt_util_abs_s(
 
 			*c = fabsf(*c);
 		}
+}
+
+struct delta {
+	int curr;
+	int *symb;
+	int symb_no;
+	int next;
+	void (*func)(void *, int, int *, int);
+};
+
+static
+int fsm_symb_found(int symb, int *symb_group, int symb_no)
+{
+	int found = 0;
+
+	for(int s = 0; s < symb_no; s++)
+	{
+		if( symb == symb_group[s] )
+			found = 1;
+	}
+
+	return found;
+}
+
+/**
+ * @brief Finite state machine.
+ * @return Returns final or error state.
+ */
+static
+int fsm(
+	void *ctx,
+	int (*get_symb)(void *),
+	struct delta *delta,
+	int count,
+	int s_init,
+	int s_final,
+	int s_error
+)
+{
+	int state = s_init;
+
+	while(1)
+	{
+		int symb = get_symb(ctx);
+
+		int d;
+
+		for(d = 0; d < count; d++)
+		{
+			struct delta *row = &delta[d];
+
+			if( state == row->curr )
+			{
+				if( fsm_symb_found(symb, row->symb, row->symb_no) )
+				{
+					if( row->func )
+						row->func(ctx, symb, row->symb, row->symb_no);
+					state = row->next;
+					break;
+				}
+			}
+		}
+
+		if( count == d )
+			state = s_error;
+
+		if( s_final == state || s_error == state )
+			break;
+	}
+
+	return state;
+}
+
+int dwt_util_save_to_mat_s(
+	const char *path,
+	const void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y
+)
+{
+	//dwt_util_log(LOG_DBG, "size_x=%i size_y=%i\n", size_x, size_y);
+
+	FILE *file = fopen(path, "w");
+
+	if( NULL == file )
+		return 1;
+
+	int symb_delim[] = { ',', ';', '\t', ' ' };
+	int symb_newline[] = { '\n', '\r' };
+
+	for(int y = 0; y < size_y; y++)
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			float coeff = *dwt_util_addr_coeff_const_s(
+				ptr,
+				y,
+				x,
+				stride_x,
+				stride_y
+			);
+
+			fprintf(file, "%f", coeff);
+
+			if( x+1 != size_x )
+				fprintf(file, "%c", (char)symb_delim[0]);
+		}
+
+		fprintf(file, "%c", (char)symb_newline[0]);
+	}
+
+	fclose(file);
+	return 0;
+}
+
+struct mat_context
+{
+	FILE *file;
+
+	int curr_cols;
+	int min_cols;
+	int rows;
+
+	void **ptr;
+	int *size_x;
+	int *size_y;
+	int *stride_x;
+	int *stride_y;
+};
+
+static
+void mat_context_init(struct mat_context *ctx, FILE *file, void **ptr, int *size_x, int *size_y, int *stride_x, int *stride_y)
+{
+	ctx->file = file;
+
+	ctx->ptr = ptr;
+	ctx->size_x = size_x;
+	ctx->size_y = size_y;
+	ctx->stride_x = stride_x;
+	ctx->stride_y = stride_y;
+
+	*ptr = NULL;
+}
+
+static
+void mat_context_reset(struct mat_context *ctx)
+{
+	ctx->curr_cols = 0;
+	ctx->min_cols = 0;
+	ctx->rows = 0;
+}
+
+int mat_get_symb(void *ctx)
+{
+	struct mat_context *c = ctx;
+
+	return fgetc(c->file);
+}
+
+int mat_unget_symb(void *ctx, int symb)
+{
+	struct mat_context *c = ctx;
+
+	return ungetc(symb, c->file);
+}
+
+void mat_end_line(void *ctx, int symb, int *symb_group, int symb_no)
+{
+	struct mat_context *c = ctx;
+
+	UNUSED(symb);
+	UNUSED(symb_group);
+	UNUSED(symb_no);
+
+	//dwt_util_log(LOG_DBG, "end line: curr_cols=%i min_cols=%i\n", c->curr_cols, c->min_cols);
+
+	c->min_cols = min(
+		c->curr_cols?c->curr_cols:c->min_cols,
+		c->min_cols?c->min_cols:c->curr_cols);
+	c->curr_cols = 0;
+}
+
+static
+int str_val_s(const char *buff, float *val)
+{
+	return 1 != sscanf(buff, "%f", val);
+}
+
+#define CELL_MAX 256
+void mat_cell_read_s(void *ctx, int symb, int *symb_group, int symb_no)
+{
+	struct mat_context *c = ctx;
+
+	char buff[CELL_MAX];
+	int cnt = 0;
+	buff[cnt++] = (char)symb;
+	do{
+		int symb_new = mat_get_symb(ctx);
+		
+		if( fsm_symb_found(symb_new, symb_group, symb_no) )
+		{
+			buff[cnt++] = (char)symb_new;
+		}
+		else
+		{
+			mat_unget_symb(ctx, symb_new);
+			break;
+		}
+	} while( cnt+1 < CELL_MAX );
+	buff[cnt] = 0;
+
+	int pos_x = c->curr_cols-1;
+	int pos_y = c->rows;
+
+	float val;
+	if( str_val_s(buff, &val) )
+	{
+		dwt_util_log(LOG_WARN, "invalid cell content\n");
+	}
+	else
+	{
+		//dwt_util_log(LOG_DBG, "store %f at (y=%i,x=%i)\n", val, pos_y, pos_x);
+		if( pos_x+1 > *c->size_x )
+		{
+			dwt_util_log(LOG_WARN, "x-coordinate is over limit\n");
+		}
+		else
+		{
+			float *coeff = dwt_util_addr_coeff_s(
+				*c->ptr,
+				pos_y,
+				pos_x,
+				*c->stride_x,
+				*c->stride_y
+			);
+
+			*coeff = val;
+		}
+	}
+}
+#undef CELL_MAX
+
+void mat_new_cell_s(void *ctx, int symb, int *symb_group, int symb_no)
+{
+	struct mat_context *c = ctx;
+
+	c->curr_cols++;
+
+	// read a cell content when the matrix is allocated
+	if( *c->ptr )
+		mat_cell_read_s(ctx, symb, symb_group, symb_no);
+}
+
+void mat_new_line(void *ctx, int symb, int *symb_group, int symb_no)
+{
+	struct mat_context *c = ctx;
+
+	//dwt_util_log(LOG_DBG, "new line on row %i\n", c->rows+1);
+
+	mat_end_line(ctx, symb, symb_group, symb_no);
+
+	c->rows++;
+}
+
+int dwt_util_load_from_mat_s(
+	const char *path,
+	void **ptr,
+	int *size_x,
+	int *size_y,
+	int *stride_x,
+	int *stride_y
+)
+{
+	FILE *file = fopen(path, "r");
+
+	if( NULL == file )
+		return 1;
+
+	enum state {
+		S_START,
+		S_DELIM,
+		S_CELL,
+		S_FINAL,
+		S_ERROR
+	};
+
+	int symb_delim[] = { ',', ';', '\t', ' ' };
+	int symb_newline[] = { '\n', '\r' };
+	int symb_number[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.' };
+	int symb_eof[] = { EOF };
+
+	struct delta delta[] = {
+		{ S_START, symb_delim,   sizeof_arr(symb_delim),   S_DELIM, 0 },
+		{ S_START, symb_newline, sizeof_arr(symb_newline), S_START, mat_end_line },
+		{ S_START, symb_number,  sizeof_arr(symb_number),  S_CELL,  mat_new_cell_s },
+		{ S_START, symb_eof,     sizeof_arr(symb_eof),     S_FINAL, mat_end_line },
+		{ S_DELIM, symb_delim,   sizeof_arr(symb_delim),   S_DELIM, 0 },
+		{ S_DELIM, symb_newline, sizeof_arr(symb_newline), S_START, mat_new_line },
+		{ S_DELIM, symb_number,  sizeof_arr(symb_number),  S_CELL,  mat_new_cell_s },
+		{ S_DELIM, symb_eof,     sizeof_arr(symb_eof),     S_FINAL, mat_end_line },
+		{ S_CELL,  symb_number,  sizeof_arr(symb_number),  S_CELL,  0 },
+		{ S_CELL,  symb_newline, sizeof_arr(symb_newline), S_START, mat_new_line },
+		{ S_CELL,  symb_delim,   sizeof_arr(symb_delim),   S_DELIM, 0 },
+		{ S_CELL,  symb_eof,     sizeof_arr(symb_eof),     S_FINAL, mat_end_line },
+	};
+
+	struct mat_context ctx;
+
+	mat_context_init(&ctx, file, ptr, size_x, size_y, stride_x, stride_y);
+	mat_context_reset(&ctx);
+
+	if( S_ERROR == fsm(&ctx, mat_get_symb, delta, sizeof_arr(delta), S_START, S_FINAL, S_ERROR) )
+	{
+		fclose(file);
+		return 1;
+	}
+
+	//dwt_util_log(LOG_DBG, "y=%i x=%i\n", ctx.rows, ctx.min_cols);
+
+	*size_x = ctx.min_cols;
+	*size_y = ctx.rows;
+	*stride_y = sizeof(float);
+	*stride_x = dwt_util_get_opt_stride(*stride_y * *size_x);
+	dwt_util_alloc_image(ctx.ptr, *ctx.stride_x, *ctx.stride_y, *ctx.size_x, *ctx.size_y);
+
+	mat_context_reset(&ctx);
+
+	rewind(file);
+
+	if( S_ERROR == fsm(&ctx, mat_get_symb, delta, sizeof_arr(delta), S_START, S_FINAL, S_ERROR) )
+	{
+		fclose(file);
+		return 1;
+	}
+
+	fclose(file);
+	return 0;
 }
