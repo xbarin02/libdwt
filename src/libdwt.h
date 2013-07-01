@@ -1634,6 +1634,19 @@ float *dwt_util_addr_coeff_s(
  * 
  * @warning This function is slow; faster way is calculate the address directly.
  */
+const float *dwt_util_addr_coeff_const_s(
+	const void *ptr,	///< pointer to beginning of image data
+	int y,			///< y-coordinate
+	int x,			///< x-coordinate
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y		///< difference between columns (in bytes)
+);
+
+/**
+ * @brief Compute address of given transform coefficient or image pixel.
+ * 
+ * @warning This function is slow; faster way is calculate the address directly.
+ */
 double *dwt_util_addr_coeff_d(
 	void *ptr,		///< pointer to beginning of image data
 	int y,			///< y-coordinate
