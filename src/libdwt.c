@@ -15565,6 +15565,12 @@ int str_val_s(const char *buff, float *val)
 	return 1 != sscanf(buff, "%f", val);
 }
 
+static
+int str_val_i(const char *buff, int *val)
+{
+	return 1 != sscanf(buff, "%i", val);
+}
+
 #define CELL_MAX 256
 void mat_cell_read_s(void *ctx, int symb, int *symb_group, int symb_no)
 {
@@ -15619,6 +15625,60 @@ void mat_cell_read_s(void *ctx, int symb, int *symb_group, int symb_no)
 }
 #undef CELL_MAX
 
+#define CELL_MAX 256
+void mat_cell_read_i(void *ctx, int symb, int *symb_group, int symb_no)
+{
+	struct mat_context *c = ctx;
+
+	char buff[CELL_MAX];
+	int cnt = 0;
+	buff[cnt++] = (char)symb;
+	do{
+		int symb_new = mat_get_symb(ctx);
+		
+		if( fsm_symb_found(symb_new, symb_group, symb_no) )
+		{
+			buff[cnt++] = (char)symb_new;
+		}
+		else
+		{
+			mat_unget_symb(ctx, symb_new);
+			break;
+		}
+	} while( cnt+1 < CELL_MAX );
+	buff[cnt] = 0;
+
+	int pos_x = c->curr_cols-1;
+	int pos_y = c->rows;
+
+	int val;
+	if( str_val_i(buff, &val) )
+	{
+		dwt_util_log(LOG_WARN, "invalid cell content\n");
+	}
+	else
+	{
+		//dwt_util_log(LOG_DBG, "store %f at (y=%i,x=%i)\n", val, pos_y, pos_x);
+		if( pos_x+1 > *c->size_x )
+		{
+			dwt_util_log(LOG_WARN, "x-coordinate is over limit\n");
+		}
+		else
+		{
+			int *coeff = dwt_util_addr_coeff_i(
+				*c->ptr,
+				pos_y,
+				pos_x,
+				*c->stride_x,
+				*c->stride_y
+			);
+
+			*coeff = val;
+		}
+	}
+}
+#undef CELL_MAX
+
 void mat_new_cell_s(void *ctx, int symb, int *symb_group, int symb_no)
 {
 	struct mat_context *c = ctx;
@@ -15628,6 +15688,17 @@ void mat_new_cell_s(void *ctx, int symb, int *symb_group, int symb_no)
 	// read a cell content when the matrix is allocated
 	if( *c->ptr )
 		mat_cell_read_s(ctx, symb, symb_group, symb_no);
+}
+
+void mat_new_cell_i(void *ctx, int symb, int *symb_group, int symb_no)
+{
+	struct mat_context *c = ctx;
+
+	c->curr_cols++;
+
+	// read a cell content when the matrix is allocated
+	if( *c->ptr )
+		mat_cell_read_i(ctx, symb, symb_group, symb_no);
 }
 
 void mat_new_line(void *ctx, int symb, int *symb_group, int symb_no)
@@ -15699,6 +15770,81 @@ int dwt_util_load_from_mat_s(
 	*size_x = ctx.min_cols;
 	*size_y = ctx.rows;
 	*stride_y = sizeof(float);
+	*stride_x = dwt_util_get_opt_stride(*stride_y * *size_x);
+	dwt_util_alloc_image(ctx.ptr, *ctx.stride_x, *ctx.stride_y, *ctx.size_x, *ctx.size_y);
+
+	mat_context_reset(&ctx);
+
+	rewind(file);
+
+	if( S_ERROR == fsm(&ctx, mat_get_symb, delta, sizeof_arr(delta), S_START, S_FINAL, S_ERROR) )
+	{
+		fclose(file);
+		return 1;
+	}
+
+	fclose(file);
+	return 0;
+}
+
+int dwt_util_load_from_mat_i(
+	const char *path,
+	void **ptr,
+	int *size_x,
+	int *size_y,
+	int *stride_x,
+	int *stride_y
+)
+{
+	FILE *file = fopen(path, "r");
+
+	if( NULL == file )
+		return 1;
+
+	enum state {
+		S_START,
+		S_DELIM,
+		S_CELL,
+		S_FINAL,
+		S_ERROR
+	};
+
+	int symb_delim[] = { ',', ';', '\t', ' ' };
+	int symb_newline[] = { '\n', '\r' };
+	int symb_number[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.' };
+	int symb_eof[] = { EOF };
+
+	struct delta delta[] = {
+		{ S_START, symb_delim,   sizeof_arr(symb_delim),   S_DELIM, 0 },
+		{ S_START, symb_newline, sizeof_arr(symb_newline), S_START, mat_end_line },
+		{ S_START, symb_number,  sizeof_arr(symb_number),  S_CELL,  mat_new_cell_i },
+		{ S_START, symb_eof,     sizeof_arr(symb_eof),     S_FINAL, mat_end_line },
+		{ S_DELIM, symb_delim,   sizeof_arr(symb_delim),   S_DELIM, 0 },
+		{ S_DELIM, symb_newline, sizeof_arr(symb_newline), S_START, mat_new_line },
+		{ S_DELIM, symb_number,  sizeof_arr(symb_number),  S_CELL,  mat_new_cell_i },
+		{ S_DELIM, symb_eof,     sizeof_arr(symb_eof),     S_FINAL, mat_end_line },
+		{ S_CELL,  symb_number,  sizeof_arr(symb_number),  S_CELL,  0 },
+		{ S_CELL,  symb_newline, sizeof_arr(symb_newline), S_START, mat_new_line },
+		{ S_CELL,  symb_delim,   sizeof_arr(symb_delim),   S_DELIM, 0 },
+		{ S_CELL,  symb_eof,     sizeof_arr(symb_eof),     S_FINAL, mat_end_line },
+	};
+
+	struct mat_context ctx;
+
+	mat_context_init(&ctx, file, ptr, size_x, size_y, stride_x, stride_y);
+	mat_context_reset(&ctx);
+
+	if( S_ERROR == fsm(&ctx, mat_get_symb, delta, sizeof_arr(delta), S_START, S_FINAL, S_ERROR) )
+	{
+		fclose(file);
+		return 1;
+	}
+
+	//dwt_util_log(LOG_DBG, "y=%i x=%i\n", ctx.rows, ctx.min_cols);
+
+	*size_x = ctx.min_cols;
+	*size_y = ctx.rows;
+	*stride_y = sizeof(int);
 	*stride_x = dwt_util_get_opt_stride(*stride_y * *size_x);
 	dwt_util_alloc_image(ctx.ptr, *ctx.stride_x, *ctx.stride_y, *ctx.size_x, *ctx.size_y);
 
