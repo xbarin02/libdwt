@@ -1281,6 +1281,20 @@ int dwt_util_load_from_pgm_i(
 );
 
 /**
+ * @brief Load grayscale image from ASCII-type MAT file.
+ *
+ * @warning experimental
+ */
+int dwt_util_load_from_mat_i(
+	const char *path,	///< input file name, e.g. "input.dat"
+	void **ptr,		///< place the pointer to beginning of image data at this address
+	int *size_x,		///< place the width of the image (in elements) at this address
+	int *size_y,		///< place the height of the image (in elements) at this address
+	int *stride_x,		///< place the difference between rows (in bytes) at this address
+	int *stride_y		///< place the difference between columns (in bytes) at this address
+);
+
+/**
  * @brief Wrapper to @p omp_get_thread_num function.
  *
  * @warning experimental
