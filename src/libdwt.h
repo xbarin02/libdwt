@@ -2565,6 +2565,69 @@ void dwt_util_abs_s(
 );
 
 /**
+ * @brief Dot product.
+ *
+ * The dot/inner product of two signals with single precission floating point format.
+ * The second signal is displaced with respect to the first one.
+ *
+ * @param ptr1 The reference signal.
+ * @param ptr2 The displaced signal.
+ * @param displ_x The x-coordinate of the displacement.
+ * @param displ_y The y-coordinate of the displacement.
+ */
+float dwt_util_dot_s(
+	const void *ptr1,
+	int size1_x,
+	int size1_y,
+	int stride1_x,
+	int stride1_y,
+	int displ_x,
+	int displ_y,
+	const void *ptr2,
+	int size2_x,
+	int size2_y,
+	int stride2_x,
+	int stride2_y
+);
+
+/**
+ * @brief Normalize signal.
+ *
+ * The samples of the input signal are divided by the signal norm.
+ *
+ * @param p The p-norm used for the normalization.
+ */
+void dwt_util_normalize_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	float p
+);
+
+/**
+ * @brief Addition of two signals.
+ *
+ * @param[in,out] ptr1 The destination signal.
+ * @param[in]     ptr2 The source signal.
+ */
+void dwt_util_add_s(
+	void *ptr1,
+	int size1_x,
+	int size1_y,
+	int stride1_x,
+	int stride1_y,
+	int displ_x,
+	int displ_y,
+	const void *ptr2,
+	int size2_x,
+	int size2_y,
+	int stride2_x,
+	int stride2_y
+);
+
+/**
  * @}
  */
 

@@ -15861,3 +15861,234 @@ int dwt_util_load_from_mat_i(
 	fclose(file);
 	return 0;
 }
+
+/**
+ * @brief Saturation arithmetic.
+ */
+static
+int saturate_i(int val, int lo, int hi)
+{
+	if( val < lo )
+		return lo;
+	if( val > hi )
+		return hi;
+	return val;
+}
+
+static
+float dot_s(
+	const void *ptr1,
+	int size1_x,
+	int size1_y,
+	int stride1_x,
+	int stride1_y,
+	int displ_x,
+	int displ_y,
+	const void *ptr2,
+	int size2_x,
+	int size2_y,
+	int stride2_x,
+	int stride2_y
+)
+{
+	float sum = 0.0f;
+
+	for(int y1 = 0; y1 < size1_y; y1++)
+		for(int x1 = 0; x1 < size1_x; x1++)
+		{
+			float val1 = *dwt_util_addr_coeff_const_s(
+				ptr1,
+				y1,
+				x1,
+				stride1_x,
+				stride1_y
+			);
+
+			// saturation arithmetic
+			int y2 = saturate_i(y1 + displ_y, 0, size2_y-1);
+			int x2 = saturate_i(x1 + displ_x, 0, size2_x-1);
+
+			float val2 = *dwt_util_addr_coeff_const_s(
+				ptr2,
+				y2,
+				x2,
+				stride2_x,
+				stride2_y
+			);
+
+			sum += val1 * val2;
+		}
+
+	return sum;
+}
+
+float dwt_util_dot_s(
+	const void *ptr1,
+	int size1_x,
+	int size1_y,
+	int stride1_x,
+	int stride1_y,
+	int displ_x,
+	int displ_y,
+	const void *ptr2,
+	int size2_x,
+	int size2_y,
+	int stride2_x,
+	int stride2_y
+)
+{
+	return dot_s(
+		ptr1,
+		size1_x,
+		size1_y,
+		stride1_x,
+		stride1_y,
+		displ_x,
+		displ_y,
+		ptr2,
+		size2_x,
+		size2_y,
+		stride2_x,
+		stride2_y
+	);
+}
+
+static
+void normalize_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	float p
+)
+{
+	float norm = dwt_util_band_lpnorm_s(
+		ptr,
+		stride_x,
+		stride_y,
+		size_x,
+		size_y,
+		p
+	);
+
+	for(int y = 0; y < size_y; y++)
+		for(int x = 0; x < size_x; x++)
+		{
+			float *coeff = dwt_util_addr_coeff_s(
+				ptr,
+				y,
+				x,
+				stride_x,
+				stride_y
+			);
+
+			*coeff /= norm;
+		}
+
+	dwt_util_log(LOG_DBG, "normalize: p=%f, norm %f => %f\n",
+		p,
+		norm,
+		dwt_util_band_lpnorm_s(
+			ptr,
+			stride_x,
+			stride_y,
+			size_x,
+			size_y,
+			p
+		)
+	);
+}
+
+void dwt_util_normalize_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	float p
+)
+{
+	normalize_s(
+		ptr,
+		size_x,
+		size_y,
+		stride_x,
+		stride_y,
+		p
+	);
+}
+
+static
+void add_s(
+	void *ptr1,
+	int size1_x,
+	int size1_y,
+	int stride1_x,
+	int stride1_y,
+	int displ_x,
+	int displ_y,
+	const void *ptr2,
+	int size2_x,
+	int size2_y,
+	int stride2_x,
+	int stride2_y
+)
+{
+	for(int y1 = 0; y1 < size1_y; y1++)
+		for(int x1 = 0; x1 < size1_x; x1++)
+		{
+			float *pdst = dwt_util_addr_coeff_s(
+				ptr1,
+				y1,
+				x1,
+				stride1_x,
+				stride1_y
+			);
+
+			// saturation arithmetic
+			int y2 = saturate_i(y1 + displ_y, 0, size2_y-1);
+			int x2 = saturate_i(x1 + displ_x, 0, size2_x-1);
+
+			float src = *dwt_util_addr_coeff_const_s(
+				ptr2,
+				y2,
+				x2,
+				stride2_x,
+				stride2_y
+			);
+
+			*pdst += src;
+		}
+}
+
+void dwt_util_add_s(
+	void *ptr1,
+	int size1_x,
+	int size1_y,
+	int stride1_x,
+	int stride1_y,
+	int displ_x,
+	int displ_y,
+	const void *ptr2,
+	int size2_x,
+	int size2_y,
+	int stride2_x,
+	int stride2_y
+)
+{
+	add_s(
+		ptr1,
+		size1_x,
+		size1_y,
+		stride1_x,
+		stride1_y,
+		displ_x,
+		displ_y,
+		ptr2,
+		size2_x,
+		size2_y,
+		stride2_x,
+		stride2_y
+	);
+}
