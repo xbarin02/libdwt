@@ -1,3 +1,9 @@
+2013-??-?? David Barina <ibarina@fit.vutbr.cz>
+* Added some new functions, e.g. normalization, dot product, signal addition,
+1D recursive DWT, series of 1D DWT in 2D matrix, MAT-file related functions
+and FSM processing core.
+* Added WPS feature extraction example.
+
 2013-06-27 David Barina <ibarina@fit.vutbr.cz>
 * Migrated to new temp[] buffer functions.
 * Added functions for testing of correctness of DWT functions.
