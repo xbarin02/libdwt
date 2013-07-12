@@ -22,11 +22,9 @@ type = "float"
 
 unset arrow
 
-if("x86_64" eq system("uname -m"))
-{
+if("x86_64" eq system("uname -m")){
 	L1cache = system("getconf LEVEL1_DCACHE_SIZE")
 	set arrow from L1cache/4,graph(0,0) to L1cache/4,graph(1,1) nohead
-
 	L2cache = system("getconf LEVEL2_CACHE_SIZE")
 	set arrow from L2cache/4,graph(0,0) to L2cache/4,graph(1,1) nohead
 }
