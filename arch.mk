@@ -34,7 +34,7 @@ endif
 ifeq ($(ARCH),x86_64)
 	CROSS_COMPILE = 
 	CFLAGS += -fopenmp -fPIC
-	CFLAGS += -ftree-vectorize
+	CFLAGS += -O3 -ftree-vectorize
 	LDFLAGS += -fopenmp
 	LDLIBS += -lrt
 endif
