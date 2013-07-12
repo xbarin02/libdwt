@@ -42,7 +42,7 @@ endif
 # ARM11 (Raspberry Pi)
 ifeq ($(ARCH),armv6l)
 	CROSS_COMPILE = 
-	CFLAGS += -fopenmp -fPIC
+	CFLAGS += -O3 -fopenmp -fPIC
 	LDFLAGS += -fopenmp
 	LDLIBS += -lrt                                                                                                                                                              
 endif
