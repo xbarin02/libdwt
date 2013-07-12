@@ -42,9 +42,8 @@ endif
 # ARM11 (Raspberry Pi)
 ifeq ($(ARCH),armv6l)
 	CROSS_COMPILE = 
-	CFLAGS += -O3 -fopenmp -fPIC
-	LDFLAGS += -fopenmp
-	LDLIBS += -lrt                                                                                                                                                              
+	CFLAGS += -O3 -fPIC -Wno-unknown-pragmas
+	LDLIBS += -lrt
 endif
 
 # Cortex-A8 (N900)
