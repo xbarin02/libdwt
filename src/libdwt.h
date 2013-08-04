@@ -1213,6 +1213,27 @@ int dwt_util_save_to_mat_s(
 );
 
 /**
+ * @brief Save matrix of vectors (float) and single-column matrix of labels (int) into LIBSVM format.
+ *
+ * See <a href="http://www.csie.ntu.edu.tw/~cjlin/libsvm/">LIBSVM homepage</a> for more details.
+ *
+ * @warning experimental
+ */
+int dwt_util_save_to_svm_s(
+	const char *path,	///< target file name, e.g. "output.dat"
+	const void *ptr,	///< pointer to beginning of matrix of vectors (float type)
+	int size_x,		///< width of nested matrix (in elements)
+	int size_y,		///< height of nested matrix (in elements)
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	const void *cls_ptr,	///< pointer to beginning of matrix of labels (int type)
+	int cls_size_x,		///< width of nested matrix (in elements), must be 1
+	int cls_size_y,		///< height of nested matrix (in elements), must be same as @e size_y
+	int cls_stride_x,	///< difference between rows (in bytes)
+	int cls_stride_y	///< difference between columns (in bytes)
+);
+
+/**
  * @brief Save grayscale image into ASCII-type PGM file.
  *
  * See <a href="http://netpbm.sourceforge.net/">the home page for Netpbm</a>.
@@ -1652,6 +1673,19 @@ void dwt_util_subband(
  */
 int *dwt_util_addr_coeff_i(
 	void *ptr,		///< pointer to beginning of image data
+	int y,			///< y-coordinate
+	int x,			///< x-coordinate
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y		///< difference between columns (in bytes)
+);
+
+/**
+ * @brief Compute address of given transform coefficient or image pixel.
+ * 
+ * @warning This function is slow; faster way is calculate the address directly.
+ */
+const int *dwt_util_addr_coeff_const_i(
+	const void *ptr,	///< pointer to beginning of image data
 	int y,			///< y-coordinate
 	int x,			///< x-coordinate
 	int stride_x,		///< difference between rows (in bytes)

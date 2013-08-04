@@ -1411,6 +1411,17 @@ int *dwt_util_addr_coeff_i(
 	return addr2_i(ptr, y, x, stride_x, stride_y);
 }
 
+const int *dwt_util_addr_coeff_const_i(
+	const void *ptr,
+	int y,
+	int x,
+	int stride_x,
+	int stride_y
+)
+{
+	return addr2_const_i(ptr, y, x, stride_x, stride_y);
+}
+
 float *dwt_util_addr_coeff_s(
 	void *ptr,
 	int y,
@@ -16091,4 +16102,69 @@ void dwt_util_add_s(
 		stride2_x,
 		stride2_y
 	);
+}
+
+int dwt_util_save_to_svm_s(
+	const char *path,
+	const void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	const void *cls_ptr,
+	int cls_size_x,
+	int cls_size_y,
+	int cls_stride_x,
+	int cls_stride_y
+)
+{
+	// assert
+	assert( path && ptr && cls_ptr );
+	assert( size_x > 0 && size_y > 0 && cls_size_x == 1 && cls_size_y == size_y );
+
+	// fopen
+	FILE *file = fopen(path, "w");
+
+	if( NULL == file )
+		return 1;
+
+	// for each y:
+	for(int y = 0; y < size_y; y++)
+	{
+		// get label(y)
+		int label = *dwt_util_addr_coeff_const_i(
+			cls_ptr,
+			y, // y
+			0, // x
+			cls_stride_x,
+			cls_stride_y
+		);
+
+		// put label(y)
+		fprintf(file, "%i", label);
+
+		// for each x:
+		for(int x = 0; x < size_x; x++)
+		{
+			// get value(y,x)
+			float coeff = *dwt_util_addr_coeff_const_s(
+				ptr,
+				y,
+				x,
+				stride_x,
+				stride_y
+			);
+
+			// put value(y,x)
+			fprintf(file, " %i:%f", x+1, coeff);
+		}
+
+		// line end
+		fprintf(file, "\n");
+	}
+
+	// fclose
+	fclose(file);
+
+	return 0;
 }
