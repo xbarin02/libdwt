@@ -10,7 +10,12 @@ int main(int argc, char *argv[])
 {
 	dwt_util_init();
 
-	const char *path = (argc > 1) ? argv[1] : "data/input_dwt.dat";
+	const char *path = (argc > 1) ? argv[1]
+		: "data/input_dwt.dat";
+	const char *cls_path = (argc > 2) ? argv[2]
+		: "data/target_classes.dat";
+	const char *svm_path = (argc > 3) ? argv[3]
+		: "data/svm.dat";
 
 	// input/transformed data
 	void *ptr;
@@ -21,6 +26,31 @@ int main(int argc, char *argv[])
 
 	// load the data from a MAT file
 	dwt_util_load_from_mat_s(path, &ptr, &size_x, &size_y, &stride_x, &stride_y);
+
+	// classes
+	void *cls_ptr;
+	int cls_size_x, cls_size_y;
+	int cls_stride_x, cls_stride_y;
+
+	// load classes as "int" matrix
+	dwt_util_load_from_mat_i(cls_path, &cls_ptr, &cls_size_x, &cls_size_y, &cls_stride_x, &cls_stride_y);
+
+	// combine input_dwt and target_classes into LIBSVM format
+	dwt_util_save_to_svm_s(
+		svm_path,
+		// matrix of vectors
+		ptr,
+		size_x,
+		size_y,
+		stride_x,
+		stride_y,
+		// matrix of labels
+		cls_ptr,
+		cls_size_x,
+		cls_size_y,
+		cls_stride_x,
+		cls_stride_y
+	);
 
 	// save the loaded data as a PGM image (should be in 0..1 interval)
 	dwt_util_save_to_pgm_s("data/input_dwt.pgm", 1.0, ptr, stride_x, stride_y, size_x, size_y);
@@ -90,6 +120,7 @@ int main(int argc, char *argv[])
 	// release resources
 	dwt_util_free_image(&fv);
 	dwt_util_free_image(&ptr);
+	dwt_util_free_image(&cls_ptr);
 	
 	dwt_util_finish();
 
