@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
 	const char *cls_path = (argc > 2) ? argv[2]
 		: "data/target_classes.dat";
 	const char *svm_path = (argc > 3) ? argv[3]
-		: "data/svm.dat";
+		: "data/spectra.svm";
 
 	// input/transformed data
 	void *ptr;
@@ -26,6 +26,19 @@ int main(int argc, char *argv[])
 
 	// load the data from a MAT file
 	dwt_util_load_from_mat_s(path, &ptr, &size_x, &size_y, &stride_x, &stride_y);
+
+#if 0
+	// scale to <0;1> interval
+	dwt_util_scale2_s(
+		ptr,
+		size_x,
+		size_y,
+		stride_x,
+		stride_y,
+		0.0f,
+		1.0f
+	);
+#endif
 
 	// classes
 	void *cls_ptr;
@@ -115,7 +128,38 @@ int main(int argc, char *argv[])
 		);
 	}
 
-	dwt_util_save_to_mat_s("data/wps.dat", fv, fv_size_x, fv_size_y, fv_stride_x, fv_stride_y);
+#if 0
+	// scale to <0;1> interval
+	dwt_util_scale2_s(
+		fv,
+		fv_size_x,
+		fv_size_y,
+		fv_stride_x,
+		fv_stride_y,
+		0.0f,
+		1.0f
+	);
+#endif
+
+	// save feature vectors into MAT-file
+	dwt_util_save_to_mat_s("data/fv.dat", fv, fv_size_x, fv_size_y, fv_stride_x, fv_stride_y);
+
+	// save these vectors into LIBSVM format
+	dwt_util_save_to_svm_s(
+		"data/fv.svm",
+		// matrix of vectors
+		fv,
+		fv_size_x,
+		fv_size_y,
+		fv_stride_x,
+		fv_stride_y,
+		// matrix of labels
+		cls_ptr,
+		cls_size_x,
+		cls_size_y,
+		cls_stride_x,
+		cls_stride_y
+	);
 
 	// release resources
 	dwt_util_free_image(&fv);
