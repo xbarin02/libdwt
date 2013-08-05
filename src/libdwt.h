@@ -2662,6 +2662,64 @@ void dwt_util_add_s(
 );
 
 /**
+ * @brief Find minimum and maximum of matrix.
+ *
+ * @warning experimental
+ */
+int dwt_util_find_min_max_s(
+	const void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	float *min,
+	float *max
+);
+
+/**
+ * @brief Add a constant to all elements of matrix.
+ *
+ * @warning experimental
+ */
+int dwt_util_shift_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	float a
+);
+
+/**
+ * @brief Multiply all elements of matrix by a constant.
+ *
+ * @warning experimental
+ */
+int dwt_util_scale_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	float a
+);
+
+/**
+ * @brief Scale vectors (rows) in matrix to interval @e lo .. @e hi.
+ *
+ * @warning experimental
+ */
+int dwt_util_scale2_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	float lo,
+	float hi
+);
+
+/**
  * @}
  */
 

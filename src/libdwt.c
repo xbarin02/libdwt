@@ -16168,3 +16168,213 @@ int dwt_util_save_to_svm_s(
 
 	return 0;
 }
+
+int dwt_util_find_min_max_s(
+	const void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	float *min,
+	float *max
+)
+{
+	assert( ptr );
+	assert( size_x > 0 && size_y > 0 );
+
+	*min = *dwt_util_addr_coeff_const_s(
+		ptr,
+		0,
+		0,
+		stride_x,
+		stride_y
+	);
+
+	*max = *dwt_util_addr_coeff_const_s(
+		ptr,
+		0,
+		0,
+		stride_x,
+		stride_y
+	);
+	
+	for(int y = 0; y < size_y; y++)
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			float coeff = *dwt_util_addr_coeff_const_s(
+				ptr,
+				y,
+				x,
+				stride_x,
+				stride_y
+			);
+
+			if( coeff > *max )
+				*max = coeff;
+
+			if( coeff < *min )
+				*min = coeff;
+		}
+	}
+
+	return 0;
+}
+
+int dwt_util_shift_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	float a
+)
+{
+	assert( ptr );
+
+	for(int y = 0; y < size_y; y++)
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			*dwt_util_addr_coeff_s(
+				ptr,
+				y,
+				x,
+				stride_x,
+				stride_y
+			) += a;
+		}
+	}
+
+	return 0;
+}
+
+int dwt_util_scale_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	float a
+)
+{
+	assert( ptr );
+
+	for(int y = 0; y < size_y; y++)
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			*dwt_util_addr_coeff_s(
+				ptr,
+				y,
+				x,
+				stride_x,
+				stride_y
+			) *= a;
+		}
+	}
+
+	return 0;
+}
+
+int dwt_util_scale2_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	float lo,
+	float hi
+)
+{
+	assert( ptr );
+	assert( hi > lo );
+
+	float target_diff = hi - lo;
+
+	// for each y:
+	for(int y = 0; y < size_y; y++)
+	{
+		float min, max;
+
+		// find min, max (on row)
+		dwt_util_find_min_max_s(
+			dwt_util_addr_coeff_const_s(
+				ptr,
+				y,
+				0,
+				stride_x,
+				stride_y
+			), // (y,0)
+			size_x, // size_x
+			1, // 1
+			stride_x,
+			stride_y,
+			&min,
+			&max
+		);
+
+		float diff = max - min;
+
+		if( max == min )
+		{
+			dwt_util_log(LOG_WARN, "Cannot scale row y=%i\n", y);
+			continue;
+		}
+
+		//dwt_util_log(LOG_DBG, "scale(y=%i) <%f..%f> => <%f..%f>\n", y, min, max, lo, hi);
+
+		// shift min => lo (on row)
+		dwt_util_shift_s(
+			dwt_util_addr_coeff_s(
+				ptr,
+				y,
+				0,
+				stride_x,
+				stride_y
+			), // (y,0)
+			size_x, // size_x
+			1, // 1
+			stride_x,
+			stride_y,
+			(lo-min)
+		);
+
+		// scale to hi (on row)
+		dwt_util_scale_s(
+			dwt_util_addr_coeff_s(
+				ptr,
+				y,
+				0,
+				stride_x,
+				stride_y
+			), // (y,0)
+			size_x, // size_x
+			1, // 1
+			stride_x,
+			stride_y,
+			(target_diff/diff)
+		);
+
+		// check
+		dwt_util_find_min_max_s(
+			dwt_util_addr_coeff_const_s(
+				ptr,
+				y,
+				0,
+				stride_x,
+				stride_y
+			), // (y,0)
+			size_x, // size_x
+			1, // 1
+			stride_x,
+			stride_y,
+			&min,
+			&max
+		);
+
+		//dwt_util_log(LOG_DBG, "scale(y=%i) <%f..%f>\n", y, min, max);
+	}
+
+	return 0;
+}
