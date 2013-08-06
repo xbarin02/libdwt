@@ -2720,6 +2720,29 @@ int dwt_util_scale2_s(
 );
 
 /**
+ * @brief Displace given vector (1-D) in-place.
+ *
+ * @warning experimental
+ */
+int dwt_util_displace1_s(
+	void *ptr,
+	int size_x,
+	int stride_y,
+	int displ_x
+);
+
+/**
+ * @brief Get a position of the center of given vector (1D).
+ *
+ * @warning experimental
+ */
+int dwt_util_get_center_s(
+	const void *ptr,
+	int size_x,
+	int stride_y
+);
+
+/**
  * @}
  */
 

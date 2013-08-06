@@ -16378,3 +16378,145 @@ int dwt_util_scale2_s(
 
 	return 0;
 }
+
+int dwt_util_displace1_s(
+	void *ptr,
+	int size_x,
+	int stride_y,
+	int displ_x
+)
+{
+	// assert( ptr ); // not needed
+
+	if( !displ_x )
+		return 0;
+
+	if( displ_x > 0 )
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			int src_x = saturate_i(x + displ_x, 0, size_x-1);
+
+			*dwt_util_addr_coeff_s(
+				ptr,
+				0, // y
+				x, // x
+				0, // stride x
+				stride_y // stride y
+			) = *dwt_util_addr_coeff_const_s(
+				ptr,
+				0, // y
+				src_x, // x
+				0, // stride x
+				stride_y // stride y
+			);
+		}
+	}
+	else // < 0
+	{
+		for(int x = size_x-1; x >= 0; x--)
+		{
+			int src_x = saturate_i(x + displ_x, 0, size_x-1);
+
+			*dwt_util_addr_coeff_s(
+				ptr,
+				0, // y
+				x, // x
+				0, // stride x
+				stride_y // stride y
+			) = *dwt_util_addr_coeff_const_s(
+				ptr,
+				0, // y
+				src_x, // x
+				0, // stride x
+				stride_y // stride y
+			);
+		}
+	}
+
+	return 0;
+}
+
+int dwt_util_get_center_s(
+	const void *ptr,
+	int size_x,
+	int stride_y
+)
+{
+	// assert( ptr ); // not needed
+	assert( size_x > 0 );
+
+	// total "energy" (L1 norm)
+	float norm1 = dwt_util_band_lpnorm_s(
+		ptr,
+		0, // stride x
+		stride_y, // stride y
+		size_x, // size x
+		1, // size y
+		1 // p
+	);
+
+	float half = norm1 / 2;
+
+	// indexes of center borders
+	int lidx = -1;
+	int ridx = -1;
+
+	// "energy" accumulator
+	float sum;
+
+	sum = 0.0f;
+
+	for(int x = 0; x < size_x; x++)
+	{
+		// get coeff
+		float coeff = *dwt_util_addr_coeff_const_s(
+			ptr,
+			0, // y
+			x, // x
+			0, // stride x
+			stride_y // stride y
+		);
+
+		// accumulate "energy"
+		sum += fabsf(coeff);
+
+		if( sum > half )
+		{
+			ridx = x - 1;
+			break;
+		}
+	}
+
+	sum = 0.0f;
+
+	for(int x = size_x-1; x >= 0; x--)
+	{
+		// get coeff
+		float coeff = *dwt_util_addr_coeff_const_s(
+			ptr,
+			0, // y
+			x, // x
+			0, // stride x
+			stride_y // stride y
+		);
+
+		// accumulate "energy"
+		sum += fabsf(coeff);
+
+		if( sum > half )
+		{
+			lidx = x + 1;
+			break;
+		}
+	}
+
+	if( -1 == lidx || -1 == ridx )
+		dwt_util_log(LOG_WARN, "Cannot found center indexes!\n");
+
+	int center = (lidx + ridx) / 2;
+
+	// dwt_util_log(LOG_DBG, "center at %i (%i %i)\n", center, lidx, ridx);
+
+	return center;
+}
