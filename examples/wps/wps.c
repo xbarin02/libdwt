@@ -27,6 +27,37 @@ int main(int argc, char *argv[])
 	// load the data from a MAT file
 	dwt_util_load_from_mat_s(path, &ptr, &size_x, &size_y, &stride_x, &stride_y);
 
+#if 1
+	// shift base-line from "1" to "0"
+	dwt_util_shift_s(
+		ptr,
+		size_x,
+		size_y,
+		stride_x,
+		stride_y,
+		-1.0f
+	);
+#endif
+
+#if 1
+	// center vectors
+	for(int y = 0; y < size_y; y++)
+	{
+		dwt_util_center1_s(
+			dwt_util_addr_coeff_s(
+				ptr,
+				y, // y
+				0, // x
+				stride_x,
+				stride_y
+			),
+			size_x,
+			stride_y,
+			20
+		);
+	}
+#endif
+
 #if 0
 	// scale to <0;1> interval
 	dwt_util_scale2_s(
