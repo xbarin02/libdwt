@@ -41,26 +41,19 @@ int main(int argc, char *argv[])
 
 #if 1
 	// center vectors
-	for(int y = 0; y < size_y; y++)
-	{
-		dwt_util_center1_s(
-			dwt_util_addr_coeff_s(
-				ptr,
-				y, // y
-				0, // x
-				stride_x,
-				stride_y
-			),
-			size_x,
-			stride_y,
-			20
-		);
-	}
+	dwt_util_center21_s(
+		ptr,
+		size_x,
+		size_y,
+		stride_x,
+		stride_y,
+		20
+	);
 #endif
 
 #if 0
 	// scale to <0;1> interval
-	dwt_util_scale2_s(
+	dwt_util_scale21_s(
 		ptr,
 		size_x,
 		size_y,
@@ -161,7 +154,7 @@ int main(int argc, char *argv[])
 
 #if 0
 	// scale to <0;1> interval
-	dwt_util_scale2_s(
+	dwt_util_scale21_s(
 		fv,
 		fv_size_x,
 		fv_size_y,
