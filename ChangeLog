@@ -1,7 +1,9 @@
 2013-??-?? David Barina <ibarina@fit.vutbr.cz>
 * Added some new functions, e.g. normalization, dot product, signal addition,
-1D recursive DWT, series of 1D DWT in 2D matrix, MAT-file related functions
-and FSM processing core.
+1D recursive DWT, series of 1D DWT in 2D matrix, centering, displacement,
+value scaling and shifting function.
+* Added MAT-file related functions and LIBSVM format storing function.
+* Added FSM processing core.
 * Added WPS feature extraction example.
 
 2013-06-27 David Barina <ibarina@fit.vutbr.cz>
@@ -200,3 +202,6 @@ math routines.
 
 * libdwt.c libdwt.h (dwt_cdf97_2f, dwt_cdf97_2i): Added functions for image
 processing.
+
+2011-04-11 David Barina <ibarina@fit.vutbr.cz>
+* First public version.
