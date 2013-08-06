@@ -16520,3 +16520,38 @@ int dwt_util_get_center_s(
 
 	return center;
 }
+
+int dwt_util_center1_s(
+	void *ptr,
+	int size_x,
+	int stride_y,
+	int max_iters
+)
+{
+	// iterations
+	for(int i = 0; i < max_iters; i++)
+	{
+		int center = dwt_util_get_center_s(
+			ptr,
+			size_x,
+			stride_y
+		);
+
+		int exp_center = size_x / 2;
+		int displ = exp_center - center;
+
+		// dwt_util_log(LOG_DBG, "i=%i: real_center=%i expected_center=%i displacement=%i\n", i, center, exp_center, displ);
+
+		if( !displ )
+			break;
+
+		dwt_util_displace1_s(
+			ptr,
+			size_x,
+			stride_y,
+			-displ
+		);
+	}
+
+	return 0;
+}

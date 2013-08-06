@@ -2705,7 +2705,7 @@ int dwt_util_scale_s(
 );
 
 /**
- * @brief Scale vectors (rows) in matrix to interval @e lo .. @e hi.
+ * @brief Scale 1-D vectors (rows) in matrix to interval @e lo .. @e hi (independently).
  *
  * @warning experimental
  */
@@ -2732,7 +2732,7 @@ int dwt_util_displace1_s(
 );
 
 /**
- * @brief Get a position of the center of given vector (1D).
+ * @brief Get a position of the center of given vector (1-D).
  *
  * @warning experimental
  */
@@ -2740,6 +2740,18 @@ int dwt_util_get_center_s(
 	const void *ptr,
 	int size_x,
 	int stride_y
+);
+
+/**
+ * @brief Center given vector (1-D).
+ *
+ * @warning experimetnal
+ */
+int dwt_util_center1_s(
+	void *ptr,
+	int size_x,
+	int stride_y,
+	int max_iters
 );
 
 /**
