@@ -16277,7 +16277,7 @@ int dwt_util_scale_s(
 	return 0;
 }
 
-int dwt_util_scale2_s(
+int dwt_util_scale21_s(
 	void *ptr,
 	int size_x,
 	int size_y,
@@ -16437,7 +16437,7 @@ int dwt_util_displace1_s(
 	return 0;
 }
 
-int dwt_util_get_center_s(
+int dwt_util_get_center1_s(
 	const void *ptr,
 	int size_x,
 	int stride_y
@@ -16531,7 +16531,7 @@ int dwt_util_center1_s(
 	// iterations
 	for(int i = 0; i < max_iters; i++)
 	{
-		int center = dwt_util_get_center_s(
+		int center = dwt_util_get_center1_s(
 			ptr,
 			size_x,
 			stride_y
@@ -16550,6 +16550,34 @@ int dwt_util_center1_s(
 			size_x,
 			stride_y,
 			-displ
+		);
+	}
+
+	return 0;
+}
+
+int dwt_util_center21_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	int max_iters
+)
+{
+	for(int y = 0; y < size_y; y++)
+	{
+		dwt_util_center1_s(
+			dwt_util_addr_coeff_s(
+				ptr,
+				y, // y
+				0, // x
+				stride_x,
+				stride_y
+			),
+			size_x,
+			stride_y,
+			max_iters
 		);
 	}
 

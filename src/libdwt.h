@@ -2709,7 +2709,7 @@ int dwt_util_scale_s(
  *
  * @warning experimental
  */
-int dwt_util_scale2_s(
+int dwt_util_scale21_s(
 	void *ptr,
 	int size_x,
 	int size_y,
@@ -2736,7 +2736,7 @@ int dwt_util_displace1_s(
  *
  * @warning experimental
  */
-int dwt_util_get_center_s(
+int dwt_util_get_center1_s(
 	const void *ptr,
 	int size_x,
 	int stride_y
@@ -2750,6 +2750,20 @@ int dwt_util_get_center_s(
 int dwt_util_center1_s(
 	void *ptr,
 	int size_x,
+	int stride_y,
+	int max_iters
+);
+
+/**
+ * @brief Center vectors (1-D) in matrix (vectors as rows).
+ *
+ * @warning experimental
+ */
+int dwt_util_center21_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
 	int stride_y,
 	int max_iters
 );
