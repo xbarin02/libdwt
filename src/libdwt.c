@@ -11742,7 +11742,7 @@ int dwt_util_save_to_pgm_i(
 			if( px > max_value )
 			{
 				if( !err++ )
-					dwt_util_log(LOG_WARN, "%s: Maximum pixel intensity exceeded (%i > %i) at (x=%i, y=%i). Such an incident will be reported only once.\n", __FUNCTION__, px, max_value, x, y);
+					dwt_util_log(LOG_WARN, "%s: Maximum pixel intensity exceeded (%i > %i) at (y=%i, x=%i). Such an incident will be reported only once.\n", __FUNCTION__, px, max_value, y, x);
 			}
 
 			if( px > max_value )
@@ -11753,7 +11753,7 @@ int dwt_util_save_to_pgm_i(
 			if( px < 0 )
 			{
 				if( !err++ )
-					dwt_util_log(LOG_WARN, "%s: Minimum pixel intensity exceeded (%i < %i) at (x=%i, y=%i). Such an incident will be reported only once.\n", __FUNCTION__, px, 0, x, y);
+					dwt_util_log(LOG_WARN, "%s: Minimum pixel intensity exceeded (%i < %i) at (y=%i, x=%i). Such an incident will be reported only once.\n", __FUNCTION__, px, 0, y, x);
 			}
 
 			if( px < 0 )
@@ -12053,7 +12053,7 @@ int dwt_util_save_to_pgm_s(
 			if( px - 1e-3f > max_value )
 			{
 				if( !err++ )
-					dwt_util_log(LOG_WARN, "%s: Maximum pixel intensity exceeded (%f > %f). Such an incident will be reported only once.\n", __FUNCTION__, px, max_value);
+					dwt_util_log(LOG_WARN, "%s: Maximum pixel intensity exceeded (%f > %f) at (y=%i, x=%i). Such an incident will be reported only once.\n", __FUNCTION__, px, max_value, y, x);
 			}
 
 			if( px > max_value )
@@ -12064,7 +12064,7 @@ int dwt_util_save_to_pgm_s(
 			if( px + 1e-3f < 0.0f )
 			{
 				if( !err++ )
-					dwt_util_log(LOG_WARN, "%s: Minimum pixel intensity exceeded (%f < %f). Such an incident will be reported only once.\n", __FUNCTION__, px, 0.0f);
+					dwt_util_log(LOG_WARN, "%s: Minimum pixel intensity exceeded (%f < %f) at (y=%i, x=%i). Such an incident will be reported only once.\n", __FUNCTION__, px, 0.0f, y, x);
 			}
 
 			if( px < 0.0f )
@@ -12121,7 +12121,7 @@ int dwt_util_save_to_pgm_d(
 			if( px - 1e-6 > max_value )
 			{
 				if( !err++ )
-					dwt_util_log(LOG_WARN, "%s: Maximum pixel intensity exceeded (%f > %f). Such an incident will be reported only once.\n", __FUNCTION__, px, max_value);
+					dwt_util_log(LOG_WARN, "%s: Maximum pixel intensity exceeded (%f > %f) at (y=%i, x=%i). Such an incident will be reported only once.\n", __FUNCTION__, px, max_value, y, x);
 			}
 
 			if( px > max_value )
@@ -12132,7 +12132,7 @@ int dwt_util_save_to_pgm_d(
 			if( px + 1e-6 < 0.0 )
 			{
 				if( !err++ )
-					dwt_util_log(LOG_WARN, "%s: Minimum pixel intensity exceeded (%f < %f). Such an incident will be reported only once.\n", __FUNCTION__, px, 0.0f);
+					dwt_util_log(LOG_WARN, "%s: Minimum pixel intensity exceeded (%f < %f) at (y=%i, x=%i). Such an incident will be reported only once.\n", __FUNCTION__, px, 0.0f, y, x);
 			}
 
 			if( px < 0.0 )
@@ -15452,6 +15452,11 @@ int fsm(
 		if( count == d )
 			state = s_error;
 
+		if( s_error == state )
+		{
+			dwt_util_log(LOG_DBG, "FSM in error state: symb=%i(%c)\n", symb, (char)symb);
+		}
+
 		if( s_final == state || s_error == state )
 			break;
 	}
@@ -15747,7 +15752,7 @@ int dwt_util_load_from_mat_s(
 
 	int symb_delim[] = { ',', ';', '\t', ' ' };
 	int symb_newline[] = { '\n', '\r' };
-	int symb_number[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.' };
+	int symb_number[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '-' };
 	int symb_eof[] = { EOF };
 
 	struct delta delta[] = {
@@ -15773,7 +15778,7 @@ int dwt_util_load_from_mat_s(
 	if( S_ERROR == fsm(&ctx, mat_get_symb, delta, sizeof_arr(delta), S_START, S_FINAL, S_ERROR) )
 	{
 		fclose(file);
-		return 1;
+		return 2;
 	}
 
 	//dwt_util_log(LOG_DBG, "y=%i x=%i\n", ctx.rows, ctx.min_cols);
@@ -15791,7 +15796,9 @@ int dwt_util_load_from_mat_s(
 	if( S_ERROR == fsm(&ctx, mat_get_symb, delta, sizeof_arr(delta), S_START, S_FINAL, S_ERROR) )
 	{
 		fclose(file);
-		return 1;
+		// free allocated image
+		dwt_util_free_image(ptr);
+		return 3;
 	}
 
 	fclose(file);
@@ -15822,7 +15829,7 @@ int dwt_util_load_from_mat_i(
 
 	int symb_delim[] = { ',', ';', '\t', ' ' };
 	int symb_newline[] = { '\n', '\r' };
-	int symb_number[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.' };
+	int symb_number[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '-' };
 	int symb_eof[] = { EOF };
 
 	struct delta delta[] = {
@@ -15848,7 +15855,7 @@ int dwt_util_load_from_mat_i(
 	if( S_ERROR == fsm(&ctx, mat_get_symb, delta, sizeof_arr(delta), S_START, S_FINAL, S_ERROR) )
 	{
 		fclose(file);
-		return 1;
+		return 2;
 	}
 
 	//dwt_util_log(LOG_DBG, "y=%i x=%i\n", ctx.rows, ctx.min_cols);
@@ -15866,7 +15873,9 @@ int dwt_util_load_from_mat_i(
 	if( S_ERROR == fsm(&ctx, mat_get_symb, delta, sizeof_arr(delta), S_START, S_FINAL, S_ERROR) )
 	{
 		fclose(file);
-		return 1;
+		// free allocated image
+		dwt_util_free_image(ptr);
+		return 3;
 	}
 
 	fclose(file);
@@ -16318,7 +16327,7 @@ int dwt_util_scale21_s(
 
 		if( max == min )
 		{
-			dwt_util_log(LOG_WARN, "Cannot scale row y=%i\n", y);
+			dwt_util_log(LOG_WARN, "Cannot scale row y=%i (min=max=%f)\n", y, min);
 			continue;
 		}
 
