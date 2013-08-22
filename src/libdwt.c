@@ -15773,7 +15773,10 @@ int dwt_util_load_from_mat_s(
 	FILE *file = fopen(path, "r");
 
 	if( NULL == file )
+	{
+		*ptr = NULL;
 		return 1;
+	}
 
 	enum state {
 		S_START,
@@ -15811,6 +15814,7 @@ int dwt_util_load_from_mat_s(
 	if( S_ERROR == fsm(&ctx, mat_get_symb, delta, sizeof_arr(delta), S_START, S_FINAL, S_ERROR) )
 	{
 		fclose(file);
+		*ptr = NULL;
 		return 2;
 	}
 
@@ -15831,6 +15835,7 @@ int dwt_util_load_from_mat_s(
 		fclose(file);
 		// free allocated image
 		dwt_util_free_image(ptr);
+		*ptr = NULL;
 		return 3;
 	}
 
@@ -15850,7 +15855,10 @@ int dwt_util_load_from_mat_i(
 	FILE *file = fopen(path, "r");
 
 	if( NULL == file )
+	{
+		*ptr = NULL;
 		return 1;
+	}
 
 	enum state {
 		S_START,
@@ -15888,6 +15896,7 @@ int dwt_util_load_from_mat_i(
 	if( S_ERROR == fsm(&ctx, mat_get_symb, delta, sizeof_arr(delta), S_START, S_FINAL, S_ERROR) )
 	{
 		fclose(file);
+		*ptr = NULL;
 		return 2;
 	}
 
@@ -15908,6 +15917,7 @@ int dwt_util_load_from_mat_i(
 		fclose(file);
 		// free allocated image
 		dwt_util_free_image(ptr);
+		*ptr = NULL;
 		return 3;
 	}
 
