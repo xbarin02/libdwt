@@ -2691,6 +2691,19 @@ int dwt_util_shift_s(
 );
 
 /**
+ * @brief Shift each vector (row) in matrix by itw median.
+ *
+ * @warning experimental
+ */
+void dwt_util_shift21_med_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y
+);
+
+/**
  * @brief Multiply all elements of matrix by a constant.
  *
  * @warning experimental
@@ -2732,6 +2745,18 @@ int dwt_util_displace1_s(
 );
 
 /**
+ * @brief Displace given vector (1-D) in-place, zero padding.
+ *
+ * @warning experimental
+ */
+int dwt_util_displace1_zero_s(
+	void *ptr,
+	int size_x,
+	int stride_y,
+	int displ_x
+);
+
+/**
  * @brief Get a position of the center of given vector (1-D).
  *
  * @warning experimental
@@ -2766,6 +2791,49 @@ int dwt_util_center21_s(
 	int stride_x,
 	int stride_y,
 	int max_iters
+);
+
+/**
+ * @brief Get viewport to matrix/image.
+ *
+ * Example usage:
+ * @code
+ * // the original image
+ * int size_x = 640, size_y = 480, stride_y = sizeof(float), stride_x = stride_y * size_x;
+ * void *ptr;
+ * dwt_util_alloc_image(&ptr, stride_x, stride_y, size_x, size_y);
+ *
+ * // the viewport
+ * int view_x = 320, view_y = 240, offset_x = 160, offset_y = 120;
+ * void *view = dwt_util_viewport(ptr, size_x, size_y, stride_x, stride_y, offset_x, offset_y);
+ * @endcode
+ *
+ * @return pointer to the viewport
+ *
+ * @warning experimental
+ */
+void *dwt_util_viewport(
+	void *ptr,		///< original matrix pointer
+	int size_x,		///< original matrix width
+	int size_y,		///< original matrix height
+	int stride_x,		///< original matrix stride
+	int stride_y,		///< original matrix stride
+	int offset_x,		///< requested offset in x
+	int offset_y		///< requested offset in y
+);
+
+/**
+ * @brief Crop @p len_x samples around the center of each vector.
+ *
+ * @warning experimental
+ */
+void *dwt_util_crop21(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	int len_x
 );
 
 /**

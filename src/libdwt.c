@@ -1802,6 +1802,7 @@ size_t dwt_util_image_size(
 		size_o_big_y);
 }
 
+// TODO: this function should return a pointer
 void dwt_util_alloc_image(
 	void **pptr,
 	int stride_x,
@@ -12266,8 +12267,8 @@ float *dwt_util_allocate_16_vec_s(int size)
 
 float *dwt_util_allocate_vec_s(int size)
 {
-	// FIXME: why must be even???
-	size = to_even(size);
+	// FIXME: why must be even??? moreover, cannot allocate less elements than required
+	size = to_even(size+1);
 
 	float *addr = (float *)0;
 
@@ -12477,6 +12478,36 @@ int dwt_util_log(
 	return ret;
 }
 
+int dwt_util_vlog(
+	enum dwt_util_loglevel level,
+	const char *format,
+	va_list ap)
+{
+	int ret = 0;
+	FILE *stream = stderr;
+
+	const char *prefix[] = {
+		[LOG_NONE] = "",
+		[LOG_DBG]  = "DEBUG: ",
+		[LOG_INFO] = "INFO: ",
+		[LOG_WARN] = "WARNING: ",
+		[LOG_ERR]  = "ERROR: ",
+		[LOG_TEST] = "TEST: ",
+	};
+
+	flockfile(stream);
+
+	ret += dwt_util_fprintf(stream, prefix[level]);
+
+	ret += dwt_util_vfprintf(stream, format, ap);
+
+	fflush(stream);
+
+	funlockfile(stream);
+
+	return ret;
+}
+
 void dwt_util_error(
 	const char *format,
 	...)
@@ -12484,7 +12515,7 @@ void dwt_util_error(
 	va_list ap;
 
 	va_start(ap, format);
-	dwt_util_log(LOG_ERR, format, ap);
+	dwt_util_vlog(LOG_ERR, format, ap);
 	va_end(ap);
 
 	dwt_util_abort();
@@ -14173,6 +14204,8 @@ float dwt_util_band_med_s(
 )
 {
 	const int size = size_x * size_y;
+
+	//dwt_util_log(LOG_DBG, "size=%i size_x=%i size_y=%i\n", size, size_x, size_y);
 
 	float *arr = dwt_util_allocate_vec_s(size);
 
@@ -16446,6 +16479,66 @@ int dwt_util_displace1_s(
 	return 0;
 }
 
+int dwt_util_displace1_zero_s(
+	void *ptr,
+	int size_x,
+	int stride_y,
+	int displ_x
+)
+{
+	// assert( ptr ); // not needed
+
+	if( !displ_x )
+		return 0;
+
+	if( displ_x > 0 )
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			int src_x = saturate_i(x + displ_x, 0, size_x-1);
+
+			*dwt_util_addr_coeff_s(
+				ptr,
+				0, // y
+				x, // x
+				0, // stride x
+				stride_y // stride y
+			) = ( x + displ_x != src_x ) ? 0.0f :
+			*dwt_util_addr_coeff_const_s(
+				ptr,
+				0, // y
+				src_x, // x
+				0, // stride x
+				stride_y // stride y
+			);
+		}
+	}
+	else // < 0
+	{
+		for(int x = size_x-1; x >= 0; x--)
+		{
+			int src_x = saturate_i(x + displ_x, 0, size_x-1);
+
+			*dwt_util_addr_coeff_s(
+				ptr,
+				0, // y
+				x, // x
+				0, // stride x
+				stride_y // stride y
+			) = ( x + displ_x != src_x ) ? 0.0f :
+			*dwt_util_addr_coeff_const_s(
+				ptr,
+				0, // y
+				src_x, // x
+				0, // stride x
+				stride_y // stride y
+			);
+		}
+	}
+
+	return 0;
+}
+
 int dwt_util_get_center1_s(
 	const void *ptr,
 	int size_x,
@@ -16455,23 +16548,35 @@ int dwt_util_get_center1_s(
 	// assert( ptr ); // not needed
 	assert( size_x > 0 );
 
-	// total "energy" (L1 norm)
-	float norm1 = dwt_util_band_lpnorm_s(
+	// TODO: as an argument
+	const int p = 10;
+
+	// total "norm"
+	float norm = dwt_util_band_lpnorm_s(
 		ptr,
 		0, // stride x
 		stride_y, // stride y
 		size_x, // size x
 		1, // size y
-		1 // p
+		p // p
 	);
 
-	float half = norm1 / 2;
+	if( 0.0f == norm )
+	{
+		dwt_util_log(LOG_WARN, "Cannot get a center of signal due to its zero norm!\n");
+		return size_x/2;
+	}
+
+	// the value of p-norm raised to the power of p
+	norm = powf(norm, p);
+
+	float half = norm / 2;
 
 	// indexes of center borders
 	int lidx = -1;
 	int ridx = -1;
 
-	// "energy" accumulator
+	// "norm" accumulator
 	float sum;
 
 	sum = 0.0f;
@@ -16487,8 +16592,8 @@ int dwt_util_get_center1_s(
 			stride_y // stride y
 		);
 
-		// accumulate "energy"
-		sum += fabsf(coeff);
+		// accumulate "norm"
+		sum += powf(fabsf(coeff), p);
 
 		if( sum > half )
 		{
@@ -16510,8 +16615,8 @@ int dwt_util_get_center1_s(
 			stride_y // stride y
 		);
 
-		// accumulate "energy"
-		sum += fabsf(coeff);
+		// accumulate "norm"
+		sum += powf(fabsf(coeff), p);
 
 		if( sum > half )
 		{
@@ -16521,7 +16626,17 @@ int dwt_util_get_center1_s(
 	}
 
 	if( -1 == lidx || -1 == ridx )
-		dwt_util_log(LOG_WARN, "Cannot found center indexes!\n");
+	{
+		dwt_util_log(LOG_WARN, "Cannot found center indexes! lidx=%i ridx=%i norm=%f half=%f size_x=%i\n", lidx, ridx, norm, half, size_x);
+	
+		if( -1 == lidx && -1 == ridx )
+			return size_x / 2;
+
+		if( -1 == lidx )
+			lidx = ridx;
+		else
+			ridx = lidx;
+	}
 
 	int center = (lidx + ridx) / 2;
 
@@ -16549,12 +16664,12 @@ int dwt_util_center1_s(
 		int exp_center = size_x / 2;
 		int displ = exp_center - center;
 
-		// dwt_util_log(LOG_DBG, "i=%i: real_center=%i expected_center=%i displacement=%i\n", i, center, exp_center, displ);
+		//dwt_util_log(LOG_DBG, "i=%i: real_center=%i expected_center=%i displacement=%i\n", i, center, exp_center, displ);
 
 		if( !displ )
 			break;
 
-		dwt_util_displace1_s(
+		dwt_util_displace1_zero_s(
 			ptr,
 			size_x,
 			stride_y,
@@ -16576,6 +16691,8 @@ int dwt_util_center21_s(
 {
 	for(int y = 0; y < size_y; y++)
 	{
+		//dwt_util_log(LOG_DBG, "Centering vector y=%i\n", y);
+
 		dwt_util_center1_s(
 			dwt_util_addr_coeff_s(
 				ptr,
@@ -16591,4 +16708,81 @@ int dwt_util_center21_s(
 	}
 
 	return 0;
+}
+
+void dwt_util_shift21_med_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y
+)
+{
+	for(int y = 0; y < size_y; y++)
+	{
+		// single transformed vector
+		void *src = dwt_util_addr_coeff_s(ptr, y, 0, stride_x, stride_y);
+		int src_x = size_x;
+		int src_y = 1;
+
+		float med = dwt_util_band_med_s(
+			src,
+			stride_x,
+			stride_y,
+			src_x,
+			src_y
+		);
+
+		//dwt_util_log(LOG_DBG, "shift21_med: y=%i med=%f\n", y, med);
+
+		dwt_util_shift_s(
+			src,
+			src_x,
+			src_y,
+			stride_x,
+			stride_y,
+			-med
+		);
+	}
+}
+
+void *dwt_util_viewport(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	int offset_x,
+	int offset_y
+)
+{
+	assert( offset_x < size_x && offset_y < size_y );
+
+	return dwt_util_addr_coeff_s(ptr, offset_y, offset_x, stride_x, stride_y);
+}
+
+void *dwt_util_crop21(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	int len_x
+)
+{
+	UNUSED(size_y);
+
+	assert( len_x > 0 );
+
+	assert( len_x < size_x );
+
+	int center_x = size_x / 2;
+
+	int offset_x = center_x - len_x/2;
+
+	assert( offset_x + len_x <= size_x );
+
+	//dwt_util_log(LOG_DBG, "crop: offset_x=%i len_x=%i\n", offset_x, len_x);
+
+	return dwt_util_addr_coeff_s(ptr, 0, offset_x, stride_x, stride_y);
 }
