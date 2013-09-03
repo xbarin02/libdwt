@@ -5,6 +5,7 @@ value scaling and shifting function.
 * Added MAT-file related functions and LIBSVM format storing function.
 * Added FSM processing core.
 * Added WPS feature extraction example.
+* Licensed under the MIT license. The BUT license remains.
 
 2013-06-27 David Barina <ibarina@fit.vutbr.cz>
 * Migrated to new temp[] buffer functions.
