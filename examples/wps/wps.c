@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 	);
 #endif
 
-#if 1
+#if 0
 	// crop 256 samples around the center of each vector
 	int crop_size_x = 256;
 
