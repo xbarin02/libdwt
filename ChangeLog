@@ -1,4 +1,4 @@
-2013-??-?? David Barina <ibarina@fit.vutbr.cz>
+2013-09-03 David Barina <ibarina@fit.vutbr.cz>
 * Added some new functions, e.g. normalization, dot product, signal addition,
 1D recursive DWT, series of 1D DWT in 2D matrix, centering, displacement,
 value scaling and shifting function.
