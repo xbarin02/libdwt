@@ -1444,9 +1444,27 @@ int dwt_util_cmp_vec_s(
 	int size		///< number of vectors' elements
 );
 
+/**
+ * @brief Print vector.
+ *
+ * @warning experimental
+ */
 void dwt_util_print_vec_s(
 	const float *addr,
 	int size
+);
+
+/**
+ * @brief Unit impulse.
+ *
+ * Zero the vector and put "1" into its center with the offset.
+ *
+ * @warning experimental
+ */
+void dwt_util_unit_vec_s(
+	float *addr,
+	int size,
+	int offset
 );
 
 /**

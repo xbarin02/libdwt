@@ -16865,3 +16865,14 @@ void *dwt_util_crop21(
 
 	return dwt_util_addr_coeff_s(ptr, 0, offset_x, stride_x, stride_y);
 }
+
+void dwt_util_unit_vec_s(
+	float *addr,
+	int size,
+	int offset
+)
+{
+	dwt_util_zero_vec_s(addr, size);
+
+	addr[size/2+offset] = 1.f;
+}
