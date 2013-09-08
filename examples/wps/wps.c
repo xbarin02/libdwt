@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 	if( ptr )
 		dwt_util_log(LOG_INFO, "Loaded %i spectra of length of %i samples\n", size_y, size_x);
 	else
-		dwt_util_log(LOG_ERR, "Unable to load spectra.\n");
+		dwt_util_error("Unable to load spectra.\n");
 
 	void *free_ptr = ptr;
 
@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
 	if( cls_ptr )
 		dwt_util_log(LOG_INFO, "Loaded %i classes\n", cls_size_y);
 	else
-		dwt_util_log(LOG_ERR, "Unable to load classes\n");
+		dwt_util_error("Unable to load classes.\n");
 
 	dwt_util_log(LOG_INFO, "Saving into SVM-file...\n");
 
