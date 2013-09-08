@@ -16876,3 +16876,117 @@ void dwt_util_unit_vec_s(
 
 	addr[size/2+offset] = 1.f;
 }
+
+struct cbuff
+{
+	char *ptr;
+	size_t size;
+	char *pos;
+};
+
+static
+struct cbuff *cbuff_create()
+{
+	struct cbuff *cbuff = (struct cbuff *)malloc(sizeof(struct cbuff));
+
+	cbuff->size = 1;
+	cbuff->ptr = malloc(1);
+	if(!cbuff->ptr)
+		dwt_util_error("unable to allocate memory!\n");
+
+	cbuff->pos = cbuff->ptr;
+
+	return cbuff;
+}
+
+static
+void cbuff_destroy(struct cbuff *cbuff)
+{
+	free(cbuff->ptr);
+	free(cbuff);
+}
+
+static
+void cbuff_reset(struct cbuff *cbuff)
+{
+	cbuff->pos = cbuff->ptr;
+}
+
+static
+int cbuff_offset(struct cbuff *cbuff)
+{
+	return cbuff->pos - cbuff->ptr;
+}
+
+static
+int cbuff_avail(struct cbuff *cbuff)
+{
+	return cbuff->size - cbuff_offset(cbuff);
+}
+
+static
+void cbuff_realloc(struct cbuff *cbuff)
+{
+	cbuff->size <<= 1;
+
+	if(!cbuff->size)
+		dwt_util_error("size_t is too small!\n");
+	
+	int offset = cbuff_offset(cbuff);
+	
+	cbuff->ptr = realloc(cbuff->ptr, cbuff->size);
+
+	if(!cbuff->ptr)
+		dwt_util_error("unable to allocate %i bytes!\n", cbuff->size);
+
+	cbuff->pos = cbuff->ptr + offset;
+}
+
+static
+char *cbuff_cstr(struct cbuff *cbuff)
+{
+	return cbuff->ptr;
+}
+
+static
+void cbuff_sprintf(struct cbuff *cbuff, const char *format, ...)
+{
+	va_list ap;
+
+	while(1)
+	{
+		va_start(ap, format);
+		int n = vsnprintf(cbuff->pos, cbuff_avail(cbuff), format, ap);
+		va_end(ap);
+
+		if( n < 0 )
+			dwt_util_error("vsnprintf returned negative value!\n");
+
+		if( n >= cbuff_avail(cbuff) )
+			cbuff_realloc(cbuff);
+		else
+		{
+			cbuff->pos += n;
+			break;
+		}
+	}
+}
+
+const char *dwt_util_str_vec_s(
+	const float *vec,
+	int size
+)
+{
+	static struct cbuff *cbuff = NULL;
+	if(!cbuff)
+		cbuff = cbuff_create();
+
+	cbuff_reset(cbuff);
+
+	cbuff_sprintf(cbuff, "[ ");
+	for(int i = 0; i < size; i++)
+		cbuff_sprintf(cbuff, "%+9f ", vec[i]);
+	cbuff_sprintf(cbuff, "]");
+
+	return cbuff_cstr(cbuff);
+}

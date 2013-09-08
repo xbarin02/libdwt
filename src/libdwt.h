@@ -1455,6 +1455,18 @@ void dwt_util_print_vec_s(
 );
 
 /**
+ * @brief Return formatted vector as string.
+ *
+ * Do not call free on returned pointer.
+ *
+ * @warning experimental
+ */
+const char *dwt_util_str_vec_s(
+	const float *vec,
+	int size
+);
+
+/**
  * @brief Unit impulse.
  *
  * Zero the vector and put "1" into its center with the offset.
