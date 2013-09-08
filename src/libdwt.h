@@ -789,6 +789,22 @@ void dwt_cdf97_1f_s(
 );
 
 /**
+ * @brief Inverse 1-D fast wavelet transform using CDF 9/7 wavelet and lifting scheme, in-place version.
+ *
+ * This function works with single precision floating point numbers (i.e. float data type).
+ *
+ * @warning experimental
+ */
+void dwt_cdf97_1i_s(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int j_max,		///< the number of decomposition levels (scales)
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+);
+
+/**
  * @brief Series of forward 1-D fast wavelet transforms using CDF 9/7 wavelet and lifting scheme, in-place version.
  *
  * This function works with single precision floating point numbers (i.e. float data type).
@@ -1426,6 +1442,11 @@ int dwt_util_cmp_vec_s(
 	const float *a,		///< first vector
 	const float *b,		///< second vector
 	int size		///< number of vectors' elements
+);
+
+void dwt_util_print_vec_s(
+	const float *addr,
+	int size
 );
 
 /**

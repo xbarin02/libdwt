@@ -9962,6 +9962,75 @@ void dwt_cdf97_2f_s(
 	FUNC_END;
 }
 
+void dwt_cdf97_1i_s(
+	void *ptr,
+	int stride_y,
+	int size_o_big_x,
+	int size_i_big_x,
+	int j_max,
+	int zero_padding
+)
+{
+	FUNC_BEGIN;
+
+	assert( 1 == dwt_util_get_num_workers() );
+
+	const int threads = 1;
+
+#ifdef microblaze
+	dwt_util_switch_op(DWT_OP_LIFT4SB);
+#endif
+
+	const int offset = 0;
+
+	float **temp = alloc_temp_s(threads,
+		calc_and_set_temp_size_s(size_o_big_x, offset)
+	);
+
+	int j = ceil_log2( size_o_big_x );
+
+	if( j_max >= 0 && j_max < j )
+		j = j_max;
+
+	for(;;)
+	{
+		if(0 == j)
+			break;
+
+		const int size_o_src_x = ceil_div_pow2(size_o_big_x, j  );
+		const int size_o_dst_x = ceil_div_pow2(size_o_big_x, j-1);
+		const int size_i_dst_x = ceil_div_pow2(size_i_big_x, j-1);
+
+		const int lines_x = size_o_dst_x;
+
+		if( lines_x > 1 )
+		{
+				dwt_cdf97_i_ex_stride_s(
+					addr1_const_s(ptr,0,stride_y),
+					addr1_const_s(ptr,size_o_src_x,stride_y),
+					addr1_s(ptr,0,stride_y),
+					temp[0],
+					size_i_dst_x,
+					stride_y);
+		}
+
+		if(zero_padding)
+		{
+				dwt_zero_padding_i_stride_s(
+					addr1_s(ptr,0,stride_y),
+					size_i_dst_x,
+					size_o_dst_x,
+					stride_y);
+		}
+
+		j--;
+	}
+
+	free_temp_s(threads, temp);
+
+	FUNC_END;
+}
+
 void dwt_cdf97_2f1_s(
 	void *ptr,
 	int stride_x,
@@ -12542,7 +12611,7 @@ const char *node()
 	if( -1 == host_name_max )
 		host_name_max = 255;
 	host_name_max++; // the terminating null byte
-	
+
 	// NOTE: should gethostname be called instead of reading from procfs?
 	FILE *f = fopen("/proc/sys/kernel/hostname", "r");
 	if(f)
