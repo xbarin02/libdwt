@@ -12,15 +12,15 @@ int main()
 {
 	dwt_util_init();
 
-	float dec_phi[9+2] = { +0.000000, +0.037828, -0.023849, -0.110624, +0.377403, +0.852699, +0.377403, -0.110624, -0.023849, +0.037828, +0.000000 };
-	float dec_psi[7+2] =            { +0.000000, +0.064539, -0.040689, -0.418092, +0.788486, -0.418092, -0.040689, +0.064539, +0.000000 };
-	float rec_phi[7+2] =            { +0.000000, -0.064539, -0.040689, +0.418092, +0.788486, +0.418092, -0.040689, -0.064539, +0.000000 };
-	float rec_psi[9+2] = { -0.000000, +0.037828, +0.023849, -0.110624, -0.377403, +0.852699, -0.377403, -0.110624, +0.023849, +0.037828, -0.000000 };
+	float dec_phi[9] = { +0.037828, -0.023849, -0.110624, +0.377403, +0.852699, +0.377403, -0.110624, -0.023849, +0.037828 };
+	float dec_psi[7] =            { +0.064539, -0.040689, -0.418092, +0.788486, -0.418092, -0.040689, +0.064539 };
+	float rec_phi[7] =            { -0.064539, -0.040689, +0.418092, +0.788486, +0.418092, -0.040689, -0.064539 };
+	float rec_psi[9] = { +0.037828, +0.023849, -0.110624, -0.377403, +0.852699, -0.377403, -0.110624, +0.023849, +0.037828};
 
-#define FILTER rec_phi
+#define FILTER rec_psi
 
 	float *fir = FILTER;
-	int size = sizeof(FILTER)/sizeof(*FILTER) - 2;
+	int size = sizeof(FILTER)/sizeof(*FILTER);
 
 #if 0
 	// scale coeffs
@@ -39,12 +39,13 @@ int main()
 		dwt_util_band_lpnorm_s(fir, 0, sizeof(float), size, 1, /*p=*/2)
 	);
 
-	int l_size = 32; // long size, 32, 256
-	int passes = 50; // 20, 3, 100, 200
+	int l_size = 64; // long size, 32, 256
+	int passes = 20; // 20, 3, 100, 200
 	float a[passes][l_size];
 
 	// unit impulse => a[0]
 	dwt_util_unit_vec_s(a[0], l_size, 0);
+	a[0][l_size/2+1]=1.f; // HACK
 
 	// print result
 	dwt_util_log(LOG_DBG, "impulse: %s\n", dwt_util_str_vec_s(a[0], l_size));
@@ -68,9 +69,9 @@ int main()
 			fir,
 			sizeof(float),
 			size,
-			size/2+1,
+			size/2,
 			// parameters
-			1, // downsample output
+			2, // downsample output
 			2 // upsample kernel
 		);
 

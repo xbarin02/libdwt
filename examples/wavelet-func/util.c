@@ -41,7 +41,8 @@ void dwt_util_convolve1_s(
 
 		for(int g_idx = signal_const_left(g_signal); g_idx <= signal_const_right(g_signal); g_idx++)
 		{
-			float x_coeff  = *signal_const_get_s(x_signal, g_upsample_factor*((y_downsample_factor*y_idx-g_idx)));
+			//float x_coeff  = *signal_const_get_s(x_signal, g_upsample_factor*((y_downsample_factor*y_idx-g_idx)));
+			float x_coeff  = *signal_const_get_s(x_signal, (y_downsample_factor*y_idx-g_upsample_factor*g_idx));
 			float g_coeff  = *signal_const_get_s(g_signal, g_idx);
 
 			*y_coeff += x_coeff * g_coeff;
