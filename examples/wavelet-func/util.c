@@ -4,7 +4,6 @@
 
 #include "util.h"
 #include "signal.h"
-#include "libdwt.h"
 
 void dwt_util_convolve1_s(
 	// output response
@@ -33,16 +32,13 @@ void dwt_util_convolve1_s(
 
 	for(int y_idx = signal_left(y_signal); y_idx <= signal_right(y_signal); y_idx++)
 	{
-		//dwt_util_log(LOG_DBG, "y_idx=%i (y_idx0=%i)\n", y_idx, signal_get_s(y_signal, y_idx)-(float *)y_ptr);
-
 		float *y_coeff = signal_get_s(y_signal, y_idx);
 
 		*y_coeff = 0.f;
 
 		for(int g_idx = signal_const_left(g_signal); g_idx <= signal_const_right(g_signal); g_idx++)
 		{
-			//float x_coeff  = *signal_const_get_s(x_signal, g_upsample_factor*((y_downsample_factor*y_idx-g_idx)));
-			float x_coeff  = *signal_const_get_s(x_signal, (y_downsample_factor*y_idx-g_upsample_factor*g_idx));
+			float x_coeff  = *signal_const_get_s(x_signal, y_downsample_factor*y_idx - g_upsample_factor*g_idx);
 			float g_coeff  = *signal_const_get_s(g_signal, g_idx);
 
 			*y_coeff += x_coeff * g_coeff;
