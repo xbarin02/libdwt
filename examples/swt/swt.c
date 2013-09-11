@@ -15,6 +15,10 @@ int main(int argc, char *argv[])
 {
 	const char *vec_path = (argc > 1) ? argv[1]
 		: "data/spectra.dat";
+	const char *cls_path = (argc > 2) ? argv[2]
+		: "data/target_classes.dat";
+
+	const char *fv_svm_path = "data/fv.svm";
 
 	dwt_util_init();
 
@@ -32,108 +36,166 @@ int main(int argc, char *argv[])
 	else
 		dwt_util_error("Unable to load spectra.\n");
 
-	// testing signal
-	int size = size_x;
-	int y = 10;
-	float *x = dwt_util_addr_coeff_s(
-		ptr,
-		y,
-		0,
-		stride_x,
-		stride_y
-	);
+	int levels = 10;
+
+	float mat_fvH[size_y*levels];
+	float mat_fvL[size_y*levels];
+
+	// TODO: for each spectrum
+	for(int y = 0; y < size_y; y++)
+	{
+		// testing signal
+		int size = size_x;
+		float *x = dwt_util_addr_coeff_s(
+			ptr,
+			y,
+			0,
+			stride_x,
+			stride_y
+		);
+
+		// store SWT here
+		float xL[levels+1][size];
+		float xH[levels+1][size];
+
+		// copy x => xL[0]
+		dwt_util_copy_vec_s(x, xL[0], size);
+
+		// for
+		for(int l = 0; l < levels; l++)
+		{
+			// filter xL[l] => xL[l+1] with g upsampled by factor 2^l
+			dwt_util_convolve1_s(
+				// output response
+				xL[l+1],
+				sizeof(float),
+				size,
+				size/2,
+				// input signal
+				xL[l],
+				sizeof(float),
+				size,
+				size/2,
+				// kernel
+				g,
+				sizeof(float),
+				9,
+				9/2,
+				// parameters
+				1,
+				1<<l
+			);
+
+			// filter xL[l] => xH[l+1] with h upsampled by factor 2^l
+			dwt_util_convolve1_s(
+				// output response
+				xH[l+1],
+				sizeof(float),
+				size,
+				size/2,
+				// input signal
+				xL[l],
+				sizeof(float),
+				size,
+				size/2,
+				// kernel
+				h,
+				sizeof(float),
+				7,
+				7/2,
+				// parameters
+				1,
+				1<<l
+			);
+		}
 
 #if 0
-	dwt_util_log(LOG_DBG, "stride_y=%i stride_x=%i ptr=%p (is_aligned_16=%i) x=%p (is_aligned_16=%i)\n", stride_y, stride_x, ptr, dwt_util_is_aligned_16(ptr), x, dwt_util_is_aligned_16(x));
+		dwt_util_save_to_mat_s(
+			"x.mat",
+			x,
+			size,
+			1,
+			0,
+			sizeof(float)
+		);
 
-	// FIXME: cause SIGSEGV; function expect aligned memory pointer; probably the stride should be multiply by sizeof(xmm)
-	dwt_util_unit_vec_s(x, size, 0);
+		dwt_util_save_to_mat_s(
+			"lo.mat",
+			xL[levels],
+			size,
+			1,
+			0,
+			sizeof(float)
+		);
+
+		dwt_util_save_to_mat_s(
+			"hi.mat",
+			xH[levels],
+			size,
+			1,
+			0,
+			sizeof(float)
+// 		);
 #endif
+		dwt_util_log(LOG_INFO, "y=%i: Extracting feature vectors...\n", y);
 
-	int levels = 7; // 5
+		float *fvH = &mat_fvH[y*levels];
+		float *fvL = &mat_fvL[y*levels];
 
-	// store SWT here
-	float xL[levels+1][size];
-	float xH[levels+1][size];
+		for(int l = 0; l < levels; l++)
+		{
+			// extract from x?[l+1] => fv?[l]
+			fvH[l] = dwt_util_band_med_s(
+				xH[l+1],
+				0,
+				sizeof(float),
+				size,
+				1
+			);
 
-	// copy x => xL[0]
-	dwt_util_copy_vec_s(x, xL[0], size);
+			fvL[l] = dwt_util_band_med_s(
+				xL[l+1],
+				0,
+				sizeof(float),
+				size,
+				1
+			);
+		}
 
-	// for
-	for(int l = 0; l < levels; l++)
-	{
-		// filter xL[l] => xL[l+1] with g upsampled by factor 2^l
-		dwt_util_convolve1_s(
-			// output response
-			xL[l+1],
-			sizeof(float),
-			size,
-			size/2,
-			// input signal
-			xL[l],
-			sizeof(float),
-			size,
-			size/2,
-			// kernel
-			g,
-			sizeof(float),
-			9,
-			9/2,
-			// parameters
-			1,
-			1<<l
-		);
-
-		// filter xL[l] => xH[l+1] with h upsampled by factor 2^l
-		dwt_util_convolve1_s(
-			// output response
-			xH[l+1],
-			sizeof(float),
-			size,
-			size/2,
-			// input signal
-			xL[l],
-			sizeof(float),
-			size,
-			size/2,
-			// kernel
-			h,
-			sizeof(float),
-			7,
-			7/2,
-			// parameters
-			1,
-			1<<l
-		);
+		dwt_util_log(LOG_INFO, "Extraction done\n");
 	}
 
-	dwt_util_save_to_mat_s(
-		"x.mat",
-		x,
-		size,
-		1,
-		0,
-		sizeof(float)
+	// classes
+	void *cls_ptr;
+	int cls_size_x, cls_size_y;
+	int cls_stride_x, cls_stride_y;
+
+	// load classes as "int" matrix
+	dwt_util_load_from_mat_i(cls_path, &cls_ptr, &cls_size_x, &cls_size_y, &cls_stride_x, &cls_stride_y);
+
+	if( cls_ptr )
+		dwt_util_log(LOG_INFO, "Loaded %i classes.\n", cls_size_y);
+	else
+		dwt_util_error("Unable to load classes.\n");
+
+	// merge with classes to LIBSVM
+	dwt_util_save_to_svm_s(
+		fv_svm_path,
+		// matrix of vectors
+		mat_fvH,
+		levels,
+		size_y,
+		sizeof(float)*levels,
+		sizeof(float),
+		// matrix of labels
+		cls_ptr,
+		cls_size_x,
+		cls_size_y,
+		cls_stride_x,
+		cls_stride_y
 	);
 
-	dwt_util_save_to_mat_s(
-		"lo.mat",
-		xL[levels],
-		size,
-		1,
-		0,
-		sizeof(float)
-	);
-
-	dwt_util_save_to_mat_s(
-		"hi.mat",
-		xH[levels],
-		size,
-		1,
-		0,
-		sizeof(float)
-	);
-
+	dwt_util_free_image(&cls_ptr);
 	dwt_util_free_image(&ptr);
 
 	dwt_util_finish();
