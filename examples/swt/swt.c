@@ -36,12 +36,36 @@ int main(int argc, char *argv[])
 	else
 		dwt_util_error("Unable to load spectra.\n");
 
+#if 1
+	dwt_util_log(LOG_INFO, "Shifting base-line by median...\n");
+	dwt_util_shift21_med_s(
+		ptr,
+		size_x,
+		size_y,
+		stride_x,
+		stride_y
+	);
+#endif
+
+#if 1
+	dwt_util_log(LOG_INFO, "Centering...\n");
+	// center vectors
+	dwt_util_center21_s(
+		ptr,
+		size_x,
+		size_y,
+		stride_x,
+		stride_y,
+		20
+	);
+#endif
+
 	int levels = 10;
 
 	float mat_fvH[size_y*levels];
 	float mat_fvL[size_y*levels];
 
-	// TODO: for each spectrum
+	// for each spectrum
 	for(int y = 0; y < size_y; y++)
 	{
 		// testing signal
@@ -137,15 +161,16 @@ int main(int argc, char *argv[])
 			sizeof(float)
 // 		);
 #endif
-		dwt_util_log(LOG_INFO, "y=%i: Extracting feature vectors...\n", y);
-
 		float *fvH = &mat_fvH[y*levels];
 		float *fvL = &mat_fvL[y*levels];
+
+#define _FE_FNC(FE) dwt_util_band_##FE##_s
+#define FE_FNC _FE_FNC(med)
 
 		for(int l = 0; l < levels; l++)
 		{
 			// extract from x?[l+1] => fv?[l]
-			fvH[l] = dwt_util_band_med_s(
+			fvH[l] = FE_FNC(
 				xH[l+1],
 				0,
 				sizeof(float),
@@ -153,7 +178,7 @@ int main(int argc, char *argv[])
 				1
 			);
 
-			fvL[l] = dwt_util_band_med_s(
+			fvL[l] = FE_FNC(
 				xL[l+1],
 				0,
 				sizeof(float),
@@ -161,9 +186,9 @@ int main(int argc, char *argv[])
 				1
 			);
 		}
-
-		dwt_util_log(LOG_INFO, "Extraction done\n");
 	}
+
+	dwt_util_log(LOG_INFO, "Extraction done\n");
 
 	// classes
 	void *cls_ptr;
