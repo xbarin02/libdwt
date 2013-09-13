@@ -16985,7 +16985,7 @@ const char *dwt_util_str_vec_s(
 
 	cbuff_sprintf(cbuff, "[ ");
 	for(int i = 0; i < size; i++)
-		cbuff_sprintf(cbuff, "%+9f ", vec[i]);
+		cbuff_sprintf(cbuff, "%+11.8f ", vec[i]);
 	cbuff_sprintf(cbuff, "] ");
 
 	cbuff_sprintf(cbuff, "(%i)", size);
