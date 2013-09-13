@@ -88,78 +88,47 @@ int main(int argc, char *argv[])
 		// for
 		for(int l = 0; l < levels; l++)
 		{
-			// filter xL[l] => xL[l+1] with g upsampled by factor 2^l
-			dwt_util_convolve1_s(
-				// output response
+			swt_cdf97_f_ex_stride_s(
+				xL[l],
 				xL[l+1],
-				sizeof(float),
-				size,
-				size/2,
-				// input signal
-				xL[l],
-				sizeof(float),
-				size,
-				size/2,
-				// kernel
-				g,
-				sizeof(float),
-				9,
-				9/2,
-				// parameters
-				1,
-				1<<l
-			);
-
-			// filter xL[l] => xH[l+1] with h upsampled by factor 2^l
-			dwt_util_convolve1_s(
-				// output response
 				xH[l+1],
-				sizeof(float),
 				size,
-				size/2,
-				// input signal
-				xL[l],
 				sizeof(float),
-				size,
-				size/2,
-				// kernel
-				h,
-				sizeof(float),
-				7,
-				7/2,
-				// parameters
-				1,
-				1<<l
+				l
 			);
 		}
 
 #if 0
-		dwt_util_save_to_mat_s(
-			"x.mat",
-			x,
-			size,
-			1,
-			0,
-			sizeof(float)
-		);
+		if( 1000 == y )
+		{
+			int l = 6; // levels
+			dwt_util_save_to_mat_s(
+				"x.mat",
+				x,
+				size,
+				1,
+				0,
+				sizeof(float)
+			);
 
-		dwt_util_save_to_mat_s(
-			"lo.mat",
-			xL[levels],
-			size,
-			1,
-			0,
-			sizeof(float)
-		);
+			dwt_util_save_to_mat_s(
+				"lo.mat",
+				xL[l],
+				size,
+				1,
+				0,
+				sizeof(float)
+			);
 
-		dwt_util_save_to_mat_s(
-			"hi.mat",
-			xH[levels],
-			size,
-			1,
-			0,
-			sizeof(float)
-// 		);
+			dwt_util_save_to_mat_s(
+				"hi.mat",
+				xH[l],
+				size,
+				1,
+				0,
+				sizeof(float)
+			);
+		}
 #endif
 		float *fvH = &mat_fvH[y*levels];
 		float *fvL = &mat_fvL[y*levels];
