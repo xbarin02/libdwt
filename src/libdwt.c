@@ -10126,6 +10126,36 @@ void dwt_cdf97_2f1_s(
 	}
 }
 
+void dwt_cdf53_2f1_s(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int *j_max_ptr,
+	int zero_padding
+)
+{
+	UNUSED(size_o_big_y);
+
+	for(int y = 0; y < size_i_big_y; y++)
+	{
+		int x = 0;
+		void *y_ptr = addr2_s(ptr, y, x, stride_x, stride_y);
+
+		dwt_cdf53_1f_s(
+			y_ptr,
+			stride_y,
+			size_o_big_x,
+			size_i_big_x,
+			j_max_ptr,
+			zero_padding
+		);
+	}
+}
+
 void dwt_cdf97_1f_s(
 	void *ptr,
 	int stride_y,
