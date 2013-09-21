@@ -152,7 +152,11 @@ int main(int argc, char *argv[])
 	int j = -1;
 
 	// series of 1-D transforms
+#if 1
 	dwt_cdf97_2f1_s(ptr, stride_x, stride_y, size_x, size_y, size_x, size_y, &j, 0);
+#else
+	dwt_cdf53_2f1_s(ptr, stride_x, stride_y, size_x, size_y, size_x, size_y, &j, 0);
+#endif
 
 	dwt_util_log(LOG_INFO, "DWT done, reached j=%i\n", j);
 
