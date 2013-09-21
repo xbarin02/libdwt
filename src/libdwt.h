@@ -789,6 +789,22 @@ void dwt_cdf97_1f_s(
 );
 
 /**
+ * @brief Forward 1-D fast wavelet transform using CDF 5/3 wavelet and lifting scheme, in-place version.
+ *
+ * This function works with single precision floating point numbers (i.e. float data type).
+ *
+ * @warning experimental
+ */
+void dwt_cdf53_1f_s(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int *j_max_ptr,		///< pointer to the number of intended decomposition levels (scales), the number of achieved decomposition levels will be stored also here
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+);
+
+/**
  * @brief Inverse 1-D fast wavelet transform using CDF 9/7 wavelet and lifting scheme, in-place version.
  *
  * This function works with single precision floating point numbers (i.e. float data type).
@@ -796,6 +812,22 @@ void dwt_cdf97_1f_s(
  * @warning experimental
  */
 void dwt_cdf97_1i_s(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int j_max,		///< the number of decomposition levels (scales)
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+);
+
+/**
+ * @brief Inverse 1-D fast wavelet transform using CDF 5/3 wavelet and lifting scheme, in-place version.
+ *
+ * This function works with single precision floating point numbers (i.e. float data type).
+ *
+ * @warning experimental
+ */
+void dwt_cdf53_1i_s(
 	void *ptr,		///< pointer to beginning of image data
 	int stride_y,		///< difference between columns (in bytes)
 	int size_o_big_x,	///< width of outer image frame (in elements)
