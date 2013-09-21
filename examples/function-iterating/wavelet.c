@@ -6,6 +6,14 @@
 
 #include "libdwt.h"
 
+#if 1
+void (*dwt_wt_1i_s)(void *, int, int, int, int, int) = dwt_cdf97_1i_s;
+void (*dwt_wt_1f_s)(void *, int, int, int, int *, int)  = dwt_cdf97_1f_s;
+#else
+void (*dwt_wt_1i_s)(void *, int, int, int, int, int) = dwt_cdf53_1i_s;
+void (*dwt_wt_1f_s)(void *, int, int, int, int *, int)  = dwt_cdf53_1f_s;
+#endif
+
 int main()
 {
 	dwt_util_init();
@@ -19,7 +27,7 @@ int main()
 	int j = -1;
 
 	// find max. j
-	dwt_cdf97_1f_s(vec, sizeof(float), size, size, &j, 0);
+	dwt_wt_1f_s(vec, sizeof(float), size, size, &j, 0);
 
 	// target scale
 	int jj = j - 3;
@@ -46,7 +54,7 @@ int main()
 	((float *)subband_ptr)[subband_size_x/2] = energy;
 
 	// iterate the filter bank
-	dwt_cdf97_1i_s(vec, sizeof(float), size, size, jj, 0);
+	dwt_wt_1i_s(vec, sizeof(float), size, size, jj, 0);
 
 	// save scaling function
 	dwt_util_save_to_mat_s("phi.mat", vec, size, 1, 0, sizeof(float));
@@ -63,7 +71,7 @@ int main()
 	((float *)subband_ptr)[subband_size_x/2] = energy;
 
 	// iterate the filter bank
-	dwt_cdf97_1i_s(vec, sizeof(float), size, size, jj, 0);
+	dwt_wt_1i_s(vec, sizeof(float), size, size, jj, 0);
 
 	// save scaling function
 	dwt_util_save_to_mat_s("psi.mat", vec, size, 1, 0, sizeof(float));
