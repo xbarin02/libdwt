@@ -8,6 +8,12 @@
 #include <stdlib.h> // free
 #include <math.h> // sqrtf
 
+#if 1
+void (*dwt_wt_1f_s)(void *, int, int, int, int *, int)  = dwt_cdf97_1f_s;
+#else
+void (*dwt_wt_1f_s)(void *, int, int, int, int *, int)  = dwt_cdf53_1f_s;
+#endif
+
 // synthesis (reconstruction)
 //#define PRIM
 
@@ -30,7 +36,7 @@ int main()
 
 	dwt_util_unit_vec_s(vec, size, 0);
 
-	dwt_cdf97_1f_s(vec, sizeof(float), size, size, &j, 0);
+	dwt_wt_1f_s(vec, sizeof(float), size, size, &j, 0);
 
 	for(int i=0; i<size/2; i++)
 	{
@@ -45,7 +51,7 @@ int main()
 
 	dwt_util_unit_vec_s(vec, size, -1);
 
-	dwt_cdf97_1f_s(vec, sizeof(float), size, size, &j, 0);
+	dwt_wt_1f_s(vec, sizeof(float), size, size, &j, 0);
 
 	for(int i=0; i<size/2; i++)
 	{
