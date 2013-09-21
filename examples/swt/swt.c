@@ -5,12 +5,6 @@
 #include "libdwt.h"
 #include "util.h"
 
-// low-pass
-float g[9] = { +0.03782846, -0.02384947, -0.11062438, +0.37740287, +0.85269880, +0.37740287, -0.11062438, -0.02384947, +0.03782846 };
-
-// high-pass
-float h[7] = { +0.06453887, -0.04068942, -0.41809219, +0.78848559, -0.41809219, -0.04068942, +0.06453887 };
-
 int main(int argc, char *argv[])
 {
 	const char *vec_path = (argc > 1) ? argv[1]
@@ -88,7 +82,11 @@ int main(int argc, char *argv[])
 		// for
 		for(int l = 0; l < levels; l++)
 		{
+#if 1
 			swt_cdf97_f_ex_stride_s(
+#else
+			swt_cdf53_f_ex_stride_s(
+#endif
 				xL[l],
 				xL[l+1],
 				xH[l+1],
