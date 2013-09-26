@@ -23,10 +23,16 @@ endif
 
 $(LIBNAME).o: $(LIBNAME).c $(LIBNAME).h
 
+util.o: util.c util.h
+
+signal.o: signal.c signal.h
+
+swt.o: swt.c swt.h
+
 $(LIBNAME).S: $(LIBNAME).c $(LIBNAME).h
 	$(CC) $(CFLAGS) -S -Wa,-adhln -g -fverbose-asm $< -o $@
 
-$(LIBNAME).a: $(LIBNAME).o
+$(LIBNAME).a: $(LIBNAME).o util.o signal.o swt.o
 	$(AR) -rsc $@ $^
 
 # $(LIBNAME).so: $(LIBNAME).o
