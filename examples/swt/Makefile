@@ -3,7 +3,7 @@ include ../../common.mk
 LIBNAME = libdwt
 LIBPATH = $(ROOT)/src
 CFLAGS += -I$(LIBPATH)
-BIN = swt
+BIN = main
 
 .PHONY: all clean
 
@@ -13,12 +13,10 @@ clean:
 	$(MAKE) -C $(LIBPATH) $@
 	-$(RM) $(BIN) *.o *.elf *.gdb
 
-$(BIN): $(BIN).o $(LIBPATH)/$(LIBNAME).o util.o signal.o
+$(BIN): $(BIN).o $(LIBPATH)/$(LIBNAME).a
 
-$(BIN).o: $(BIN).c $(LIBPATH)/$(LIBNAME).h
-
-$(LIBPATH)/$(LIBNAME).o: $(LIBPATH)/$(LIBNAME).c $(LIBPATH)/$(LIBNAME).h
-	$(MAKE) -C $(LIBPATH) $(LIBNAME).o
+$(LIBPATH)/$(LIBNAME).a:
+	$(MAKE) -C $(LIBPATH) $(LIBNAME).a
 
 .PHONY: distclean
 distclean: clean

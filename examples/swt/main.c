@@ -3,7 +3,7 @@
  */
 
 #include "libdwt.h"
-#include "util.h"
+#include "swt.h"
 
 int main(int argc, char *argv[])
 {
