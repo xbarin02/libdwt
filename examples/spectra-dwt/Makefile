@@ -3,7 +3,7 @@ include ../../common.mk
 LIBNAME = libdwt
 LIBPATH = $(ROOT)/src
 CFLAGS += -I$(LIBPATH)
-BIN = wps
+BIN = main
 
 .PHONY: all clean
 
