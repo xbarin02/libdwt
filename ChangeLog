@@ -1,4 +1,4 @@
-2013-09-?? David Barina <ibarina@fit.vutbr.cz>
+2013-09-27 David Barina <ibarina@fit.vutbr.cz>
 * Split some new functions into separate source files instead of one huge file.
 * Added convolution and SWT related functions.
 * Improved support for CDF 5/3 1-D transform.
