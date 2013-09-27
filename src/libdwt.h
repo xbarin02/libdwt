@@ -2939,6 +2939,11 @@ void *dwt_util_crop21(
 );
 
 /**
+ * @brief Size of array in elements.
+ */
+#define sizeof_arr(a) (sizeof(a)/sizeof(*a))
+
+/**
  * @}
  */
 
