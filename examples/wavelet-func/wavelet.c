@@ -38,17 +38,14 @@ int main()
 
 	// configuration
 	int density = 128;
-	int l_size = 3*sizeof_arr(FILTER_PHI)*density;
+	int size = 3*sizeof_arr(FILTER_PHI)*density;
 	int passes = 12;
 
 	// store approximations here
-	float a[passes][l_size];
+	float a[passes][size];
 
 	// unit impulse as initial iteration
-	dwt_util_unit_vec_s(a[0], l_size, 0);
-
-	// print result
-	dwt_util_log(LOG_DBG, "initial: %s\n", dwt_util_str_vec_s(a[0], l_size));
+	dwt_util_unit_vec_s(a[0], size, 0);
 
 	// a[p] <= a[p-1] (*) kernel
 	for(int p = 1; p < passes-1; p++)
@@ -58,13 +55,13 @@ int main()
 			// output response
 			a[p],
 			sizeof(float),
-			l_size,
-			l_size/2,
+			size,
+			size/2,
 			// input signal
 			a[p-1],
 			sizeof(float),
-			l_size,
-			l_size/2,
+			size,
+			size/2,
 			// kernel
 			FILTER_PHI,
 			sizeof(float),
@@ -74,9 +71,6 @@ int main()
 			2, // downsample output
 			density // upsample kernel
 		);
-
-		// print result
-		dwt_util_log(LOG_DBG, "phi(pass=%i): %s\n", p, dwt_util_str_vec_s(a[p], l_size));
 	}
 
 	// last pass
@@ -86,13 +80,13 @@ int main()
 			// output response
 			a[p],
 			sizeof(float),
-			l_size,
-			l_size/2,
+			size,
+			size/2,
 			// input signal
 			a[p-1],
 			sizeof(float),
-			l_size,
-			l_size/2,
+			size,
+			size/2,
 			// kernel
 #if 1
 			FILTER_PSI,
@@ -114,7 +108,7 @@ int main()
 	dwt_util_save_to_mat_s(
 		"func.mat",
 		a[passes-1],
-		l_size,
+		size,
 		1,
 		0,
 		sizeof(float)
