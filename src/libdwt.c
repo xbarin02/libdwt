@@ -445,8 +445,6 @@
 	#include <omp.h>
 #endif
 
-#define sizeof_arr(arr) ( sizeof(arr) / sizeof(*(arr)) )
-
 #ifdef microblaze
 inline
 float powf(
@@ -2482,6 +2480,102 @@ void accel_lift_op4s_main_s(
 				out[1] *= v[1];
 
 				out += 2;
+			}
+		}
+	}
+	else
+	{
+		// uni
+		dwt_util_abort();
+	}
+
+	FUNC_END;
+}
+
+static
+void accel_lift_op4s_main_stride_s(
+	float *arr,
+	int steps,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	int scaling,
+	int stride
+)
+{
+	FUNC_BEGIN;
+
+	assert( steps >= 0 );
+
+	if( scaling < 0 )
+	{
+		// inv
+		assert( 1 == dwt_util_get_num_workers() );
+		{
+			// constants
+			const float w[4] = { delta, gamma, beta, alpha };
+			const float v[2] = { 1/zeta, zeta };
+
+			// descale
+			float *out = addr1_s(arr, 4, stride);
+
+			for(int s = 0; s < steps; s++)
+			{
+				*addr1_s(out, 0, stride) *= v[0];
+				*addr1_s(out, 1, stride) *= v[1];
+
+				out = addr1_s(out, 2, stride);
+			}
+
+			// operations
+			for(int off = 4; off >= 1; off--)
+			{
+				float *out = addr1_s(arr, off, stride);
+				const float c = w[off-1];
+
+				for(int s = 0; s < steps; s++)
+				{
+					*addr1_s(out, 0, stride) += c * (*addr1_s(out, -1, stride) + *addr1_s(out, +1, stride));
+
+					out = addr1_s(out, 2, stride);
+				}
+			}
+		}
+	}
+	else if( scaling > 0 )
+	{
+		// fwd
+		assert( 1 == dwt_util_get_num_workers() );
+		{
+			// constants
+			const float w[4] = { delta, gamma, beta, alpha };
+			const float v[2] = { 1/zeta, zeta };
+
+			// operations
+			for(int off = 4; off >= 1; off--)
+			{
+				float *out = addr1_s(arr, off, stride);
+				const float c = w[off-1];
+
+				for(int s = 0; s < steps; s++)
+				{
+					*addr1_s(out, 0, stride) += c * (*addr1_s(out, -1, stride) + *addr1_s(out, +1, stride));
+
+					out = addr1_s(out, 2, stride);
+				}
+			}
+
+			// scale
+			float *out = addr1_s(arr, 0, stride);
+
+			for(int s = 0; s < steps; s++)
+			{
+				*addr1_s(out, 0, stride) *= v[0];
+				*addr1_s(out, 1, stride) *= v[1];
+
+				out = addr1_s(out, 2, stride);
 			}
 		}
 	}
@@ -8002,7 +8096,8 @@ void accel_lift_op4s_prolog_s(
 	float gamma,
 	float delta,
 	float zeta,
-	int scaling)
+	int scaling
+)
 {
 	assert( N-off >= 4 );
 
@@ -8013,7 +8108,7 @@ void accel_lift_op4s_prolog_s(
 	for(int w = 0; w < dwt_util_get_num_workers(); w++)
 	{
 		float *arr_local = calc_temp_offset2_s(arr, w, off);
-		
+
 		if(off)
 		{
 			// inv-scaling
@@ -8063,6 +8158,86 @@ void accel_lift_op4s_prolog_s(
 			// gamma
 			arr_local[0] += 2*gamma*(arr_local[1]);
 		
+			// delta
+			// none
+
+			// scaling
+			// none
+		}
+	}
+}
+
+static
+void accel_lift_op4s_prolog_stride_s(
+	float *arr,
+	int off,
+	int N,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	int scaling,
+	int stride
+)
+{
+	assert( N-off >= 4 );
+
+#ifdef NDEBUG
+	UNUSED(N);
+#endif
+
+	assert( 1 == dwt_util_get_num_workers() );
+	{
+		if( off )
+		{
+			// inv-scaling
+			if( scaling < 0 )
+			{
+				// TODO
+			}
+
+			// alpha
+			*addr1_s(arr, 1, stride) += alpha*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+			*addr1_s(arr, 3, stride) += alpha*(*addr1_s(arr, 2, stride) + *addr1_s(arr, 4, stride));
+
+			// beta
+			*addr1_s(arr, 0, stride) += 2*beta*(*addr1_s(arr, 1, stride));
+			*addr1_s(arr, 2, stride) += beta*(*addr1_s(arr, 1, stride) + *addr1_s(arr, 3, stride));
+		
+			// gamma
+			*addr1_s(arr, 1, stride) += gamma*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+		
+			// delta
+			*addr1_s(arr, 0, stride) += 2*delta*(*addr1_s(arr, 1, stride));
+
+			// scaling
+			if( scaling > 0)
+			{
+				*addr1_s(arr, 0, stride) *= zeta;
+			}
+		}
+		else
+		{
+			// inv-scaling
+			if( scaling < 0 )
+			{
+				*addr1_s(arr, 0, stride) *= 1/zeta;
+				*addr1_s(arr, 1, stride) *= zeta;
+				*addr1_s(arr, 2, stride) *= 1/zeta;
+				*addr1_s(arr, 3, stride) *= zeta;
+			}
+
+			// alpha
+			*addr1_s(arr, 0, stride) += 2*alpha*(*addr1_s(arr, 1, stride));
+			*addr1_s(arr, 2, stride) += alpha*(*addr1_s(arr, 1, stride) + *addr1_s(arr, 3, stride));
+			
+			// beta
+			*addr1_s(arr, 1, stride) += beta*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+		
+			// gamma
+			*addr1_s(arr, 0, stride) += 2*gamma*(*addr1_s(arr, 1, stride));
+
 			// delta
 			// none
 
@@ -8157,6 +8332,91 @@ void accel_lift_op4s_epilog_s(
 	}
 }
 
+static
+void accel_lift_op4s_epilog_stride_s(
+	float *arr,
+	int off,
+	int N,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	int scaling,
+	int stride
+)
+{
+	assert( N-off >= 4 );
+
+	assert( 1 == dwt_util_get_num_workers() );
+	{
+		if( is_even(N - off) )
+		{
+			// inv-scaling
+			if( scaling < 0 )
+			{
+				// TODO
+			}
+
+			// alpha
+			// none
+
+			// beta
+			*addr1_s(arr, N-1, stride) += 2*beta*(*addr1_s(arr, N-2, stride));
+
+			// gamma
+			*addr1_s(arr, N-2, stride) += gamma*(*addr1_s(arr, N-1, stride) + *addr1_s(arr, N-3, stride));
+
+			// delta
+			*addr1_s(arr, N-1, stride) += 2*delta*(*addr1_s(arr, N-2, stride));
+			*addr1_s(arr, N-3, stride) += delta*(*addr1_s(arr, N-4, stride) + *addr1_s(arr, N-2, stride));
+
+			// scaling
+			if( scaling > 0 )
+			{
+				// FIXME: this is dependend on "off"
+				*addr1_s(arr, N-4, stride) *= 1/zeta;
+				*addr1_s(arr, N-3, stride) *= zeta;
+				*addr1_s(arr, N-2, stride) *= 1/zeta;
+				*addr1_s(arr, N-1, stride) *= zeta;
+			}
+		}
+		else /* is_odd(N-off) */
+		{
+			// inv-scaling
+			if( scaling < 0 )
+			{
+				*addr1_s(arr, N-1, stride) *= 1/zeta;
+			}
+
+			// alpha
+			*addr1_s(arr, N-1, stride) += 2*alpha*(*addr1_s(arr, N-2, stride));
+
+			// beta
+			*addr1_s(arr, N-2, stride) += beta*(*addr1_s(arr, N-1, stride) + *addr1_s(arr, N-3, stride));
+
+			// gamma
+			*addr1_s(arr, N-1, stride) += 2*gamma*(*addr1_s(arr, N-2, stride));
+			*addr1_s(arr, N-3, stride) += gamma*(*addr1_s(arr, N-2, stride) + *addr1_s(arr, N-4, stride));
+
+			// delta
+			*addr1_s(arr, N-2, stride) += delta*(*addr1_s(arr, N-1, stride) + *addr1_s(arr, N-3, stride));
+			*addr1_s(arr, N-4, stride) += delta*(*addr1_s(arr, N-5, stride) + *addr1_s(arr, N-3, stride));
+
+			// scaling
+			if( scaling > 0 )
+			{
+				// FIXME: this is dependend on "off"
+				*addr1_s(arr, N-5, stride) *= 1/zeta;
+				*addr1_s(arr, N-4, stride) *= zeta;
+				*addr1_s(arr, N-3, stride) *= 1/zeta;
+				*addr1_s(arr, N-2, stride) *= zeta;
+				*addr1_s(arr, N-1, stride) *= 1/zeta;
+			}
+		}
+	}
+}
+
 /**
  * @brief Prolog and epilog for N-off < 4.
  */
@@ -8170,7 +8430,8 @@ void accel_lift_op4s_short_s(
 	float gamma,
 	float delta,
 	float zeta,
-	int scaling)
+	int scaling
+)
 {
 	assert( N-off < 4 );
 
@@ -8336,6 +8597,182 @@ void accel_lift_op4s_short_s(
 }
 
 static
+void accel_lift_op4s_short_stride_s(
+	float *arr,
+	int off,
+	int N,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	int scaling,
+	int stride
+)
+{
+	assert( N-off < 4 );
+
+	assert( 1 == dwt_util_get_num_workers() );
+
+	{
+		if( off )
+		{
+			if( N == 2 )
+			{
+				// inv-scaling
+				if( scaling < 0 )
+				{
+					// TODO
+				}
+
+				// alpha
+				*addr1_s(arr, 1, stride) += 2*alpha*(*addr1_s(arr, 0, stride));
+
+				// beta
+				*addr1_s(arr, 0, stride) += 2*beta*(*addr1_s(arr, 1, stride));
+
+				// gamma
+				*addr1_s(arr, 1, stride) += 2*gamma*(*addr1_s(arr, 0, stride));
+
+				// delta
+				*addr1_s(arr, 0, stride) += 2*delta*(*addr1_s(arr, 1, stride));
+
+				// scaling
+				if( scaling > 0 )
+				{
+					*addr1_s(arr, 0, stride) *= zeta;
+					*addr1_s(arr, 1, stride) *= 1/zeta;
+				}
+			}
+			else
+			if( N == 3 )
+			{
+				// inv-scaling
+				if( scaling < 0 )
+				{
+					// TODO
+				}
+
+				// alpha
+				*addr1_s(arr, 1, stride) += alpha*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+
+				// beta
+				*addr1_s(arr, 0, stride) += 2*beta*(*addr1_s(arr, 1, stride));
+				*addr1_s(arr, 2, stride) += 2*beta*(*addr1_s(arr, 1, stride));
+
+				// gamma
+				*addr1_s(arr, 1, stride) += gamma*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+
+				// delta
+				*addr1_s(arr, 0, stride) += 2*delta*(*addr1_s(arr, 1, stride));
+				*addr1_s(arr, 2, stride) += 2*delta*(*addr1_s(arr, 1, stride));
+
+				// scaling
+				if( scaling > 0 )
+				{
+					*addr1_s(arr, 0, stride) *= zeta;
+					*addr1_s(arr, 1, stride) *= 1/zeta;
+					*addr1_s(arr, 2, stride) *= zeta;
+				}
+			}
+			else /* N == 4 */
+			{
+				// inv-scaling
+				if( scaling < 0 )
+				{
+					// TODO
+				}
+
+				// alpha
+				*addr1_s(arr, 1, stride) += alpha*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+				*addr1_s(arr, 3, stride) += 2*alpha*(*addr1_s(arr, 2, stride));
+
+				// beta
+				*addr1_s(arr, 0, stride) += 2*beta*(*addr1_s(arr, 1, stride));
+				*addr1_s(arr, 2, stride) += beta*(*addr1_s(arr, 1, stride) + *addr1_s(arr, 3, stride));
+
+				// gamma
+				*addr1_s(arr, 1, stride) += gamma*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+				*addr1_s(arr, 3, stride) += 2*gamma*(*addr1_s(arr, 2, stride));
+
+				// delta
+				*addr1_s(arr, 0, stride) += 2*delta*(*addr1_s(arr, 1, stride));
+				*addr1_s(arr, 2, stride) += delta*(*addr1_s(arr, 1, stride) + *addr1_s(arr, 3, stride));
+
+				// scaling
+				if( scaling > 0 )
+				{
+					*addr1_s(arr, 0, stride) *= zeta;
+					*addr1_s(arr, 1, stride) *= 1/zeta;
+					*addr1_s(arr, 2, stride) *= zeta;
+					*addr1_s(arr, 3, stride) *= 1/zeta;
+				}
+			}
+		}
+		else /* !off */
+		{
+			if( N == 2 )
+			{
+				// inv-scaling
+				if( scaling < 0 )
+				{
+					*addr1_s(arr, 0, stride) *= 1/zeta;
+					*addr1_s(arr, 1, stride) *= zeta;
+				}
+
+				// alpha
+				*addr1_s(arr, 0, stride) += 2*alpha*(*addr1_s(arr, 1, stride));
+
+				// beta
+				*addr1_s(arr, 1, stride) += 2*beta*(*addr1_s(arr, 0, stride));
+
+				// gamma
+				*addr1_s(arr, 0, stride) += 2*gamma*(*addr1_s(arr, 1, stride));
+
+				// delta
+				*addr1_s(arr, 1, stride) += 2*delta*(*addr1_s(arr, 0, stride));
+
+				// scaling
+				if( scaling > 0 )
+				{
+					// TODO
+				}
+			}
+			else /* N == 3 */
+			{
+				// inv-scaling
+				if( scaling < 0 )
+				{
+					*addr1_s(arr, 0, stride) *= 1/zeta;
+					*addr1_s(arr, 1, stride) *= zeta;
+					*addr1_s(arr, 2, stride) *= 1/zeta;
+				}
+
+				// alpha
+				*addr1_s(arr, 0, stride) += 2*alpha*(*addr1_s(arr, 1, stride));
+				*addr1_s(arr, 2, stride) += 2*alpha*(*addr1_s(arr, 1, stride));
+
+				// beta
+				*addr1_s(arr, 1, stride) += beta*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+
+				// gamma
+				*addr1_s(arr, 0, stride) += 2*gamma*(*addr1_s(arr, 1, stride));
+				*addr1_s(arr, 2, stride) += 2*gamma*(*addr1_s(arr, 1, stride));
+
+				// delta
+				*addr1_s(arr, 1, stride) += delta*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+
+				// scaling
+				if( scaling > 0 )
+				{
+					// TODO
+				}
+			}
+		}
+	}
+}
+
+static
 void accel_lift_op4s_s(
 	float *restrict arr,
 	int off,
@@ -8345,7 +8782,8 @@ void accel_lift_op4s_s(
 	float gamma,
 	float delta,
 	float zeta,
-	int scaling)
+	int scaling
+)
 {
 	FUNC_BEGIN;
 
@@ -8528,6 +8966,44 @@ void accel_lift_op4s_s(
 	FUNC_END;
 }
 
+static
+void accel_lift_op4s_stride_s(
+	float *restrict arr,
+	int off,
+	int len,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	int scaling,
+	int stride
+)
+{
+	FUNC_BEGIN;
+
+	assert( len >= 2 );
+	assert( 0 == off || 1 == off );
+
+	if( len-off < 4 )
+	{
+		accel_lift_op4s_short_stride_s(arr, off, len, alpha, beta, gamma, delta, zeta, scaling, stride);
+	}
+	else
+	{
+		accel_lift_op4s_prolog_stride_s(arr, off, len, alpha, beta, gamma, delta, zeta, scaling, stride);
+
+		assert( 0 == get_accel_type() );
+		{
+			accel_lift_op4s_main_stride_s(addr1_s(arr, off, stride), (to_even(len-off)-4)/2, alpha, beta, gamma, delta, zeta, scaling, stride);
+		}
+
+		accel_lift_op4s_epilog_stride_s(arr, off, len, alpha, beta, gamma, delta, zeta, scaling, stride);
+	}
+
+	FUNC_END;
+}
+
 void dwt_cdf97_f_ex_stride_s(
 	const float *src,
 	float *dst_l,
@@ -8584,6 +9060,32 @@ void dwt_cdf97_f_ex_stride_s(
 			dwt_util_memcpy_stride_s(src_local, stride, tmp_local, sizeof(float), N);
 #endif
 	}
+}
+
+/**
+ * This function leaves H and L subband interleaved.
+ */
+void dwt_cdf97_f_ex_stride_inplace_s(
+	float *ptr,
+	int N,
+	int stride
+)
+{
+	assert( N >= 0 && NULL != ptr && 0 != stride );
+
+	const int offset = 1;
+
+	// fix for small N
+	if(N < 2)
+	{
+		// respect stride
+		if(1 == N)
+			ptr[0] = ptr[0] * dwt_cdf97_s1_s;
+		return;
+	}
+
+	// TODO: split to prolog, core and epilog
+	accel_lift_op4s_stride_s(ptr, offset, N, -dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride);
 }
 
 /*
@@ -8956,6 +9458,29 @@ void dwt_cdf97_i_ex_stride_s(
 
 		dwt_util_memcpy_stride_s(dst_local, stride, tmp_local, sizeof(float), N);
 	}
+}
+
+void dwt_cdf97_i_ex_stride_inplace_s(
+	float *ptr,
+	int N,
+	int stride
+)
+{
+	assert( N >= 0 && NULL != ptr && 0 != stride );
+
+	const int offset = 0;
+
+	// fix for small N
+	if(N < 2)
+	{
+		// respect stride
+		if(1 == N)
+			ptr[0] = ptr[0] * dwt_cdf97_s2_s; // FIXME: 1/zeta
+		return;
+	}
+
+	// split to prolog, core and epilog
+	accel_lift_op4s_stride_s(ptr, offset, N, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
 }
 
 void dwt_cdf97_i_ex_stride_i(
@@ -9962,6 +10487,116 @@ void dwt_cdf97_2f_s(
 	FUNC_END;
 }
 
+void dwt_cdf97_2f_inplace_s(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int *j_max_ptr,
+	int decompose_one,
+	int zero_padding)
+{
+	FUNC_BEGIN;
+
+	const int threads = dwt_util_get_num_threads();
+	const int workers = dwt_util_get_num_workers();
+
+	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
+	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
+
+	int j = 0;
+
+	const int j_limit = ceil_log2( decompose_one ? size_o_big_max : size_o_big_min );
+
+	if( *j_max_ptr < 0 || *j_max_ptr > j_limit )
+		*j_max_ptr = j_limit;
+
+	for(;;)
+	{
+		if( *j_max_ptr == j )
+			break;
+
+		const int size_o_src_x = ceil_div_pow2(size_o_big_x, j  );
+		const int size_o_src_y = ceil_div_pow2(size_o_big_y, j  );
+		const int size_o_dst_x = ceil_div_pow2(size_o_big_x, j+1);
+		const int size_o_dst_y = ceil_div_pow2(size_o_big_y, j+1);
+		const int size_i_src_x = ceil_div_pow2(size_i_big_x, j  );
+		const int size_i_src_y = ceil_div_pow2(size_i_big_y, j  );
+		
+		const int lines_x = size_o_src_x;
+		const int lines_y = size_o_src_y;
+
+		const int workers_segment_y = floor_div(lines_y, workers);
+		const int workers_segment_x = floor_div(lines_x, workers);
+#ifdef _OPENMP
+		const int threads_segment_y = ceil_div(workers_segment_y, threads);
+		const int threads_segment_x = ceil_div(workers_segment_x, threads);
+#endif
+		const int workers_lines_y = workers_segment_y * workers;
+		const int workers_lines_x = workers_segment_x * workers;
+
+		const int stride_y_j = stride_y * (1<<(j));
+		const int stride_x_j = stride_x * (1<<(j));
+
+#ifndef DISABLE_Y
+		if( lines_x > 1 )
+		{
+			// FIXME: size_i_big_y
+			for(int y = 0; y < size_o_big_y; y++)
+			{
+				dwt_cdf97_f_ex_stride_inplace_s(
+					addr2_s(ptr,y,0,stride_x,stride_y),
+					size_i_src_x,
+					stride_y_j);
+			}
+		}
+#endif
+
+#ifndef DISABLE_X
+		if( lines_y > 1 )
+		{
+			// FIXME: size_i_big_x
+			for(int x = 0; x < size_o_big_x; x++)
+			{
+				dwt_cdf97_f_ex_stride_inplace_s(
+					addr2_s(ptr,0,x,stride_x,stride_y),
+					size_i_src_y,
+					stride_x_j);
+			}
+		}
+#endif
+
+// 		if(zero_padding)
+// 		{
+// 			#pragma omp parallel for schedule(static, threads_segment_y)
+// 			for(int y = 0; y < size_o_src_y; y++)
+// 				dwt_zero_padding_f_stride_s(
+// 					addr2_s(ptr,y,0,stride_x,stride_y),
+// 					addr2_s(ptr,y,size_o_dst_x,stride_x,stride_y),
+// 					size_i_src_x,
+// 					size_o_dst_x,
+// 					size_o_src_x-size_o_dst_x,
+// 					stride_y);
+// 			#pragma omp parallel for schedule(static, threads_segment_x)
+// 			for(int x = 0; x < size_o_src_x; x++)
+// 				dwt_zero_padding_f_stride_s(
+// 					addr2_s(ptr,0,x,stride_x,stride_y),
+// 					addr2_s(ptr,size_o_dst_y,x,stride_x,stride_y),
+// 					size_i_src_y,
+// 					size_o_dst_y,
+// 					size_o_src_y-size_o_dst_y,
+// 					stride_x);
+// 		}
+// 
+		j++;
+	}
+
+	FUNC_END;
+}
+
 void dwt_cdf97_1i_s(
 	void *ptr,
 	int stride_y,
@@ -10840,6 +11475,106 @@ void dwt_cdf97_2i_s(
 	}
 
 	free_temp_s(threads, temp);
+
+	FUNC_END;
+}
+
+void dwt_cdf97_2i_inplace_s(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	int decompose_one,
+	int zero_padding)
+{
+	FUNC_BEGIN;
+
+	const int threads = dwt_util_get_num_threads();
+	const int workers = dwt_util_get_num_workers();
+
+	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
+	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
+
+	int j = ceil_log2( decompose_one ? size_o_big_max : size_o_big_min );
+
+	if( j_max >= 0 && j_max < j )
+		j = j_max;
+
+	for(;;)
+	{
+		if(0 == j)
+			break;
+
+		const int size_o_src_x = ceil_div_pow2(size_o_big_x, j  );
+		const int size_o_src_y = ceil_div_pow2(size_o_big_y, j  );
+		const int size_o_dst_x = ceil_div_pow2(size_o_big_x, j-1);
+		const int size_o_dst_y = ceil_div_pow2(size_o_big_y, j-1);
+		const int size_i_dst_x = ceil_div_pow2(size_i_big_x, j-1);
+		const int size_i_dst_y = ceil_div_pow2(size_i_big_y, j-1);
+
+		const int lines_y = size_o_dst_y;
+		const int lines_x = size_o_dst_x;
+
+		const int workers_segment_y = floor_div(lines_y, workers);
+		const int workers_segment_x = floor_div(lines_x, workers);
+#ifdef _OPENMP
+		const int threads_segment_y = ceil_div(workers_segment_y, threads);
+		const int threads_segment_x = ceil_div(workers_segment_x, threads);
+#endif
+		const int workers_lines_y = workers_segment_y * workers;
+		const int workers_lines_x = workers_segment_x * workers;
+
+		const int stride_y_j = stride_y * (1<<(j-1));
+		const int stride_x_j = stride_x * (1<<(j-1));
+
+		if( lines_x > 1 )
+		{
+			// FIXME: size_i_big_y
+			for(int y = 0; y < size_o_big_y; y++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_s(
+					addr2_s(ptr,y,0,stride_x,stride_y),
+					size_i_dst_x,
+					stride_y_j);
+			}
+		}
+
+		if( lines_y > 1 )
+		{
+			// FIXME: size_i_big_x
+			for(int x = 0; x < size_o_big_x; x++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_s(
+					addr2_s(ptr,0,x,stride_x,stride_y),
+					size_i_dst_y,
+					stride_x_j);
+			}
+		}
+
+// 		if(zero_padding)
+// 		{
+// 			#pragma omp parallel for schedule(static, threads_segment_y)
+// 			for(int y = 0; y < size_o_dst_y; y++)
+// 				dwt_zero_padding_i_stride_s(
+// 					addr2_s(ptr,y,0,stride_x,stride_y),
+// 					size_i_dst_x,
+// 					size_o_dst_x,
+// 					stride_y);
+// 			#pragma omp parallel for schedule(static, threads_segment_x)
+// 			for(int x = 0; x < size_o_dst_x; x++)
+// 				dwt_zero_padding_i_stride_s(
+// 					addr2_s(ptr,0,x,stride_x,stride_y),
+// 					size_i_dst_y,
+// 					size_o_dst_y,
+// 					stride_x);
+// 		}
+
+		j--;
+	}
 
 	FUNC_END;
 }
