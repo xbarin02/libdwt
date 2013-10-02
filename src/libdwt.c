@@ -2588,6 +2588,112 @@ void accel_lift_op4s_main_stride_s(
 	FUNC_END;
 }
 
+/**
+ * horizontal vectorisation (multi-loop approach), forward transform
+ */
+static
+void accel_lift_op4s_fwd_main_stride_s(
+	float *arr,
+	int steps,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	int scaling,
+	int stride
+)
+{
+	FUNC_BEGIN;
+
+	assert( steps >= 0 );
+	assert( scaling > 0 );
+
+	// constants
+	const float w[4] = { delta, gamma, beta, alpha };
+	const float v[2] = { 1/zeta, zeta };
+
+	// operations
+	for(int off = 4; off >= 1; off--)
+	{
+		float *out = addr1_s(arr, off, stride);
+		const float c = w[off-1];
+
+		for(int s = 0; s < steps; s++)
+		{
+			*addr1_s(out, 0, stride) += c * (*addr1_s(out, -1, stride) + *addr1_s(out, +1, stride));
+
+			out = addr1_s(out, 2, stride);
+		}
+	}
+
+	// scale
+	float *out = addr1_s(arr, 0, stride);
+
+	for(int s = 0; s < steps; s++)
+	{
+		*addr1_s(out, 0, stride) *= v[0];
+		*addr1_s(out, 1, stride) *= v[1];
+
+		out = addr1_s(out, 2, stride);
+	}
+
+	FUNC_END;
+}
+
+/**
+ * horizontal vectorisation (multi-loop approach), inverse transform
+ */
+static
+void accel_lift_op4s_inv_main_stride_s(
+	float *arr,
+	int steps,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	int scaling,
+	int stride
+)
+{
+	FUNC_BEGIN;
+
+	assert( steps >= 0 );
+	assert( scaling < 0 );
+
+	// constants
+	const float w[4] = { delta, gamma, beta, alpha };
+	const float v[2] = { 1/zeta, zeta };
+
+	// descale
+	float *out = addr1_s(arr, 4, stride);
+
+	for(int s = 0; s < steps; s++)
+	{
+		*addr1_s(out, 0, stride) *= v[0];
+		*addr1_s(out, 1, stride) *= v[1];
+
+		out = addr1_s(out, 2, stride);
+	}
+
+	// operations
+	for(int off = 4; off >= 1; off--)
+	{
+		float *out = addr1_s(arr, off, stride);
+		const float c = w[off-1];
+
+		for(int s = 0; s < steps; s++)
+		{
+			*addr1_s(out, 0, stride) += c * (*addr1_s(out, -1, stride) + *addr1_s(out, +1, stride));
+
+			out = addr1_s(out, 2, stride);
+		}
+	}
+
+	FUNC_END;
+}
+
 #ifdef __SSE__
 /**
  * multi-loop algorithm with 4 workers
@@ -9024,20 +9130,15 @@ void dwt_cdf97_f_ex_stride_s(
 	}
 }
 
-/**
- * This function leaves H and L subband interleaved.
- */
-void dwt_cdf97_f_ex_stride_inplace_s(
+static
+void dwt_cdf97_f_ex_stride_inplace_part_exceptions_s(
 	float *ptr,
 	int N,
 	int stride
 )
 {
-	assert( N >= 0 && NULL != ptr && 0 != stride );
-
 	const int offset = 1;
 
-	// fix for small N
 	if( N < 2 )
 	{
 		// respect stride
@@ -9046,16 +9147,45 @@ void dwt_cdf97_f_ex_stride_inplace_s(
 		return;
 	}
 	else
-	if( N-offset < 4 )
 	{
 		accel_lift_op4s_short_stride_s(ptr, offset, N, -dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride);
 	}
-	else
-	{
-		accel_lift_op4s_prolog_stride_s(ptr, offset, N, -dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride);
-		accel_lift_op4s_main_stride_s(addr1_s(ptr, offset, stride), (to_even(N-offset)-4)/2, -dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride);
-		accel_lift_op4s_epilog_stride_s(ptr, offset, N, -dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride);
-	}
+}
+
+static
+void dwt_cdf97_f_ex_stride_inplace_part_prolog_s(
+	float *ptr,
+	int N,
+	int stride
+)
+{
+	const int offset = 1;
+
+	accel_lift_op4s_prolog_stride_s(ptr, offset, N, -dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride);
+}
+
+static
+void dwt_cdf97_f_ex_stride_inplace_part_core_s(
+	float *ptr,
+	int N,
+	int stride
+)
+{
+	const int offset = 1;
+
+	accel_lift_op4s_fwd_main_stride_s(addr1_s(ptr, offset, stride), (to_even(N-offset)-4)/2, -dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride);
+}
+
+static
+void dwt_cdf97_f_ex_stride_inplace_part_epilog_s(
+	float *ptr,
+	int N,
+	int stride
+)
+{
+	const int offset = 1;
+
+	accel_lift_op4s_epilog_stride_s(ptr, offset, N, -dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride);
 }
 
 /*
@@ -9430,35 +9560,62 @@ void dwt_cdf97_i_ex_stride_s(
 	}
 }
 
-void dwt_cdf97_i_ex_stride_inplace_s(
+static
+void dwt_cdf97_i_ex_stride_inplace_part_exceptions_s(
 	float *ptr,
 	int N,
 	int stride
 )
 {
-	assert( N >= 0 && NULL != ptr && 0 != stride );
-
 	const int offset = 0;
 
-	// fix for small N
 	if( N < 2 )
 	{
 		// respect stride
 		if( 1 == N )
-			ptr[0] *= dwt_cdf97_s2_s; // FIXME: 1/zeta
+			ptr[0] *= dwt_cdf97_s2_s;
 		return;
 	}
 	else
-	if( N-offset < 4 )
 	{
 		accel_lift_op4s_short_stride_s(ptr, offset, N,-dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
 	}
-	else
-	{
-		accel_lift_op4s_prolog_stride_s(ptr, offset, N, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
-		accel_lift_op4s_main_stride_s(addr1_s(ptr, offset, stride), (to_even(N-offset)-4)/2, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
-		accel_lift_op4s_epilog_stride_s(ptr, offset, N, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
-	}
+}
+
+static
+void dwt_cdf97_i_ex_stride_inplace_part_prolog_s(
+	float *ptr,
+	int N,
+	int stride
+)
+{
+	const int offset = 0;
+
+	accel_lift_op4s_prolog_stride_s(ptr, offset, N, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
+}
+
+static
+void dwt_cdf97_i_ex_stride_inplace_part_core_s(
+	float *ptr,
+	int N,
+	int stride
+)
+{
+	const int offset = 0;
+
+	accel_lift_op4s_inv_main_stride_s(addr1_s(ptr, offset, stride), (to_even(N-offset)-4)/2, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
+}
+
+static
+void dwt_cdf97_i_ex_stride_inplace_part_epilog_s(
+	float *ptr,
+	int N,
+	int stride
+)
+{
+	const int offset = 0;
+
+	accel_lift_op4s_epilog_stride_s(ptr, offset, N, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
 }
 
 void dwt_cdf97_i_ex_stride_i(
@@ -10479,6 +10636,8 @@ void dwt_cdf97_2f_inplace_s(
 {
 	FUNC_BEGIN;
 
+	assert( 1 == dwt_util_get_num_workers() );
+
 	const int threads = dwt_util_get_num_threads();
 	const int workers = dwt_util_get_num_workers();
 
@@ -10519,33 +10678,98 @@ void dwt_cdf97_2f_inplace_s(
 		const int stride_y_j = stride_y * (1<<(j));
 		const int stride_x_j = stride_x * (1<<(j));
 
-#ifndef DISABLE_Y
-		if( lines_x > 1 )
+		if( lines_x > 1 && size_i_src_x < 5 )
 		{
 			// FIXME: size_i_big_y
 			for(int y = 0; y < size_o_big_y; y++)
 			{
-				dwt_cdf97_f_ex_stride_inplace_s(
-					addr2_s(ptr,y,0,stride_x,stride_y),
-					size_i_src_x,
+				dwt_cdf97_f_ex_stride_inplace_part_exceptions_s(
+					addr2_s(ptr, y, 0, stride_x, stride_y),
+					size_i_src_x, // N
 					stride_y_j);
 			}
 		}
-#endif
-
-#ifndef DISABLE_X
-		if( lines_y > 1 )
+		if( lines_y > 1 && size_i_src_y < 5 )
 		{
 			// FIXME: size_i_big_x
 			for(int x = 0; x < size_o_big_x; x++)
 			{
-				dwt_cdf97_f_ex_stride_inplace_s(
-					addr2_s(ptr,0,x,stride_x,stride_y),
-					size_i_src_y,
+				dwt_cdf97_f_ex_stride_inplace_part_exceptions_s(
+					addr2_s(ptr, 0, x, stride_x, stride_y),
+					size_i_src_y, // N
 					stride_x_j);
 			}
 		}
-#endif
+
+		if( lines_x > 1 && size_i_src_x >= 5 )
+		{
+			// FIXME: size_i_big_y
+			for(int y = 0; y < size_o_big_y; y++)
+			{
+				dwt_cdf97_f_ex_stride_inplace_part_prolog_s(
+					addr2_s(ptr, y, 0, stride_x, stride_y),
+					size_i_src_x, // N
+					stride_y_j);
+			}
+		}
+		if( lines_y > 1 && size_i_src_y >= 5 )
+		{
+			// FIXME: size_i_big_x
+			for(int x = 0; x < size_o_big_x; x++)
+			{
+				dwt_cdf97_f_ex_stride_inplace_part_prolog_s(
+					addr2_s(ptr, 0, x, stride_x, stride_y),
+					size_i_src_y, // N
+					stride_x_j);
+			}
+		}
+
+		// TODO: merge these two loops into single one
+		if( lines_x > 1 && size_i_src_x >= 5 )
+		{
+			// FIXME: size_i_big_y
+			for(int y = 0; y < size_o_big_y; y++)
+			{
+				dwt_cdf97_f_ex_stride_inplace_part_core_s(
+					addr2_s(ptr, y, 0, stride_x, stride_y),
+					size_i_src_x, // N
+					stride_y_j);
+			}
+		}
+		if( lines_y > 1 && size_i_src_y >= 5 )
+		{
+			// FIXME: size_i_big_x
+			for(int x = 0; x < size_o_big_x; x++)
+			{
+				dwt_cdf97_f_ex_stride_inplace_part_core_s(
+					addr2_s(ptr, 0, x, stride_x, stride_y),
+					size_i_src_y, // N
+					stride_x_j);
+			}
+		}
+
+		if( lines_x > 1 && size_i_src_x >= 5 )
+		{
+			// FIXME: size_i_big_y
+			for(int y = 0; y < size_o_big_y; y++)
+			{
+				dwt_cdf97_f_ex_stride_inplace_part_epilog_s(
+					addr2_s(ptr, y, 0, stride_x, stride_y),
+					size_i_src_x, // N
+					stride_y_j);
+			}
+		}
+		if( lines_y > 1 && size_i_src_y >= 5 )
+		{
+			// FIXME: size_i_big_x
+			for(int x = 0; x < size_o_big_x; x++)
+			{
+				dwt_cdf97_f_ex_stride_inplace_part_epilog_s(
+					addr2_s(ptr, 0, x, stride_x, stride_y),
+					size_i_src_y, // N
+					stride_x_j);
+			}
+		}
 
 // 		if(zero_padding)
 // 		{
@@ -11471,6 +11695,8 @@ void dwt_cdf97_2i_inplace_s(
 {
 	FUNC_BEGIN;
 
+	assert( 1 == dwt_util_get_num_workers() );
+
 	const int threads = dwt_util_get_num_threads();
 	const int workers = dwt_util_get_num_workers();
 
@@ -11509,24 +11735,92 @@ void dwt_cdf97_2i_inplace_s(
 		const int stride_y_j = stride_y * (1<<(j-1));
 		const int stride_x_j = stride_x * (1<<(j-1));
 
-		if( lines_x > 1 )
+		if( lines_x > 1 && size_i_dst_x < 4 )
 		{
 			// FIXME: size_i_big_y
 			for(int y = 0; y < size_o_big_y; y++)
 			{
-				dwt_cdf97_i_ex_stride_inplace_s(
+				dwt_cdf97_i_ex_stride_inplace_part_exceptions_s(
+					addr2_s(ptr,y,0,stride_x,stride_y),
+					size_i_dst_x, // N
+					stride_y_j);
+			}
+		}
+		if( lines_y > 1 && size_i_dst_y < 4 )
+		{
+			// FIXME: size_i_big_x
+			for(int x = 0; x < size_o_big_x; x++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_exceptions_s(
+					addr2_s(ptr,0,x,stride_x,stride_y),
+					size_i_dst_y, // N
+					stride_x_j);
+			}
+		}
+
+		if( lines_x > 1 && size_i_dst_x >= 4 )
+		{
+			// FIXME: size_i_big_y
+			for(int y = 0; y < size_o_big_y; y++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_prolog_s(
 					addr2_s(ptr,y,0,stride_x,stride_y),
 					size_i_dst_x,
 					stride_y_j);
 			}
 		}
-
-		if( lines_y > 1 )
+		if( lines_y > 1 && size_i_dst_y >= 4 )
 		{
 			// FIXME: size_i_big_x
 			for(int x = 0; x < size_o_big_x; x++)
 			{
-				dwt_cdf97_i_ex_stride_inplace_s(
+				dwt_cdf97_i_ex_stride_inplace_part_prolog_s(
+					addr2_s(ptr,0,x,stride_x,stride_y),
+					size_i_dst_y,
+					stride_x_j);
+			}
+		}
+
+		if( lines_x > 1 && size_i_dst_x >= 4 )
+		{
+			// FIXME: size_i_big_y
+			for(int y = 0; y < size_o_big_y; y++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_core_s(
+					addr2_s(ptr,y,0,stride_x,stride_y),
+					size_i_dst_x,
+					stride_y_j);
+			}
+		}
+		if( lines_y > 1 && size_i_dst_y >= 4 )
+		{
+			// FIXME: size_i_big_x
+			for(int x = 0; x < size_o_big_x; x++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_core_s(
+					addr2_s(ptr,0,x,stride_x,stride_y),
+					size_i_dst_y,
+					stride_x_j);
+			}
+		}
+
+		if( lines_x > 1 && size_i_dst_x >= 4 )
+		{
+			// FIXME: size_i_big_y
+			for(int y = 0; y < size_o_big_y; y++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_epilog_s(
+					addr2_s(ptr,y,0,stride_x,stride_y),
+					size_i_dst_x,
+					stride_y_j);
+			}
+		}
+		if( lines_y > 1 && size_i_dst_y >= 4 )
+		{
+			// FIXME: size_i_big_x
+			for(int x = 0; x < size_o_big_x; x++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_epilog_s(
 					addr2_s(ptr,0,x,stride_x,stride_y),
 					size_i_dst_y,
 					stride_x_j);
