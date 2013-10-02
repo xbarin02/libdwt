@@ -572,6 +572,15 @@ void dwt_cdf97_2f_s(
 	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
 );
 
+/**
+ * @brief Forward image fast wavelet transform using CDF 9/7 wavelet and lifting scheme, in-place version.
+ *
+ * This function works on image data itself, i.e. no data is copied. That has the consequence the DWT subbands are interleaved in place of the original image.
+ *
+ * This function works with single precision floating point numbers (i.e. float data type).
+ *
+ * @warning experimental
+ */
 void dwt_cdf97_2f_inplace_s(
 	void *ptr,		///< pointer to beginning of image data
 	int stride_x,		///< difference between rows (in bytes)
@@ -712,6 +721,15 @@ void dwt_cdf97_2i_s(
 	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
 );
 
+/**
+ * @brief Inverse image fast wavelet transform using CDF 9/7 wavelet and lifting scheme, in-place version.
+ *
+ * This function works on image data itself, i.e. no data is copied. That has the consequence the DWT subbands are interleaved in place of the original image.
+ *
+ * This function works with single precision floating point numbers (i.e. float data type).
+ *
+ * @warning experimental
+ */
 void dwt_cdf97_2i_inplace_s(
 	void *ptr,		///< pointer to beginning of image data
 	int stride_x,		///< difference between rows (in bytes)
@@ -2898,7 +2916,7 @@ int dwt_util_get_center1_s(
 /**
  * @brief Center given vector (1-D).
  *
- * @warning experimetnal
+ * @warning experimental
  */
 int dwt_util_center1_s(
 	void *ptr,

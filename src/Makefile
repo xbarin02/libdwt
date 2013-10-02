@@ -10,8 +10,8 @@ all: $(LIBNAME).o
 clean:
 	-$(RM) *.o *.a *.so *.S
 
-# ARCH=microblaze needs firmwares to be compiled
-ifeq ($(ARCH),microblaze)
+# ARCH=asvp needs firmwares to be compiled
+ifeq ($(ARCH),asvp)
 FWDIR = firmware
 FIRMWARES = fw_fp01_lift4sa fw_fp01_lift4sb
 

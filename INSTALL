@@ -1,37 +1,37 @@
-UTIA ASVP platform 
-==================
+== UTIA ASVP platform ==
 
 For cross-compilation for UTIA ASVP platform (formerly EdkDSP platform)
 unpack files from asvpsdk-api-1.0.zip archive into ./api directory. This
 archive can be downloaded from:
 
-http://sp.utia.cz/index.php?ids=projects/smecy&id=downloads
+ http://sp.utia.cz/index.php?ids=projects/smecy&id=downloads
 
 Now, you will need properly configured PicoBlaze and PetaLinux compiler for
 library compilation. You can test it on example application in directory
 ./examples/simple with command:
 
-make ARCH=microblaze
+make ARCH=asvp
 
-PC platform
-===========
+== PC platform ==
+
 Compile the example application like above but with command:
 
-make ARCH=x86_64
+ make ARCH=x86_64
 
 For example, a simple application showing libdwt API usage can be compiled
 and started with:
 
-make -C examples/simple run
+ make -C examples/simple run
 
 You can also compile the libdwt static library like follows:
 
-make ARCH=x86_64 BUILD=release -C src libdwt.a
+ make ARCH=x86_64 BUILD=release -C src libdwt.a
 
 Finally, do not forget to link your application also with -lm, -lrt, and
 enable OpenMP with -fopenmp.
 
 == Dependencies ==
+
 * glibc/uClibc
 * ASVP/EdkDSP SDK (optional on ASVP)
 * Make
