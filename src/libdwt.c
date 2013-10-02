@@ -6427,6 +6427,180 @@ void accel_lift_op4s_main_dl_s(
 	}
 }
 
+/**
+ * vertical vectorisation (double-loop approach), forward transform
+ */
+static
+void accel_lift_op4s_fwd_main_dl_stride_s(
+	float *arr,
+	int steps,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	int scaling,
+	int stride
+)
+{
+	assert( steps >= 0 );
+	assert( scaling > 0 );
+
+	// constants
+	const float w[4] = { delta, gamma, beta, alpha };
+	const float v[2] = { 1/zeta, zeta };
+
+	// aux. variables
+	float in[2];
+	float out[2];
+	float r[4];
+	float c[4];
+	float l[4];
+
+	// values that have to be passed from iteration to iteration
+	// slide in left border
+	l[0] = *addr1_s(arr, 0, stride);
+	l[1] = *addr1_s(arr, 1, stride);
+	l[2] = *addr1_s(arr, 2, stride);
+	l[3] = *addr1_s(arr, 3, stride);
+
+	// init
+	float *addr = addr1_s(arr, 4, stride);
+
+	// loop by pairs from left to right
+	for(int s = 0; s < steps; s++)
+	{
+		// inputs
+		in[0] = *addr1_s(addr, 0, stride);
+		in[1] = *addr1_s(addr, 1, stride);
+
+		// shuffles
+		out[0] = l[0];
+		c[0]   = l[1];
+		c[1]   = l[2];
+		c[2]   = l[3];
+		c[3]   = in[0];
+
+		// operation z[] = c[] + w[] * ( l[] + r[] )
+		// by sequential computation from top/right to bottom/left
+		r[3]   = in[1];
+		r[2]   = c[3]+w[3]*(l[3]+r[3]);
+		r[1]   = c[2]+w[2]*(l[2]+r[2]);
+		r[0]   = c[1]+w[1]*(l[1]+r[1]);
+		out[1] = c[0]+w[0]*(l[0]+r[0]);
+
+		// scales
+		out[0] = out[0] * v[0];
+		out[1] = out[1] * v[1];
+
+		// outputs
+		*addr1_s(addr, 0-4, stride) = out[0];
+		*addr1_s(addr, 1-4, stride) = out[1];
+
+		// update l[]
+		l[0] = r[0];
+		l[1] = r[1];
+		l[2] = r[2];
+		l[3] = r[3];
+
+		// pointers
+		addr = addr1_s(addr, 2, stride);
+	}
+
+	// slide out right border
+	*addr1_s(addr, 0-4, stride) = l[0];
+	*addr1_s(addr, 1-4, stride) = l[1];
+	*addr1_s(addr, 2-4, stride) = l[2];
+	*addr1_s(addr, 3-4, stride) = l[3];
+}
+
+/**
+ * vertical vectorisation (double-loop approach), inverse transform
+ */
+static
+void accel_lift_op4s_inv_main_dl_stride_s(
+	float *arr,
+	int steps,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	int scaling,
+	int stride
+)
+{
+	assert( steps >= 0 );
+	assert( scaling < 0 );
+
+	// constants
+	const float w[4] = { delta, gamma, beta, alpha };
+	const float v[2] = { 1/zeta, zeta };
+
+	// aux. variables
+	float in[2];
+	float out[2];
+	float r[4];
+	float c[4];
+	float l[4];
+
+	// values that have to be passed from iteration to iteration
+	// slide in left border
+	l[0] = *addr1_s(arr, 0, stride);
+	l[1] = *addr1_s(arr, 1, stride);
+	l[2] = *addr1_s(arr, 2, stride);
+	l[3] = *addr1_s(arr, 3, stride);
+
+	// init
+	float *addr = addr1_s(arr, 4, stride);
+
+	// loop by pairs from left to right
+	for(int s = 0; s < steps; s++)
+	{
+		// inputs
+		in[0] = *addr1_s(addr, 0, stride);
+		in[1] = *addr1_s(addr, 1, stride);
+
+		// scales
+		in[0] = in[0] * v[0];
+		in[1] = in[1] * v[1];
+
+		// shuffles
+		out[0] = l[0];
+		c[0]   = l[1];
+		c[1]   = l[2];
+		c[2]   = l[3];
+		c[3]   = in[0];
+
+		// operation z[] = c[] + w[] * ( l[] + r[] )
+		// by sequential computation from top/right to bottom/left
+		r[3]   = in[1];
+		r[2]   = c[3]+w[3]*(l[3]+r[3]);
+		r[1]   = c[2]+w[2]*(l[2]+r[2]);
+		r[0]   = c[1]+w[1]*(l[1]+r[1]);
+		out[1] = c[0]+w[0]*(l[0]+r[0]);
+
+		// outputs
+		*addr1_s(addr, 0-4, stride) = out[0];
+		*addr1_s(addr, 1-4, stride) = out[1];
+
+		// update l[]
+		l[0] = r[0];
+		l[1] = r[1];
+		l[2] = r[2];
+		l[3] = r[3];
+
+		// pointers
+		addr = addr1_s(addr, 2, stride);
+	}
+
+	// slide out right border
+	*addr1_s(addr, 0-4, stride) = l[0];
+	*addr1_s(addr, 1-4, stride) = l[1];
+	*addr1_s(addr, 2-4, stride) = l[2];
+	*addr1_s(addr, 3-4, stride) = l[3];
+}
+
 static
 void accel_lift_op4s_main_dl4line_s(
 	float *arr,
@@ -9173,7 +9347,11 @@ void dwt_cdf97_f_ex_stride_inplace_part_core_s(
 {
 	const int offset = 1;
 
+#if 0
 	accel_lift_op4s_fwd_main_stride_s(addr1_s(ptr, offset, stride), (to_even(N-offset)-4)/2, -dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride);
+#else
+	accel_lift_op4s_fwd_main_dl_stride_s(addr1_s(ptr, offset, stride), (to_even(N-offset)-4)/2, -dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride);
+#endif
 }
 
 static
@@ -9603,7 +9781,11 @@ void dwt_cdf97_i_ex_stride_inplace_part_core_s(
 {
 	const int offset = 0;
 
+#if 0
 	accel_lift_op4s_inv_main_stride_s(addr1_s(ptr, offset, stride), (to_even(N-offset)-4)/2, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
+#else
+	accel_lift_op4s_inv_main_dl_stride_s(addr1_s(ptr, offset, stride), (to_even(N-offset)-4)/2, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
+#endif
 }
 
 static
