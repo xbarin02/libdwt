@@ -8966,44 +8966,6 @@ void accel_lift_op4s_s(
 	FUNC_END;
 }
 
-static
-void accel_lift_op4s_stride_s(
-	float *restrict arr,
-	int off,
-	int len,
-	float alpha,
-	float beta,
-	float gamma,
-	float delta,
-	float zeta,
-	int scaling,
-	int stride
-)
-{
-	FUNC_BEGIN;
-
-	assert( len >= 2 );
-	assert( 0 == off || 1 == off );
-
-	if( len-off < 4 )
-	{
-		accel_lift_op4s_short_stride_s(arr, off, len, alpha, beta, gamma, delta, zeta, scaling, stride);
-	}
-	else
-	{
-		accel_lift_op4s_prolog_stride_s(arr, off, len, alpha, beta, gamma, delta, zeta, scaling, stride);
-
-		assert( 0 == get_accel_type() );
-		{
-			accel_lift_op4s_main_stride_s(addr1_s(arr, off, stride), (to_even(len-off)-4)/2, alpha, beta, gamma, delta, zeta, scaling, stride);
-		}
-
-		accel_lift_op4s_epilog_stride_s(arr, off, len, alpha, beta, gamma, delta, zeta, scaling, stride);
-	}
-
-	FUNC_END;
-}
-
 void dwt_cdf97_f_ex_stride_s(
 	const float *src,
 	float *dst_l,
@@ -9076,16 +9038,24 @@ void dwt_cdf97_f_ex_stride_inplace_s(
 	const int offset = 1;
 
 	// fix for small N
-	if(N < 2)
+	if( N < 2 )
 	{
 		// respect stride
-		if(1 == N)
-			ptr[0] = ptr[0] * dwt_cdf97_s1_s;
+		if( 1 == N )
+			ptr[0] *= dwt_cdf97_s1_s;
 		return;
 	}
-
-	// TODO: split to prolog, core and epilog
-	accel_lift_op4s_stride_s(ptr, offset, N, -dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride);
+	else
+	if( N-offset < 4 )
+	{
+		accel_lift_op4s_short_stride_s(ptr, offset, N, -dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride);
+	}
+	else
+	{
+		accel_lift_op4s_prolog_stride_s(ptr, offset, N, -dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride);
+		accel_lift_op4s_main_stride_s(addr1_s(ptr, offset, stride), (to_even(N-offset)-4)/2, -dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride);
+		accel_lift_op4s_epilog_stride_s(ptr, offset, N, -dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride);
+	}
 }
 
 /*
@@ -9471,16 +9441,24 @@ void dwt_cdf97_i_ex_stride_inplace_s(
 	const int offset = 0;
 
 	// fix for small N
-	if(N < 2)
+	if( N < 2 )
 	{
 		// respect stride
-		if(1 == N)
-			ptr[0] = ptr[0] * dwt_cdf97_s2_s; // FIXME: 1/zeta
+		if( 1 == N )
+			ptr[0] *= dwt_cdf97_s2_s; // FIXME: 1/zeta
 		return;
 	}
-
-	// split to prolog, core and epilog
-	accel_lift_op4s_stride_s(ptr, offset, N, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
+	else
+	if( N-offset < 4 )
+	{
+		accel_lift_op4s_short_stride_s(ptr, offset, N,-dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
+	}
+	else
+	{
+		accel_lift_op4s_prolog_stride_s(ptr, offset, N, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
+		accel_lift_op4s_main_stride_s(addr1_s(ptr, offset, stride), (to_even(N-offset)-4)/2, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
+		accel_lift_op4s_epilog_stride_s(ptr, offset, N, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
+	}
 }
 
 void dwt_cdf97_i_ex_stride_i(
