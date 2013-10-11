@@ -6427,6 +6427,136 @@ void accel_lift_op4s_main_dl_s(
 	}
 }
 
+static
+void accel_lift_op4s_fwd_main_dl_stride_pair_prolog0_s(
+	float *ptr0,
+	float *ptr1,
+	float *out0,
+	float *out1,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	float *l // [4]
+)
+{
+	l[0] = *ptr0;
+	l[1] = *ptr1;
+}
+
+static
+void accel_lift_op4s_fwd_main_dl_stride_pair_prolog1_s(
+	float *ptr0,
+	float *ptr1,
+	float *out0,
+	float *out1,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	float *l // [4]
+)
+{
+	l[2] = *ptr0;
+	l[3] = *ptr1;
+}
+
+static
+void accel_lift_op4s_fwd_main_dl_stride_pair_core_s(
+	float *ptr0,
+	float *ptr1,
+	float *out0,
+	float *out1,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	float *l // [4]
+)
+{
+	// constants
+	const float w[4] = { delta, gamma, beta, alpha };
+	const float v[2] = { 1/zeta, zeta };
+
+	// aux. variables
+	float in[2];
+	float out[2];
+	float r[4];
+	float c[4];
+
+	// inputs
+	in[0] = *ptr0;
+	in[1] = *ptr1;
+
+	// shuffles
+	out[0] = l[0];
+	c[0]   = l[1];
+	c[1]   = l[2];
+	c[2]   = l[3];
+	c[3]   = in[0];
+
+	// operation z[] = c[] + w[] * ( l[] + r[] )
+	// by sequential computation from top/right to bottom/left
+	r[3]   = in[1];
+	r[2]   = c[3]+w[3]*(l[3]+r[3]);
+	r[1]   = c[2]+w[2]*(l[2]+r[2]);
+	r[0]   = c[1]+w[1]*(l[1]+r[1]);
+	out[1] = c[0]+w[0]*(l[0]+r[0]);
+
+	// scales
+	out[0] = out[0] * v[0];
+	out[1] = out[1] * v[1];
+
+	// outputs
+	*out0 = out[0];
+	*out1 = out[1];
+
+	// update l[]
+	l[0] = r[0];
+	l[1] = r[1];
+	l[2] = r[2];
+	l[3] = r[3];
+}
+
+static
+void accel_lift_op4s_fwd_main_dl_stride_pair_epilog0_s(
+	float *ptr0,
+	float *ptr1,
+	float *out0,
+	float *out1,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	float *l // [4]
+)
+{
+	*out0 = l[0];
+	*out1 = l[1];
+}
+
+static
+void accel_lift_op4s_fwd_main_dl_stride_pair_epilog1_s(
+	float *ptr0,
+	float *ptr1,
+	float *out0,
+	float *out1,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	float *l // [4]
+)
+{
+	*out0 = l[2];
+	*out1 = l[3];
+}
+
 /**
  * vertical vectorisation (double-loop approach), forward transform
  */
@@ -6446,23 +6576,32 @@ void accel_lift_op4s_fwd_main_dl_stride_s(
 	assert( steps >= 0 );
 	assert( scaling > 0 );
 
-	// constants
-	const float w[4] = { delta, gamma, beta, alpha };
-	const float v[2] = { 1/zeta, zeta };
-
-	// aux. variables
-	float in[2];
-	float out[2];
-	float r[4];
-	float c[4];
 	float l[4];
 
-	// values that have to be passed from iteration to iteration
-	// slide in left border
-	l[0] = *addr1_s(arr, 0, stride);
-	l[1] = *addr1_s(arr, 1, stride);
-	l[2] = *addr1_s(arr, 2, stride);
-	l[3] = *addr1_s(arr, 3, stride);
+	accel_lift_op4s_fwd_main_dl_stride_pair_prolog0_s(
+		addr1_s(arr, 0, stride),
+		addr1_s(arr, 1, stride),
+		NULL,
+		NULL,
+		alpha,
+		beta,
+		gamma,
+		delta,
+		zeta,
+		l
+	);
+	accel_lift_op4s_fwd_main_dl_stride_pair_prolog1_s(
+		addr1_s(arr, 2, stride),
+		addr1_s(arr, 3, stride),
+		NULL,
+		NULL,
+		alpha,
+		beta,
+		gamma,
+		delta,
+		zeta,
+		l
+	);
 
 	// init
 	float *addr = addr1_s(arr, 4, stride);
@@ -6470,48 +6609,47 @@ void accel_lift_op4s_fwd_main_dl_stride_s(
 	// loop by pairs from left to right
 	for(int s = 0; s < steps; s++)
 	{
-		// inputs
-		in[0] = *addr1_s(addr, 0, stride);
-		in[1] = *addr1_s(addr, 1, stride);
-
-		// shuffles
-		out[0] = l[0];
-		c[0]   = l[1];
-		c[1]   = l[2];
-		c[2]   = l[3];
-		c[3]   = in[0];
-
-		// operation z[] = c[] + w[] * ( l[] + r[] )
-		// by sequential computation from top/right to bottom/left
-		r[3]   = in[1];
-		r[2]   = c[3]+w[3]*(l[3]+r[3]);
-		r[1]   = c[2]+w[2]*(l[2]+r[2]);
-		r[0]   = c[1]+w[1]*(l[1]+r[1]);
-		out[1] = c[0]+w[0]*(l[0]+r[0]);
-
-		// scales
-		out[0] = out[0] * v[0];
-		out[1] = out[1] * v[1];
-
-		// outputs
-		*addr1_s(addr, 0-4, stride) = out[0];
-		*addr1_s(addr, 1-4, stride) = out[1];
-
-		// update l[]
-		l[0] = r[0];
-		l[1] = r[1];
-		l[2] = r[2];
-		l[3] = r[3];
+		accel_lift_op4s_fwd_main_dl_stride_pair_core_s(
+			addr1_s(addr, 0, stride),
+			addr1_s(addr, 1, stride),
+			addr1_s(addr, 0-4, stride),
+			addr1_s(addr, 1-4, stride),
+			alpha,
+			beta,
+			gamma,
+			delta,
+			zeta,
+			l
+		);
 
 		// pointers
 		addr = addr1_s(addr, 2, stride);
 	}
 
-	// slide out right border
-	*addr1_s(addr, 0-4, stride) = l[0];
-	*addr1_s(addr, 1-4, stride) = l[1];
-	*addr1_s(addr, 2-4, stride) = l[2];
-	*addr1_s(addr, 3-4, stride) = l[3];
+	accel_lift_op4s_fwd_main_dl_stride_pair_epilog0_s(
+		NULL,
+		NULL,
+		addr1_s(addr, 0-4, stride),
+		addr1_s(addr, 1-4, stride),
+		alpha,
+		beta,
+		gamma,
+		delta,
+		zeta,
+		l
+	);
+	accel_lift_op4s_fwd_main_dl_stride_pair_epilog1_s(
+		NULL,
+		NULL,
+		addr1_s(addr, 2-4, stride),
+		addr1_s(addr, 3-4, stride),
+		alpha,
+		beta,
+		gamma,
+		delta,
+		zeta,
+		l
+	);
 }
 
 /**
@@ -10857,27 +10995,35 @@ void dwt_cdf97_2f_inplace_s(
 		const int workers_lines_y = workers_segment_y * workers;
 		const int workers_lines_x = workers_segment_x * workers;
 
-		const int stride_y_j = stride_y * (1<<(j));
-		const int stride_x_j = stride_x * (1<<(j));
+		const int stride_y_j = stride_y * (1 << (j));
+		const int stride_x_j = stride_x * (1 << (j));
+
+		const int offset = 1;
+
+		const int size_x = size_i_src_x;
+		const int size_y = size_i_src_y;
+
+		const int pairs_x = (to_even(size_x-offset)-4)/2;
+		const int pairs_y = (to_even(size_y-offset)-4)/2;
+
+		const int max_y = to_even(size_y-offset)+offset;
 
 		if( lines_x > 1 && size_i_src_x < 5 )
 		{
-			// FIXME: size_i_big_y
-			for(int y = 0; y < size_o_big_y; y++)
+			for(int y = 0; y < size_i_src_y; y++)
 			{
 				dwt_cdf97_f_ex_stride_inplace_part_exceptions_s(
-					addr2_s(ptr, y, 0, stride_x, stride_y),
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
 					size_i_src_x, // N
 					stride_y_j);
 			}
 		}
 		if( lines_y > 1 && size_i_src_y < 5 )
 		{
-			// FIXME: size_i_big_x
-			for(int x = 0; x < size_o_big_x; x++)
+			for(int x = 0; x < size_i_src_x; x++)
 			{
 				dwt_cdf97_f_ex_stride_inplace_part_exceptions_s(
-					addr2_s(ptr, 0, x, stride_x, stride_y),
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
 					size_i_src_y, // N
 					stride_x_j);
 			}
@@ -10885,69 +11031,278 @@ void dwt_cdf97_2f_inplace_s(
 
 		if( lines_x > 1 && size_i_src_x >= 5 )
 		{
-			// FIXME: size_i_big_y
-			for(int y = 0; y < size_o_big_y; y++)
+			for(int y = 0; y < size_i_src_y; y++)
 			{
 				dwt_cdf97_f_ex_stride_inplace_part_prolog_s(
-					addr2_s(ptr, y, 0, stride_x, stride_y),
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
 					size_i_src_x, // N
 					stride_y_j);
 			}
 		}
 		if( lines_y > 1 && size_i_src_y >= 5 )
 		{
-			// FIXME: size_i_big_x
-			for(int x = 0; x < size_o_big_x; x++)
+			for(int x = 0; x < size_i_src_x; x++)
 			{
 				dwt_cdf97_f_ex_stride_inplace_part_prolog_s(
-					addr2_s(ptr, 0, x, stride_x, stride_y),
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
 					size_i_src_y, // N
 					stride_x_j);
 			}
 		}
 
-		// TODO: merge these two loops into single one
+		if( lines_x > 1 && size_i_src_x >= 5 && lines_y > 1 && size_i_src_y >= 5 )
+		{
+			//dwt_util_log(LOG_DBG, "[SINGLE] j=%i: block (%i, %i)\n", j, size_y, size_x);
+
+			// this should be stored in CPU cache
+			float l_buff[4 * size_x];
+
+			// for y=0 to offset step 1: horizontal only
+			for(int y = 0; y < offset; y += 1)
+			{
+// 				dwt_util_log(LOG_DBG, "y=%i => phase 0, horizontal only + no vertical\n", y);
+
+				float *ptr1_x = addr2_s(ptr, y+0, offset, stride_x_j, stride_y_j);
+
+				accel_lift_op4s_fwd_main_stride_s(
+					ptr1_x,
+					pairs_x,
+					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
+			}
+			// for y=offset to offset+4 step 2: horizontal + vertical_prolog0
+			for(int y = offset; y < offset+2; y += 2)
+			{
+// 				dwt_util_log(LOG_DBG, "y=%i => phase 1.0, horizontal + vertical_prolog0\n", y);
+
+				float *ptr1_x = addr2_s(ptr, y+0, offset, stride_x_j, stride_y_j);
+
+				accel_lift_op4s_fwd_main_stride_s(
+					ptr1_x,
+					pairs_x,
+					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
+
+				float *ptr2_x = addr2_s(ptr, y+1, offset, stride_x_j, stride_y_j);
+
+				accel_lift_op4s_fwd_main_stride_s(
+					ptr2_x,
+					pairs_x,
+					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
+
+				for(int x = 0; x < size_x; x++)
+				{
+					float *l4 = &l_buff[4*x];
+
+					// input addr for 1st coeff in the pair
+					float *ptr0_y = addr2_s(ptr, y+0, x, stride_x_j, stride_y_j);
+					// input addr for 2nd coeff in the pair
+					float *ptr1_y = addr2_s(ptr, y+1, x, stride_x_j, stride_y_j);
+					// output addr for 1st coeff in the pair
+					float *out0_y = addr2_s(ptr, y+0-4, x, stride_x_j, stride_y_j);
+					// output addr for 2nd coeff in the pair
+					float *out1_y = addr2_s(ptr, y+1-4, x, stride_x_j, stride_y_j);
+
+					accel_lift_op4s_fwd_main_dl_stride_pair_prolog0_s(
+						ptr0_y, // in
+						ptr1_y, // in
+						out0_y, // out
+						out1_y, // out
+						-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s,
+						l4
+					);
+				}
+			}
+			// for y=offset to offset+4 step 2: horizontal + vertical_prolog1
+			for(int y = offset+2; y < offset+4; y += 2)
+			{
+// 				dwt_util_log(LOG_DBG, "y=%i => phase 1.1, horizontal + vertical_prolog1\n", y);
+
+				float *ptr1_x = addr2_s(ptr, y+0, offset, stride_x_j, stride_y_j);
+
+				accel_lift_op4s_fwd_main_stride_s(
+					ptr1_x,
+					pairs_x,
+					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
+
+				float *ptr2_x = addr2_s(ptr, y+1, offset, stride_x_j, stride_y_j);
+
+				accel_lift_op4s_fwd_main_stride_s(
+					ptr2_x,
+					pairs_x,
+					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
+
+				for(int x = 0; x < size_x; x++)
+				{
+					float *l4 = &l_buff[4*x];
+
+					// input addr for 1st coeff in the pair
+					float *ptr0_y = addr2_s(ptr, y+0, x, stride_x_j, stride_y_j);
+					// input addr for 2nd coeff in the pair
+					float *ptr1_y = addr2_s(ptr, y+1, x, stride_x_j, stride_y_j);
+					// output addr for 1st coeff in the pair
+					float *out0_y = addr2_s(ptr, y+0-4, x, stride_x_j, stride_y_j);
+					// output addr for 2nd coeff in the pair
+					float *out1_y = addr2_s(ptr, y+1-4, x, stride_x_j, stride_y_j);
+
+					accel_lift_op4s_fwd_main_dl_stride_pair_prolog1_s(
+						ptr0_y, // in
+						ptr1_y, // in
+						out0_y, // out
+						out1_y, // out
+						-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s,
+						l4
+					);
+				}
+			}
+			// for y=offset+4 to max_y step 2: horizontal + vertical_core
+			for(int y = offset+4; y < max_y; y += 2)
+			{
+// 				dwt_util_log(LOG_DBG, "y=%i => phase 2, horizontal + vertical_core\n", y);
+
+				float *ptr1_x = addr2_s(ptr, y+0, offset, stride_x_j, stride_y_j);
+
+				accel_lift_op4s_fwd_main_stride_s(
+					ptr1_x,
+					pairs_x,
+					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
+
+				float *ptr2_x = addr2_s(ptr, y+1, offset, stride_x_j, stride_y_j);
+
+				accel_lift_op4s_fwd_main_stride_s(
+					ptr2_x,
+					pairs_x,
+					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
+
+				for(int x = 0; x < size_x; x++)
+				{
+					float *l4 = &l_buff[4*x];
+
+					// input addr for 1st coeff in the pair
+					float *ptr0_y = addr2_s(ptr, y+0, x, stride_x_j, stride_y_j);
+					// input addr for 2nd coeff in the pair
+					float *ptr1_y = addr2_s(ptr, y+1, x, stride_x_j, stride_y_j);
+					// output addr for 1st coeff in the pair
+					float *out0_y = addr2_s(ptr, y+0-4, x, stride_x_j, stride_y_j);
+					// output addr for 2nd coeff in the pair
+					float *out1_y = addr2_s(ptr, y+1-4, x, stride_x_j, stride_y_j);
+
+					accel_lift_op4s_fwd_main_dl_stride_pair_core_s(
+						ptr0_y, // in
+						ptr1_y, // in
+						out0_y, // out
+						out1_y, // out
+						-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s,
+						l4
+					);
+				}
+			}
+			for(int y = max_y; y < size_y; y++)
+			{
+				float *ptr1_x = addr2_s(ptr, y+0, offset, stride_x_j, stride_y_j);
+
+				accel_lift_op4s_fwd_main_stride_s(
+					ptr1_x,
+					pairs_x,
+					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
+			}
+			// for y=max_y to max_y+4 step 2: horizontal + vertical_epilog0
+			for(int y = max_y; y < max_y+2; y += 2)
+			{
+// 				dwt_util_log(LOG_DBG, "y=%i => phase 3.0, no horizontal + vertical_epilog0 only\n", y);
+
+				for(int x = 0; x < size_x; x++)
+				{
+					float *l4 = &l_buff[4*x];
+
+					// input addr for 1st coeff in the pair
+					float *ptr0_y = addr2_s(ptr, y+0, x, stride_x_j, stride_y_j);
+					// input addr for 2nd coeff in the pair
+					float *ptr1_y = addr2_s(ptr, y+1, x, stride_x_j, stride_y_j);
+					// output addr for 1st coeff in the pair
+					float *out0_y = addr2_s(ptr, y+0-4, x, stride_x_j, stride_y_j);
+					// output addr for 2nd coeff in the pair
+					float *out1_y = addr2_s(ptr, y+1-4, x, stride_x_j, stride_y_j);
+
+					accel_lift_op4s_fwd_main_dl_stride_pair_epilog0_s(
+						ptr0_y, // in
+						ptr1_y, // in
+						out0_y, // out
+						out1_y, // out
+						-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s,
+						l4
+					);
+				}
+			}
+			// for y=max_y to max_y+4 step 2: horizontal + vertical_epilog1
+			for(int y = max_y+2; y < max_y+4; y += 2)
+			{
+// 				dwt_util_log(LOG_DBG, "y=%i => phase 3.1, no horizontal + vertical_epilog1 only\n", y);
+
+				for(int x = 0; x < size_x; x++)
+				{
+					float *l4 = &l_buff[4*x];
+
+					// input addr for 1st coeff in the pair
+					float *ptr0_y = addr2_s(ptr, y+0, x, stride_x_j, stride_y_j);
+					// input addr for 2nd coeff in the pair
+					float *ptr1_y = addr2_s(ptr, y+1, x, stride_x_j, stride_y_j);
+					// output addr for 1st coeff in the pair
+					float *out0_y = addr2_s(ptr, y+0-4, x, stride_x_j, stride_y_j);
+					// output addr for 2nd coeff in the pair
+					float *out1_y = addr2_s(ptr, y+1-4, x, stride_x_j, stride_y_j);
+
+					accel_lift_op4s_fwd_main_dl_stride_pair_epilog1_s(
+						ptr0_y, // in
+						ptr1_y, // in
+						out0_y, // out
+						out1_y, // out
+						-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s,
+						l4
+					);
+				}
+			}
+		}
+		else
+		{
+			//dwt_util_log(LOG_DBG, "[DOUBLE] j=%i: block (%i, %i)\n", j, size_i_src_y, size_i_src_x);
+
+			if( lines_x > 1 && size_i_src_x >= 5 )
+			{
+				for(int y = 0; y < size_i_src_y; y++)
+				{
+					dwt_cdf97_f_ex_stride_inplace_part_core_s(
+						addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+						size_i_src_x, // N
+						stride_y_j);
+				}
+			}
+			if( lines_y > 1 && size_i_src_y >= 5 )
+			{
+				for(int x = 0; x < size_i_src_x; x++)
+				{
+					dwt_cdf97_f_ex_stride_inplace_part_core_s(
+						addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+						size_i_src_y, // N
+						stride_x_j);
+				}
+			}
+		}
+
 		if( lines_x > 1 && size_i_src_x >= 5 )
 		{
-			// FIXME: size_i_big_y
-			for(int y = 0; y < size_o_big_y; y++)
+			for(int y = 0; y < size_i_src_y; y++)
 			{
-				dwt_cdf97_f_ex_stride_inplace_part_core_s(
-					addr2_s(ptr, y, 0, stride_x, stride_y),
+				dwt_cdf97_f_ex_stride_inplace_part_epilog_s(
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
 					size_i_src_x, // N
 					stride_y_j);
 			}
 		}
 		if( lines_y > 1 && size_i_src_y >= 5 )
 		{
-			// FIXME: size_i_big_x
-			for(int x = 0; x < size_o_big_x; x++)
-			{
-				dwt_cdf97_f_ex_stride_inplace_part_core_s(
-					addr2_s(ptr, 0, x, stride_x, stride_y),
-					size_i_src_y, // N
-					stride_x_j);
-			}
-		}
-
-		if( lines_x > 1 && size_i_src_x >= 5 )
-		{
-			// FIXME: size_i_big_y
-			for(int y = 0; y < size_o_big_y; y++)
+			for(int x = 0; x < size_i_src_x; x++)
 			{
 				dwt_cdf97_f_ex_stride_inplace_part_epilog_s(
-					addr2_s(ptr, y, 0, stride_x, stride_y),
-					size_i_src_x, // N
-					stride_y_j);
-			}
-		}
-		if( lines_y > 1 && size_i_src_y >= 5 )
-		{
-			// FIXME: size_i_big_x
-			for(int x = 0; x < size_o_big_x; x++)
-			{
-				dwt_cdf97_f_ex_stride_inplace_part_epilog_s(
-					addr2_s(ptr, 0, x, stride_x, stride_y),
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
 					size_i_src_y, // N
 					stride_x_j);
 			}
@@ -10974,7 +11329,7 @@ void dwt_cdf97_2f_inplace_s(
 // 					size_o_src_y-size_o_dst_y,
 // 					stride_x);
 // 		}
-// 
+
 		j++;
 	}
 
@@ -11914,27 +12269,25 @@ void dwt_cdf97_2i_inplace_s(
 		const int workers_lines_y = workers_segment_y * workers;
 		const int workers_lines_x = workers_segment_x * workers;
 
-		const int stride_y_j = stride_y * (1<<(j-1));
-		const int stride_x_j = stride_x * (1<<(j-1));
+		const int stride_y_j = stride_y * (1 << (j-1));
+		const int stride_x_j = stride_x * (1 << (j-1));
 
 		if( lines_x > 1 && size_i_dst_x < 4 )
 		{
-			// FIXME: size_i_big_y
-			for(int y = 0; y < size_o_big_y; y++)
+			for(int y = 0; y < size_i_dst_y; y++)
 			{
 				dwt_cdf97_i_ex_stride_inplace_part_exceptions_s(
-					addr2_s(ptr,y,0,stride_x,stride_y),
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
 					size_i_dst_x, // N
 					stride_y_j);
 			}
 		}
 		if( lines_y > 1 && size_i_dst_y < 4 )
 		{
-			// FIXME: size_i_big_x
-			for(int x = 0; x < size_o_big_x; x++)
+			for(int x = 0; x < size_i_dst_x; x++)
 			{
 				dwt_cdf97_i_ex_stride_inplace_part_exceptions_s(
-					addr2_s(ptr,0,x,stride_x,stride_y),
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
 					size_i_dst_y, // N
 					stride_x_j);
 			}
@@ -11942,22 +12295,20 @@ void dwt_cdf97_2i_inplace_s(
 
 		if( lines_x > 1 && size_i_dst_x >= 4 )
 		{
-			// FIXME: size_i_big_y
-			for(int y = 0; y < size_o_big_y; y++)
+			for(int y = 0; y < size_i_dst_y; y++)
 			{
 				dwt_cdf97_i_ex_stride_inplace_part_prolog_s(
-					addr2_s(ptr,y,0,stride_x,stride_y),
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
 					size_i_dst_x,
 					stride_y_j);
 			}
 		}
 		if( lines_y > 1 && size_i_dst_y >= 4 )
 		{
-			// FIXME: size_i_big_x
-			for(int x = 0; x < size_o_big_x; x++)
+			for(int x = 0; x < size_i_dst_x; x++)
 			{
 				dwt_cdf97_i_ex_stride_inplace_part_prolog_s(
-					addr2_s(ptr,0,x,stride_x,stride_y),
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
 					size_i_dst_y,
 					stride_x_j);
 			}
@@ -11965,22 +12316,20 @@ void dwt_cdf97_2i_inplace_s(
 
 		if( lines_x > 1 && size_i_dst_x >= 4 )
 		{
-			// FIXME: size_i_big_y
-			for(int y = 0; y < size_o_big_y; y++)
+			for(int y = 0; y < size_i_dst_y; y++)
 			{
 				dwt_cdf97_i_ex_stride_inplace_part_core_s(
-					addr2_s(ptr,y,0,stride_x,stride_y),
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
 					size_i_dst_x,
 					stride_y_j);
 			}
 		}
 		if( lines_y > 1 && size_i_dst_y >= 4 )
 		{
-			// FIXME: size_i_big_x
-			for(int x = 0; x < size_o_big_x; x++)
+			for(int x = 0; x < size_i_dst_x; x++)
 			{
 				dwt_cdf97_i_ex_stride_inplace_part_core_s(
-					addr2_s(ptr,0,x,stride_x,stride_y),
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
 					size_i_dst_y,
 					stride_x_j);
 			}
@@ -11988,22 +12337,20 @@ void dwt_cdf97_2i_inplace_s(
 
 		if( lines_x > 1 && size_i_dst_x >= 4 )
 		{
-			// FIXME: size_i_big_y
-			for(int y = 0; y < size_o_big_y; y++)
+			for(int y = 0; y < size_i_dst_y; y++)
 			{
 				dwt_cdf97_i_ex_stride_inplace_part_epilog_s(
-					addr2_s(ptr,y,0,stride_x,stride_y),
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
 					size_i_dst_x,
 					stride_y_j);
 			}
 		}
 		if( lines_y > 1 && size_i_dst_y >= 4 )
 		{
-			// FIXME: size_i_big_x
-			for(int x = 0; x < size_o_big_x; x++)
+			for(int x = 0; x < size_i_dst_x; x++)
 			{
 				dwt_cdf97_i_ex_stride_inplace_part_epilog_s(
-					addr2_s(ptr,0,x,stride_x,stride_y),
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
 					size_i_dst_y,
 					stride_x_j);
 			}
