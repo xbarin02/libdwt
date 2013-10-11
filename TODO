@@ -5,8 +5,7 @@
 * integrate performance measurement
 * more example applications
 * more effective lifting implementation (take a look at another implementations, e.g. OpenJPEG or JasPer)
-* support for full decomposition in 1D
-* relicense to GNU LGPL
+* relicense to some better license
 * OpenCV wrapper (C)
 * C++ interface
 * drop deprecated interface
@@ -22,7 +21,6 @@
 * ASVP: number of workers should be adjustable by environment variable like number of threads in OpenMP
 * MS Windows support
 * code cleanup
-* drop x86_64+nosse architecture support
 * non-dyadic decompositions
 * Gabor transform
 * add simple functions like minimum, maximum, average, median, threshold
