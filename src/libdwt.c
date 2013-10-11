@@ -10958,9 +10958,6 @@ void dwt_cdf97_2f_inplace_s(
 
 	assert( 1 == dwt_util_get_num_workers() );
 
-	const int threads = dwt_util_get_num_threads();
-	const int workers = dwt_util_get_num_workers();
-
 	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
 	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
 
@@ -10970,6 +10967,8 @@ void dwt_cdf97_2f_inplace_s(
 
 	if( *j_max_ptr < 0 || *j_max_ptr > j_limit )
 		*j_max_ptr = j_limit;
+
+	const int offset = 1;
 
 	for(;;)
 	{
@@ -10982,23 +10981,9 @@ void dwt_cdf97_2f_inplace_s(
 		const int size_o_dst_y = ceil_div_pow2(size_o_big_y, j+1);
 		const int size_i_src_x = ceil_div_pow2(size_i_big_x, j  );
 		const int size_i_src_y = ceil_div_pow2(size_i_big_y, j  );
-		
-		const int lines_x = size_o_src_x;
-		const int lines_y = size_o_src_y;
-
-		const int workers_segment_y = floor_div(lines_y, workers);
-		const int workers_segment_x = floor_div(lines_x, workers);
-#ifdef _OPENMP
-		const int threads_segment_y = ceil_div(workers_segment_y, threads);
-		const int threads_segment_x = ceil_div(workers_segment_x, threads);
-#endif
-		const int workers_lines_y = workers_segment_y * workers;
-		const int workers_lines_x = workers_segment_x * workers;
 
 		const int stride_y_j = stride_y * (1 << (j));
 		const int stride_x_j = stride_x * (1 << (j));
-
-		const int offset = 1;
 
 		const int size_x = size_i_src_x;
 		const int size_y = size_i_src_y;
@@ -11008,82 +10993,77 @@ void dwt_cdf97_2f_inplace_s(
 
 		const int max_y = to_even(size_y-offset)+offset;
 
-		if( lines_x > 1 && size_i_src_x < 5 )
+		if( size_x > 1 && size_x < 5 )
 		{
-			for(int y = 0; y < size_i_src_y; y++)
+			for(int y = 0; y < size_y; y++)
 			{
 				dwt_cdf97_f_ex_stride_inplace_part_exceptions_s(
 					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
-					size_i_src_x, // N
+					size_x, // N
 					stride_y_j);
 			}
 		}
-		if( lines_y > 1 && size_i_src_y < 5 )
+		if( size_y > 1 && size_y < 5 )
 		{
-			for(int x = 0; x < size_i_src_x; x++)
+			for(int x = 0; x < size_x; x++)
 			{
 				dwt_cdf97_f_ex_stride_inplace_part_exceptions_s(
 					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
-					size_i_src_y, // N
+					size_y, // N
 					stride_x_j);
 			}
 		}
 
-		if( lines_x > 1 && size_i_src_x >= 5 )
+		if( size_x > 1 && size_x >= 5 )
 		{
-			for(int y = 0; y < size_i_src_y; y++)
+			for(int y = 0; y < size_y; y++)
 			{
 				dwt_cdf97_f_ex_stride_inplace_part_prolog_s(
 					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
-					size_i_src_x, // N
+					size_x, // N
 					stride_y_j);
 			}
 		}
-		if( lines_y > 1 && size_i_src_y >= 5 )
+		if( size_y > 1 && size_y >= 5 )
 		{
-			for(int x = 0; x < size_i_src_x; x++)
+			for(int x = 0; x < size_x; x++)
 			{
 				dwt_cdf97_f_ex_stride_inplace_part_prolog_s(
 					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
-					size_i_src_y, // N
+					size_y, // N
 					stride_x_j);
 			}
 		}
 
-		if( lines_x > 1 && size_i_src_x >= 5 && lines_y > 1 && size_i_src_y >= 5 )
+		if( size_x > 1 && size_x >= 5 && size_y > 1 && size_y >= 5 )
 		{
 			//dwt_util_log(LOG_DBG, "[SINGLE] j=%i: block (%i, %i)\n", j, size_y, size_x);
 
 			// this should be stored in CPU cache
 			float l_buff[4 * size_x];
 
-			// for y=0 to offset step 1: horizontal only
+			// for y=0 to offset step 1: horizontal only, no vertical
 			for(int y = 0; y < offset; y += 1)
 			{
-// 				dwt_util_log(LOG_DBG, "y=%i => phase 0, horizontal only + no vertical\n", y);
-
 				float *ptr1_x = addr2_s(ptr, y+0, offset, stride_x_j, stride_y_j);
 
-				accel_lift_op4s_fwd_main_stride_s(
+				accel_lift_op4s_fwd_main_dl_stride_s(
 					ptr1_x,
 					pairs_x,
 					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
 			}
-			// for y=offset to offset+4 step 2: horizontal + vertical_prolog0
+			// for y=offset to offset+4 step 2: horizontal, vertical_prolog0
 			for(int y = offset; y < offset+2; y += 2)
 			{
-// 				dwt_util_log(LOG_DBG, "y=%i => phase 1.0, horizontal + vertical_prolog0\n", y);
-
 				float *ptr1_x = addr2_s(ptr, y+0, offset, stride_x_j, stride_y_j);
+				float *ptr2_x = addr2_s(ptr, y+1, offset, stride_x_j, stride_y_j);
 
-				accel_lift_op4s_fwd_main_stride_s(
+				accel_lift_op4s_fwd_main_dl_stride_s(
 					ptr1_x,
 					pairs_x,
 					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
 
-				float *ptr2_x = addr2_s(ptr, y+1, offset, stride_x_j, stride_y_j);
-
-				accel_lift_op4s_fwd_main_stride_s(
+				accel_lift_op4s_fwd_main_dl_stride_s(
 					ptr2_x,
 					pairs_x,
 					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
@@ -11111,21 +11091,18 @@ void dwt_cdf97_2f_inplace_s(
 					);
 				}
 			}
-			// for y=offset to offset+4 step 2: horizontal + vertical_prolog1
+			// for y=offset to offset+4 step 2: horizontal, vertical_prolog1
 			for(int y = offset+2; y < offset+4; y += 2)
 			{
-// 				dwt_util_log(LOG_DBG, "y=%i => phase 1.1, horizontal + vertical_prolog1\n", y);
-
 				float *ptr1_x = addr2_s(ptr, y+0, offset, stride_x_j, stride_y_j);
+				float *ptr2_x = addr2_s(ptr, y+1, offset, stride_x_j, stride_y_j);
 
-				accel_lift_op4s_fwd_main_stride_s(
+				accel_lift_op4s_fwd_main_dl_stride_s(
 					ptr1_x,
 					pairs_x,
 					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
 
-				float *ptr2_x = addr2_s(ptr, y+1, offset, stride_x_j, stride_y_j);
-
-				accel_lift_op4s_fwd_main_stride_s(
+				accel_lift_op4s_fwd_main_dl_stride_s(
 					ptr2_x,
 					pairs_x,
 					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
@@ -11153,21 +11130,18 @@ void dwt_cdf97_2f_inplace_s(
 					);
 				}
 			}
-			// for y=offset+4 to max_y step 2: horizontal + vertical_core
+			// for y=offset+4 to max_y step 2: horizontal, vertical_core
 			for(int y = offset+4; y < max_y; y += 2)
 			{
-// 				dwt_util_log(LOG_DBG, "y=%i => phase 2, horizontal + vertical_core\n", y);
-
 				float *ptr1_x = addr2_s(ptr, y+0, offset, stride_x_j, stride_y_j);
+				float *ptr2_x = addr2_s(ptr, y+1, offset, stride_x_j, stride_y_j);
 
-				accel_lift_op4s_fwd_main_stride_s(
+				accel_lift_op4s_fwd_main_dl_stride_s(
 					ptr1_x,
 					pairs_x,
 					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
 
-				float *ptr2_x = addr2_s(ptr, y+1, offset, stride_x_j, stride_y_j);
-
-				accel_lift_op4s_fwd_main_stride_s(
+				accel_lift_op4s_fwd_main_dl_stride_s(
 					ptr2_x,
 					pairs_x,
 					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
@@ -11199,16 +11173,14 @@ void dwt_cdf97_2f_inplace_s(
 			{
 				float *ptr1_x = addr2_s(ptr, y+0, offset, stride_x_j, stride_y_j);
 
-				accel_lift_op4s_fwd_main_stride_s(
+				accel_lift_op4s_fwd_main_dl_stride_s(
 					ptr1_x,
 					pairs_x,
 					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
 			}
-			// for y=max_y to max_y+4 step 2: horizontal + vertical_epilog0
+			// for y=max_y to max_y+4 step 2: no horizontal, vertical_epilog0 only
 			for(int y = max_y; y < max_y+2; y += 2)
 			{
-// 				dwt_util_log(LOG_DBG, "y=%i => phase 3.0, no horizontal + vertical_epilog0 only\n", y);
-
 				for(int x = 0; x < size_x; x++)
 				{
 					float *l4 = &l_buff[4*x];
@@ -11232,11 +11204,9 @@ void dwt_cdf97_2f_inplace_s(
 					);
 				}
 			}
-			// for y=max_y to max_y+4 step 2: horizontal + vertical_epilog1
+			// for y=max_y to max_y+4 step 2: no horizontal, vertical_epilog1 only
 			for(int y = max_y+2; y < max_y+4; y += 2)
 			{
-// 				dwt_util_log(LOG_DBG, "y=%i => phase 3.1, no horizontal + vertical_epilog1 only\n", y);
-
 				for(int x = 0; x < size_x; x++)
 				{
 					float *l4 = &l_buff[4*x];
@@ -11265,45 +11235,45 @@ void dwt_cdf97_2f_inplace_s(
 		{
 			//dwt_util_log(LOG_DBG, "[DOUBLE] j=%i: block (%i, %i)\n", j, size_i_src_y, size_i_src_x);
 
-			if( lines_x > 1 && size_i_src_x >= 5 )
+			if( size_x > 1 && size_x >= 5 )
 			{
 				for(int y = 0; y < size_i_src_y; y++)
 				{
 					dwt_cdf97_f_ex_stride_inplace_part_core_s(
 						addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
-						size_i_src_x, // N
+						size_x, // N
 						stride_y_j);
 				}
 			}
-			if( lines_y > 1 && size_i_src_y >= 5 )
+			if( size_y > 1 && size_y >= 5 )
 			{
-				for(int x = 0; x < size_i_src_x; x++)
+				for(int x = 0; x < size_x; x++)
 				{
 					dwt_cdf97_f_ex_stride_inplace_part_core_s(
 						addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
-						size_i_src_y, // N
+						size_y, // N
 						stride_x_j);
 				}
 			}
 		}
 
-		if( lines_x > 1 && size_i_src_x >= 5 )
+		if( size_x > 1 && size_x >= 5 )
 		{
-			for(int y = 0; y < size_i_src_y; y++)
+			for(int y = 0; y < size_y; y++)
 			{
 				dwt_cdf97_f_ex_stride_inplace_part_epilog_s(
 					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
-					size_i_src_x, // N
+					size_x, // N
 					stride_y_j);
 			}
 		}
-		if( lines_y > 1 && size_i_src_y >= 5 )
+		if( size_y > 1 && size_y >= 5 )
 		{
-			for(int x = 0; x < size_i_src_x; x++)
+			for(int x = 0; x < size_x; x++)
 			{
 				dwt_cdf97_f_ex_stride_inplace_part_epilog_s(
 					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
-					size_i_src_y, // N
+					size_y, // N
 					stride_x_j);
 			}
 		}
@@ -12234,9 +12204,6 @@ void dwt_cdf97_2i_inplace_s(
 
 	assert( 1 == dwt_util_get_num_workers() );
 
-	const int threads = dwt_util_get_num_threads();
-	const int workers = dwt_util_get_num_workers();
-
 	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
 	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
 
@@ -12257,101 +12224,92 @@ void dwt_cdf97_2i_inplace_s(
 		const int size_i_dst_x = ceil_div_pow2(size_i_big_x, j-1);
 		const int size_i_dst_y = ceil_div_pow2(size_i_big_y, j-1);
 
-		const int lines_y = size_o_dst_y;
-		const int lines_x = size_o_dst_x;
-
-		const int workers_segment_y = floor_div(lines_y, workers);
-		const int workers_segment_x = floor_div(lines_x, workers);
-#ifdef _OPENMP
-		const int threads_segment_y = ceil_div(workers_segment_y, threads);
-		const int threads_segment_x = ceil_div(workers_segment_x, threads);
-#endif
-		const int workers_lines_y = workers_segment_y * workers;
-		const int workers_lines_x = workers_segment_x * workers;
+		const int lines_y = size_i_dst_y;
+		const int lines_x = size_i_dst_x;
 
 		const int stride_y_j = stride_y * (1 << (j-1));
 		const int stride_x_j = stride_x * (1 << (j-1));
 
-		if( lines_x > 1 && size_i_dst_x < 4 )
+		if( lines_x > 1 && lines_x < 4 )
 		{
-			for(int y = 0; y < size_i_dst_y; y++)
+			for(int y = 0; y < lines_y; y++)
 			{
 				dwt_cdf97_i_ex_stride_inplace_part_exceptions_s(
 					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
-					size_i_dst_x, // N
+					lines_x, // N
 					stride_y_j);
 			}
 		}
-		if( lines_y > 1 && size_i_dst_y < 4 )
+		if( lines_y > 1 && lines_y < 4 )
 		{
 			for(int x = 0; x < size_i_dst_x; x++)
 			{
 				dwt_cdf97_i_ex_stride_inplace_part_exceptions_s(
 					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
-					size_i_dst_y, // N
+					lines_y, // N
 					stride_x_j);
 			}
 		}
 
-		if( lines_x > 1 && size_i_dst_x >= 4 )
+		if( lines_x > 1 && lines_x >= 4 )
 		{
-			for(int y = 0; y < size_i_dst_y; y++)
+			for(int y = 0; y < lines_y; y++)
 			{
 				dwt_cdf97_i_ex_stride_inplace_part_prolog_s(
 					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
-					size_i_dst_x,
+					lines_x,
 					stride_y_j);
 			}
 		}
-		if( lines_y > 1 && size_i_dst_y >= 4 )
+		if( lines_y > 1 && lines_y >= 4 )
 		{
-			for(int x = 0; x < size_i_dst_x; x++)
+			for(int x = 0; x < lines_x; x++)
 			{
 				dwt_cdf97_i_ex_stride_inplace_part_prolog_s(
 					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
-					size_i_dst_y,
+					lines_y,
 					stride_x_j);
 			}
 		}
 
-		if( lines_x > 1 && size_i_dst_x >= 4 )
+		if( lines_x > 1 && lines_x >= 4 )
 		{
-			for(int y = 0; y < size_i_dst_y; y++)
+			for(int y = 0; y < lines_y; y++)
 			{
 				dwt_cdf97_i_ex_stride_inplace_part_core_s(
 					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
-					size_i_dst_x,
+					lines_x,
 					stride_y_j);
 			}
 		}
-		if( lines_y > 1 && size_i_dst_y >= 4 )
+		if( lines_y > 1 && lines_y >= 4 )
 		{
-			for(int x = 0; x < size_i_dst_x; x++)
+			for(int x = 0; x < lines_x; x++)
 			{
 				dwt_cdf97_i_ex_stride_inplace_part_core_s(
 					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
-					size_i_dst_y,
+					lines_y,
 					stride_x_j);
 			}
 		}
 
-		if( lines_x > 1 && size_i_dst_x >= 4 )
+		if( lines_x > 1 && lines_x >= 4 )
 		{
-			for(int y = 0; y < size_i_dst_y; y++)
+			for(int y = 0; y < lines_y; y++)
 			{
 				dwt_cdf97_i_ex_stride_inplace_part_epilog_s(
 					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
-					size_i_dst_x,
+					lines_x,
 					stride_y_j);
 			}
 		}
-		if( lines_y > 1 && size_i_dst_y >= 4 )
+		if( lines_y > 1 && lines_y >= 4 )
 		{
-			for(int x = 0; x < size_i_dst_x; x++)
+			for(int x = 0; x < lines_x; x++)
 			{
 				dwt_cdf97_i_ex_stride_inplace_part_epilog_s(
 					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
-					size_i_dst_y,
+					lines_y,
 					stride_x_j);
 			}
 		}
@@ -15291,6 +15249,136 @@ void dwt_util_perf_cdf97_2_s(
 		for(int m = 0; m < M; m++)
 		{
 			dwt_cdf97_2i_s(
+				ptr[m],
+				stride_x,
+				stride_y,
+				size_o_big_x,
+				size_o_big_y,
+				size_i_big_x,
+				size_i_big_y,
+				j[m],
+				decompose_one,
+				zero_padding);
+		}
+		// stop timer
+		const dwt_clock_t time_inv_stop = dwt_util_get_clock(clock_type);
+		// calc avg
+		const float time_inv_secs = (float)(time_inv_stop - time_inv_start) / M * MEASURE_FACTOR / dwt_util_get_frequency(clock_type);
+		// select min
+		if( time_inv_secs < *inv_secs )
+			*inv_secs = time_inv_secs;
+	}
+
+	// free M images
+	for(int m = 0; m < M; m++)
+	{
+		dwt_util_free_image(&ptr[m]);
+	}
+
+	FUNC_END;
+}
+
+// TODO: propagate "flush"
+void dwt_util_perf_cdf97_2_inplace_s(
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	int decompose_one,
+	int zero_padding,
+	int M,
+	int N,
+	int clock_type,
+	float *fwd_secs,
+	float *inv_secs)
+{
+	FUNC_BEGIN;
+
+	assert( M > 0 && N > 0 && fwd_secs && inv_secs );
+
+	assert( size_o_big_x > 0 && size_o_big_y > 0 && size_i_big_x > 0 && size_i_big_y > 0 );
+
+	// pointer to M pointers to image data
+	void *ptr[M];
+	int j[M];
+	
+	// allocate M images
+	for(int m = 0; m < M; m++)
+	{
+		// copy j_max to j[]
+		j[m] = j_max;
+
+		// allocate
+		dwt_util_alloc_image(
+			&ptr[m],
+			stride_x,
+			stride_y,
+			size_o_big_x,
+			size_o_big_y);
+		
+		// fill with test pattern
+		dwt_util_test_image_fill_s(
+			ptr[m],
+			stride_x,
+			stride_y,
+			size_i_big_x,
+			size_i_big_y,
+			0);
+		
+	}
+
+	*fwd_secs = +INFINITY;
+	*inv_secs = +INFINITY;
+
+	// perform N test loops, select minimum
+	for(int n = 0; n < N; n++)
+	{
+#if 1
+		// FIXME: flush memory
+		for(int m = 0; m < M; m++)
+			flush_cache(ptr[m], image_size(stride_x, stride_y, size_o_big_x, size_o_big_y) );
+#endif
+
+		// start timer
+		const dwt_clock_t time_fwd_start = dwt_util_get_clock(clock_type);
+		// perform M fwd transforms
+		for(int m = 0; m < M; m++)
+		{
+			dwt_cdf97_2f_inplace_s(
+				ptr[m],
+				stride_x,
+				stride_y,
+				size_o_big_x,
+				size_o_big_y,
+				size_i_big_x,
+				size_i_big_y,
+				&j[m],
+				decompose_one,
+				zero_padding);
+		}
+		// stop timer
+		const dwt_clock_t time_fwd_stop = dwt_util_get_clock(clock_type);
+		// calc avg
+		const float time_fwd_secs = (float)(time_fwd_stop - time_fwd_start) / M * MEASURE_FACTOR / dwt_util_get_frequency(clock_type);
+		// select min
+		if( time_fwd_secs < *fwd_secs )
+			*fwd_secs = time_fwd_secs;
+
+#if 1
+		// FIXME: flush memory
+		for(int m = 0; m < M; m++)
+			flush_cache(ptr[m], image_size(stride_x, stride_y, size_o_big_x, size_o_big_y) );
+#endif
+
+		// start timer
+		const dwt_clock_t time_inv_start = dwt_util_get_clock(clock_type);
+		// perform M inv transforms
+		for(int m = 0; m < M; m++)
+		{
+			dwt_cdf97_2i_inplace_s(
 				ptr[m],
 				stride_x,
 				stride_y,
