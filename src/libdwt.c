@@ -11135,18 +11135,235 @@ void dwt_cdf97_2f_inplace_s(
 			{
 				float *ptr1_x = addr2_s(ptr, y+0, offset, stride_x_j, stride_y_j);
 				float *ptr2_x = addr2_s(ptr, y+1, offset, stride_x_j, stride_y_j);
+				float *out1_x = addr2_s(ptr, y+0-4, offset, stride_x_j, stride_y_j);
+				float *out2_x = addr2_s(ptr, y+1-4, offset, stride_x_j, stride_y_j);
 
-				accel_lift_op4s_fwd_main_dl_stride_s(
-					ptr1_x,
-					pairs_x,
-					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
+				float *l4 = l_buff;
 
-				accel_lift_op4s_fwd_main_dl_stride_s(
-					ptr2_x,
-					pairs_x,
-					-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s, +1, stride_y_j);
+				for(int x = 0; x < offset; x++)
+				{
+					// input addr for 1st coeff in the pair
+					float *ptr0_y = addr2_s(ptr, y+0, x, stride_x_j, stride_y_j);
+					// input addr for 2nd coeff in the pair
+					float *ptr1_y = addr2_s(ptr, y+1, x, stride_x_j, stride_y_j);
+					// output addr for 1st coeff in the pair
+					float *out0_y = addr2_s(ptr, y+0-4, x, stride_x_j, stride_y_j);
+					// output addr for 2nd coeff in the pair
+					float *out1_y = addr2_s(ptr, y+1-4, x, stride_x_j, stride_y_j);
 
-				for(int x = 0; x < size_x; x++)
+					accel_lift_op4s_fwd_main_dl_stride_pair_core_s(
+						ptr0_y, // in
+						ptr1_y, // in
+						out0_y, // out
+						out1_y, // out
+						-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s,
+						l4
+					);
+				}
+				l4 += 4;
+
+				float alpha = -dwt_cdf97_p1_s;
+				float beta = dwt_cdf97_u1_s;
+				float gamma = -dwt_cdf97_p2_s;
+				float delta = dwt_cdf97_u2_s;
+				float zeta = dwt_cdf97_s1_s;
+
+				float l1[4];
+				float l2[4];
+
+				accel_lift_op4s_fwd_main_dl_stride_pair_prolog0_s(
+					addr1_s(ptr1_x, 0, stride_y_j),
+					addr1_s(ptr1_x, 1, stride_y_j),
+					NULL,
+					NULL,
+					alpha,
+					beta,
+					gamma,
+					delta,
+					zeta,
+					l1
+				);
+				accel_lift_op4s_fwd_main_dl_stride_pair_prolog0_s(
+					addr1_s(ptr2_x, 0, stride_y_j),
+					addr1_s(ptr2_x, 1, stride_y_j),
+					NULL,
+					NULL,
+					alpha,
+					beta,
+					gamma,
+					delta,
+					zeta,
+					l2
+				);
+				ptr1_x = addr1_s(ptr1_x, 2, stride_y_j);
+				ptr2_x = addr1_s(ptr2_x, 2, stride_y_j);
+				out1_x = addr1_s(out1_x, 2, stride_y_j);
+				out2_x = addr1_s(out2_x, 2, stride_y_j);
+
+				accel_lift_op4s_fwd_main_dl_stride_pair_prolog1_s(
+					addr1_s(ptr1_x, 0, stride_y_j),
+					addr1_s(ptr1_x, 1, stride_y_j),
+					NULL,
+					NULL,
+					alpha,
+					beta,
+					gamma,
+					delta,
+					zeta,
+					l1
+				);
+				accel_lift_op4s_fwd_main_dl_stride_pair_prolog1_s(
+					addr1_s(ptr2_x, 0, stride_y_j),
+					addr1_s(ptr2_x, 1, stride_y_j),
+					NULL,
+					NULL,
+					alpha,
+					beta,
+					gamma,
+					delta,
+					zeta,
+					l2
+				);
+				ptr1_x = addr1_s(ptr1_x, 2, stride_y_j);
+				ptr2_x = addr1_s(ptr2_x, 2, stride_y_j);
+				out1_x = addr1_s(out1_x, 2, stride_y_j);
+				out2_x = addr1_s(out2_x, 2, stride_y_j);
+
+				// loop by pairs from left to right
+				for(int s = 0; s < pairs_x; s++)
+				{
+					float *ptr_y0_x0 = addr1_s(ptr1_x, 0, stride_y_j);
+					float *ptr_y0_x1 = addr1_s(ptr1_x, 1, stride_y_j);
+					float *ptr_y1_x0 = addr1_s(ptr2_x, 0, stride_y_j);
+					float *ptr_y1_x1 = addr1_s(ptr2_x, 1, stride_y_j);
+
+					// FIXME: elliminate intermediate results
+					float a, b, c, d;
+					float *tmp_y0_x0 = &a; //addr1_s(ptr1_x, 0-4, stride_y_j);
+					float *tmp_y0_x1 = &b; //addr1_s(ptr1_x, 1-4, stride_y_j);
+					float *tmp_y1_x0 = &c; //addr1_s(ptr2_x, 0-4, stride_y_j);
+					float *tmp_y1_x1 = &d; //addr1_s(ptr2_x, 1-4, stride_y_j);
+
+					float *out_y0_x0 = addr1_s(out1_x, 0-4, stride_y_j);
+					float *out_y0_x1 = addr1_s(out1_x, 1-4, stride_y_j);
+					float *out_y1_x0 = addr1_s(out2_x, 0-4, stride_y_j);
+					float *out_y1_x1 = addr1_s(out2_x, 1-4, stride_y_j);
+
+					// horizontal
+
+					// [y+0, x+0], [y+0, x+1] => [y+0, x+0-4], [y+0, x+1-4]
+					accel_lift_op4s_fwd_main_dl_stride_pair_core_s(
+						ptr_y0_x0,
+						ptr_y0_x1,
+						tmp_y0_x0,
+						tmp_y0_x1,
+						alpha,
+						beta,
+						gamma,
+						delta,
+						zeta,
+						l1
+					);
+
+					// [y+1, x+0], [y+1, x+1] => [y+1, x+0-4], [y+1, x+1-4]
+					accel_lift_op4s_fwd_main_dl_stride_pair_core_s(
+						ptr_y1_x0,
+						ptr_y1_x1,
+						tmp_y1_x0,
+						tmp_y1_x1,
+						alpha,
+						beta,
+						gamma,
+						delta,
+						zeta,
+						l2
+					);
+
+					// vertical
+
+					// [y+0, x+0-4] [y+1, x+0-4] => [y+0-4, x+0-4] [y+1-4, x+0-4]
+					accel_lift_op4s_fwd_main_dl_stride_pair_core_s(
+						tmp_y0_x0,
+						tmp_y1_x0,
+						out_y0_x0,
+						out_y1_x0,
+						-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s,
+						l4
+					);
+					l4 += 4;
+
+					// [y+0, x+1-4] [y+1, x+1-4] => [y+0-4, x+1-4] [y+1-4, x+1-4]
+					accel_lift_op4s_fwd_main_dl_stride_pair_core_s(
+						tmp_y0_x1,
+						tmp_y1_x1,
+						out_y0_x1,
+						out_y1_x1,
+						-dwt_cdf97_p1_s, dwt_cdf97_u1_s, -dwt_cdf97_p2_s, dwt_cdf97_u2_s, dwt_cdf97_s1_s,
+						l4
+					);
+					l4 += 4;
+
+					// update pointers
+					ptr1_x = addr1_s(ptr1_x, 2, stride_y_j);
+					ptr2_x = addr1_s(ptr2_x, 2, stride_y_j);
+					out1_x = addr1_s(out1_x, 2, stride_y_j);
+					out2_x = addr1_s(out2_x, 2, stride_y_j);
+				}
+
+				accel_lift_op4s_fwd_main_dl_stride_pair_epilog0_s(
+					NULL,
+					NULL,
+					addr1_s(ptr1_x, 0-4, stride_y_j),
+					addr1_s(ptr1_x, 1-4, stride_y_j),
+					alpha,
+					beta,
+					gamma,
+					delta,
+					zeta,
+					l1
+				);
+				accel_lift_op4s_fwd_main_dl_stride_pair_epilog0_s(
+					NULL,
+					NULL,
+					addr1_s(ptr2_x, 0-4, stride_y_j),
+					addr1_s(ptr2_x, 1-4, stride_y_j),
+					alpha,
+					beta,
+					gamma,
+					delta,
+					zeta,
+					l2
+				);
+				ptr1_x = addr1_s(ptr1_x, 2, stride_y_j);
+				ptr2_x = addr1_s(ptr2_x, 2, stride_y_j);
+
+				accel_lift_op4s_fwd_main_dl_stride_pair_epilog1_s(
+					NULL,
+					NULL,
+					addr1_s(ptr1_x, 0-4, stride_y_j),
+					addr1_s(ptr1_x, 1-4, stride_y_j),
+					alpha,
+					beta,
+					gamma,
+					delta,
+					zeta,
+					l1
+				);
+				accel_lift_op4s_fwd_main_dl_stride_pair_epilog1_s(
+					NULL,
+					NULL,
+					addr1_s(ptr2_x, 0-4, stride_y_j),
+					addr1_s(ptr2_x, 1-4, stride_y_j),
+					alpha,
+					beta,
+					gamma,
+					delta,
+					zeta,
+					l2
+				);
+
+				// perhaps, this loop can be interleaved with epilog
+				for(int x = 2*pairs_x+offset; x < size_x; x++)
 				{
 					float *l4 = &l_buff[4*x];
 
