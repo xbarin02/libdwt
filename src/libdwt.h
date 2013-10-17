@@ -597,6 +597,30 @@ void dwt_cdf97_2f_inplace_s(
 );
 
 /**
+ * @brief Forward image fast wavelet transform using CDF 9/7 wavelet and lifting scheme, in-place version.
+ *
+ * This function works on image data itself, i.e. no data is copied. That has the consequence the DWT subbands are interleaved in place of the original image.
+ *
+ * This function works with single precision floating point numbers (i.e. float data type).
+ *
+ * This function implements single-loop (SL) approach using shifted double-loop (SDL) horizontally and shifted double-loop (SDL) vertically.
+ *
+ * @warning experimental
+ */
+void dwt_cdf97_2f_inplace_sdl_s(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int *j_max_ptr,		///< pointer to the number of intended decomposition levels (scales), the number of achieved decomposition levels will be stored also here
+	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+);
+
+/**
  * @brief Forward image fast wavelet transform using CDF 9/7 wavelet and lifting scheme, out-of-place version.
  *
  * This function works with single precision floating point numbers (i.e. float data type).
@@ -1956,6 +1980,28 @@ void dwt_util_perf_cdf97_2_s(
  * @warning experimental
  */
 void dwt_util_perf_cdf97_2_inplace_s(
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< the number of intended decomposition levels (scales)
+	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
+	int zero_padding,	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+	int M,			///< one test loop consists of transform of M images
+	int N,			///< number of test loops performed
+	int clock_type,		///< timer type
+	float *fwd_secs,	///< store resulting time for forward transform here
+	float *inv_secs		///< store resulting time for inverse transform here
+);
+
+/**
+ * @brief Performance test of 2-D DWT with CDF 9/7 wavelet.
+ *
+ * @warning experimental
+ */
+void dwt_util_perf_cdf97_2_inplace_sdl_s(
 	int stride_x,		///< difference between rows (in bytes)
 	int stride_y,		///< difference between columns (in bytes)
 	int size_o_big_x,	///< width of outer image frame (in elements)
