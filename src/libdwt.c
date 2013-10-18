@@ -12389,7 +12389,8 @@ void dwt_cdf97_2f_inplace_sdl_s(
 				);
 
 				// right border
-				for(int i = 0; i < 10; i++)
+				// NOTE: +is_even(size_x): for even sizes compute remaining column
+				for(int i = 0; i < 10+is_even(size_x); i++)
 				{
 					int x = offset + 2*(pairs_x-3) + i;
 					op4_fwd_sdl_core_s(
