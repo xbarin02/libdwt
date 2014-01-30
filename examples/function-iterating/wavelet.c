@@ -9,9 +9,14 @@
 #if 1
 void (*dwt_wt_1i_s)(void *, int, int, int, int, int) = dwt_cdf97_1i_s;
 void (*dwt_wt_1f_s)(void *, int, int, int, int *, int)  = dwt_cdf97_1f_s;
-#else
+#endif
+#if 0
 void (*dwt_wt_1i_s)(void *, int, int, int, int, int) = dwt_cdf53_1i_s;
 void (*dwt_wt_1f_s)(void *, int, int, int, int *, int)  = dwt_cdf53_1f_s;
+#endif
+#if 0
+void (*dwt_wt_1i_s)(void *, int, int, int, int, int) = dwt_interp53_1i_s;
+void (*dwt_wt_1f_s)(void *, int, int, int, int *, int)  = dwt_interp53_1f_s;
 #endif
 
 int main()
