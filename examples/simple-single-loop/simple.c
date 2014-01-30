@@ -32,7 +32,7 @@ int main()
 	dwt_util_log(LOG_INFO, "Using %i workers.\n", dwt_util_get_num_workers());
 
 	// decomposition
-	int j = -1;
+	int j = 1;
 
 	dwt_util_log(LOG_INFO, "generating test images...\n");
 
@@ -54,7 +54,11 @@ int main()
 	time_start = dwt_util_get_clock(type);
 
 	// forward transform
-	dwt_cdf97_2f_inplace_s(data1, stride_x, stride_y, x, y, x, y, &j, 0, 0);
+#if 0
+	dwt_cdf97_2f_inplace_s(data1, stride_x, stride_y, x, y, x, y, &j, 1, 0);
+#else
+	dwt_cdf97_2f_inplace_sdl_s(data1, stride_x, stride_y, x, y, x, y, &j, 1, 0);
+#endif
 
 	// stop timer
 	time_stop = dwt_util_get_clock(type);
@@ -69,7 +73,7 @@ int main()
 	time_start = dwt_util_get_clock(type);
 
 	// inverse transform
-	dwt_cdf97_2i_inplace_s(data1, stride_x, stride_y, x, y, x, y, j, 0, 0);
+	dwt_cdf97_2i_inplace_s(data1, stride_x, stride_y, x, y, x, y, j, 1, 0);
 
 	// stop timer
 	time_stop = dwt_util_get_clock(type);
