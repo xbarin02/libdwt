@@ -1,0 +1,6 @@
+set terminal svg enhanced size 640 420
+set output "error.svg"
+set xlabel "coefficients"
+set ylabel "error"
+
+plot "plot.dat" with lines lw 2 title 'L2 error'

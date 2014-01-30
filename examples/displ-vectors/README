@@ -1,0 +1,35 @@
+NAME
+
+displ-vectors
+
+DESCRIPTION
+
+The program for processing displacement vectors representing a distortion of an
+optical system.
+
+The input of processing program is matrix of vectors representing the distortion
+of optical system. These vectors are equidistant in both dimensions. The program
+is able to approximate these vectors using the discrete wavelet transform (DWT).
+In this case, the size of output matrix is equal to size of the input matrix.
+Moreover, the program can interpolate missing vectors residing among input
+vectors. In this second case, the size of output matrix is greater than the size
+of intput matrix.
+
+The input/output file in MATLAB ASCII format contains four columns: the
+x-coordinate, the y-coordinate, the x-displacement, the y-displacement.
+
+EXAMPLES
+
+To approximate the distortion of optical system with 15 most important DWT
+coefficients use command like:
+
+./vectors input.mat output.mat 15 0
+
+To interpolate this approximated matrix of vectors 4 times (two levels of
+transform) in each dimension se:
+
+./vectors input.mat output.mat 15 2
+
+For most accurate approximation and maximum interpolation use:
+
+./vectors input.mat output.mat -1 -1
