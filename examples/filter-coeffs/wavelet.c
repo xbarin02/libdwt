@@ -10,8 +10,15 @@
 
 #if 1
 void (*dwt_wt_1f_s)(void *, int, int, int, int *, int)  = dwt_cdf97_1f_s;
-#else
+#endif
+#if 0
 void (*dwt_wt_1f_s)(void *, int, int, int, int *, int)  = dwt_cdf53_1f_s;
+#endif
+#if 0
+void (*dwt_wt_1f_s)(void *, int, int, int, int *, int)  = dwt_interp53_1f_s;
+#endif
+#if 0
+void (*dwt_wt_1f_s)(void *, int, int, int, int *, int)  = dwt_interp2_1f_s;
 #endif
 
 // synthesis (reconstruction)
@@ -22,7 +29,7 @@ int main()
 	dwt_util_init();
 
 	// for CDF 9/7
-	int size = 12;
+	int size = 12; // FIXME: up to 20
 
 	float *vec = dwt_util_allocate_vec_s(size);
 
