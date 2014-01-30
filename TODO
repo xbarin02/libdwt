@@ -25,3 +25,4 @@
 * Gabor transform
 * add simple functions like minimum, maximum, average, median, threshold
 * functions for type (float, double, int) conversion
+* in 2-D transform, remove scaling from horizontal pass and merge it with scaling of vertical pass

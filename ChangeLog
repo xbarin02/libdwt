@@ -1,5 +1,8 @@
-2013-10-?? David Barina <ibarina@fit.vutbr.cz>
+2014-??-?? David Barina <ibarina@fit.vutbr.cz>
 * Added support for interleaved subband image layout.
+* Added displ-vectors example.
+* Added several single-loop implementations.
+* Added several examples in association with single-loop approaches.
 
 2013-09-27 David Barina <ibarina@fit.vutbr.cz>
 * Split some new functions into separate source files instead of one huge file.

@@ -62,3 +62,7 @@ endif
 ifeq ($(BUILD),debug)
 	CFLAGS += -DDEBUG -g
 endif
+
+ifeq ($(LINKER),static)
+	LDFLAGS += -static-libgcc -static
+endif
