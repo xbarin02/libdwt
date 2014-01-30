@@ -27,12 +27,16 @@ util.o: util.c util.h
 
 signal.o: signal.c signal.h
 
+image.o: image.c image.h
+
 swt.o: swt.c swt.h
+
+dwt.o: dwt.c dwt.h
 
 $(LIBNAME).S: $(LIBNAME).c $(LIBNAME).h
 	$(CC) $(CFLAGS) -S -Wa,-adhln -g -fverbose-asm $< -o $@
 
-$(LIBNAME).a: $(LIBNAME).o util.o signal.o swt.o
+$(LIBNAME).a: $(LIBNAME).o util.o signal.o image.o swt.o dwt.o
 	$(AR) -rsc $@ $^
 
 # $(LIBNAME).so: $(LIBNAME).o

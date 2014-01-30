@@ -596,6 +596,32 @@ void dwt_cdf97_2f_inplace_s(
 	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
 );
 
+void dwt_cdf97_2f_inplace_sep_s(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int *j_max_ptr,		///< pointer to the number of intended decomposition levels (scales), the number of achieved decomposition levels will be stored also here
+	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+);
+
+void dwt_cdf97_2f_inplace_sep_sdl_s(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int *j_max_ptr,		///< pointer to the number of intended decomposition levels (scales), the number of achieved decomposition levels will be stored also here
+	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+);
+
 /**
  * @brief Forward image fast wavelet transform using CDF 9/7 wavelet and lifting scheme, in-place version.
  *
@@ -681,6 +707,24 @@ void dwt_cdf97_2f_i(
  * This function works with single precision floating point numbers (i.e. float data type).
  */
 void dwt_cdf53_2f_s(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int *j_max_ptr,		///< pointer to the number of intended decomposition levels (scales), the number of achieved decomposition levels will be stored also here
+	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+);
+
+/**
+ * @brief Forward image fast wavelet transform using CDF 5/3 wavelet and lifting scheme without update step, in-place version.
+ *
+ * This function works with single precision floating point numbers (i.e. float data type).
+ */
+void dwt_interp53_2f_s(
 	void *ptr,		///< pointer to beginning of image data
 	int stride_x,		///< difference between rows (in bytes)
 	int stride_y,		///< difference between columns (in bytes)
@@ -843,6 +887,24 @@ void dwt_cdf53_2i_s(
 );
 
 /**
+ * @brief Inverse image fast wavelet transform using CDF 5/3 wavelet and lifting scheme without update step, in-place version.
+ *
+ * This function works with single precision floating point numbers (i.e. float data type).
+ */
+void dwt_interp53_2i_s(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< pointer to the number of achieved decomposition levels (scales)
+	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+);
+
+/**
  * @brief Forward 1-D fast wavelet transform using CDF 9/7 wavelet and lifting scheme, in-place version.
  *
  * This function works with single precision floating point numbers (i.e. float data type).
@@ -875,6 +937,31 @@ void dwt_cdf53_1f_s(
 );
 
 /**
+ * @brief Forward 1-D fast wavelet transform using CDF 5/3 wavelet without update step and lifting scheme, in-place version.
+ *
+ * This function works with single precision floating point numbers (i.e. float data type).
+ *
+ * @warning experimental
+ */
+void dwt_interp53_1f_s(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int *j_max_ptr,		///< pointer to the number of intended decomposition levels (scales), the number of achieved decomposition levels will be stored also here
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+);
+
+void dwt_interp2_1f_s(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int *j_max_ptr,		///< pointer to the number of intended decomposition levels (scales), the number of achieved decomposition levels will be stored also here
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+);
+
+/**
  * @brief Inverse 1-D fast wavelet transform using CDF 9/7 wavelet and lifting scheme, in-place version.
  *
  * This function works with single precision floating point numbers (i.e. float data type).
@@ -898,6 +985,22 @@ void dwt_cdf97_1i_s(
  * @warning experimental
  */
 void dwt_cdf53_1i_s(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int j_max,		///< the number of decomposition levels (scales)
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+);
+
+/**
+ * @brief Inverse 1-D fast wavelet transform using CDF 5/3 wavelet without update step and lifting scheme, in-place version.
+ *
+ * This function works with single precision floating point numbers (i.e. float data type).
+ *
+ * @warning experimental
+ */
+void dwt_interp53_1i_s(
 	void *ptr,		///< pointer to beginning of image data
 	int stride_y,		///< difference between columns (in bytes)
 	int size_o_big_x,	///< width of outer image frame (in elements)
@@ -1087,6 +1190,17 @@ int dwt_util_compare_s(
 	int stride_y,		///< difference between columns (in bytes)
 	int size_i_big_x,	///< width of nested image (in elements)
 	int size_i_big_y	///< height of nested image (in elements)
+);
+
+int dwt_util_compare2_s(
+	void *ptr1,
+	void *ptr2,
+	int stride1_x,
+	int stride1_y,
+	int stride2_x,
+	int stride2_y,
+	int size_x,
+	int size_y
 );
 
 /**
@@ -1802,6 +1916,21 @@ void dwt_util_subband_s(
 	int *dst_size_y		///< here will be stored height of subband
 );
 
+void dwt_util_subband_const_s(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	enum dwt_subbands band,
+	const void **dst_ptr,
+	int *dst_size_x,
+	int *dst_size_y
+);
+
 /**
  * @brief Gets pointer to and sizes of the selected subband (LL, HL, LH or HH).
  */
@@ -1996,6 +2125,40 @@ void dwt_util_perf_cdf97_2_inplace_s(
 	float *inv_secs		///< store resulting time for inverse transform here
 );
 
+void dwt_util_perf_cdf97_2_inplace_sep_s(
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< the number of intended decomposition levels (scales)
+	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
+	int zero_padding,	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+	int M,			///< one test loop consists of transform of M images
+	int N,			///< number of test loops performed
+	int clock_type,		///< timer type
+	float *fwd_secs,	///< store resulting time for forward transform here
+	float *inv_secs		///< store resulting time for inverse transform here
+);
+
+void dwt_util_perf_cdf97_2_inplace_sep_sdl_s(
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< the number of intended decomposition levels (scales)
+	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
+	int zero_padding,	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+	int M,			///< one test loop consists of transform of M images
+	int N,			///< number of test loops performed
+	int clock_type,		///< timer type
+	float *fwd_secs,	///< store resulting time for forward transform here
+	float *inv_secs		///< store resulting time for inverse transform here
+);
+
 /**
  * @brief Performance test of 2-D DWT with CDF 9/7 wavelet.
  *
@@ -2150,6 +2313,81 @@ void dwt_util_measure_perf_cdf97_1_d(
  * @warning experimental
  */
 void dwt_util_measure_perf_cdf97_2_s(
+	enum dwt_array array_type,	///< how to extend the original image
+	int min_x,			///< starting vector size
+	int max_x,			///< maximal vector size
+	int opt_stride,			///< use optimal stride
+	int j_max,			///< level of decomposition
+	int decompose_one,		///< decompose up to single coefficient?
+	int zero_padding,		///< fill residual transform areas with zeros
+	int M,				///< number of transform in one test loop
+	int N,				///< test loops to perform
+	int clock_type,			///< timer type
+	FILE *fwd_plot_data,		///< store resulting plot data for forward transform here (gnuplot compatible format)
+	FILE *inv_plot_data		///< store resulting plot data for inverse transform here (gnuplot compatible format)
+);
+
+/**
+ * @brief Measure performance of 2-D transform.
+ *
+ * @warning experimental
+ */
+void dwt_util_measure_perf_cdf97_2_inplace_s(
+	enum dwt_array array_type,	///< how to extend the original image
+	int min_x,			///< starting vector size
+	int max_x,			///< maximal vector size
+	int opt_stride,			///< use optimal stride
+	int j_max,			///< level of decomposition
+	int decompose_one,		///< decompose up to single coefficient?
+	int zero_padding,		///< fill residual transform areas with zeros
+	int M,				///< number of transform in one test loop
+	int N,				///< test loops to perform
+	int clock_type,			///< timer type
+	FILE *fwd_plot_data,		///< store resulting plot data for forward transform here (gnuplot compatible format)
+	FILE *inv_plot_data		///< store resulting plot data for inverse transform here (gnuplot compatible format)
+);
+
+/**
+ * @brief Measure performance of 2-D transform.
+ *
+ * @warning experimental
+ */
+void dwt_util_measure_perf_cdf97_2_inplace_sep_s(
+	enum dwt_array array_type,	///< how to extend the original image
+	int min_x,			///< starting vector size
+	int max_x,			///< maximal vector size
+	int opt_stride,			///< use optimal stride
+	int j_max,			///< level of decomposition
+	int decompose_one,		///< decompose up to single coefficient?
+	int zero_padding,		///< fill residual transform areas with zeros
+	int M,				///< number of transform in one test loop
+	int N,				///< test loops to perform
+	int clock_type,			///< timer type
+	FILE *fwd_plot_data,		///< store resulting plot data for forward transform here (gnuplot compatible format)
+	FILE *inv_plot_data		///< store resulting plot data for inverse transform here (gnuplot compatible format)
+);
+
+void dwt_util_measure_perf_cdf97_2_inplace_sep_sdl_s(
+	enum dwt_array array_type,	///< how to extend the original image
+	int min_x,			///< starting vector size
+	int max_x,			///< maximal vector size
+	int opt_stride,			///< use optimal stride
+	int j_max,			///< level of decomposition
+	int decompose_one,		///< decompose up to single coefficient?
+	int zero_padding,		///< fill residual transform areas with zeros
+	int M,				///< number of transform in one test loop
+	int N,				///< test loops to perform
+	int clock_type,			///< timer type
+	FILE *fwd_plot_data,		///< store resulting plot data for forward transform here (gnuplot compatible format)
+	FILE *inv_plot_data		///< store resulting plot data for inverse transform here (gnuplot compatible format)
+);
+
+/**
+ * @brief Measure performance of 2-D transform.
+ *
+ * @warning experimental
+ */
+void dwt_util_measure_perf_cdf97_2_inplace_sdl_s(
 	enum dwt_array array_type,	///< how to extend the original image
 	int min_x,			///< starting vector size
 	int max_x,			///< maximal vector size
@@ -3056,6 +3294,29 @@ void *dwt_util_crop21(
  * @brief Size of array in elements.
  */
 #define sizeof_arr(a) (sizeof(a)/sizeof(*(a)))
+
+/**
+ * @brief Allocate memory.
+ *
+ * @warning experimental
+ */
+void *dwt_util_alloc(
+	int elems,
+	size_t elem_size
+);
+
+void dwt_util_flush_cache(
+	void *addr,	///< base address
+	size_t size	///< length of memory in bytes
+);
+
+int dwt_util_up_to_even(
+	int x
+);
+
+int dwt_util_to_even(
+	int x
+);
 
 /**
  * @}
