@@ -12,6 +12,7 @@ int main()
 	dwt_util_init();
 
 	// use fast SSE implementation
+	dwt_util_set_num_threads(1);
 	dwt_util_set_num_workers(1);
 	dwt_util_set_accel(0);
 
