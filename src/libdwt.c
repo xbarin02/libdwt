@@ -6296,7 +6296,7 @@ void op4_fwd_sdl_prolog2_part6_s(
 	l[0] = *ptr0; // base+0
 }
 
-#ifdef __SSE__
+
 // part_odd
 static
 void op4_fwd_sdl_prolog2_part_s(
@@ -6310,15 +6310,24 @@ void op4_fwd_sdl_prolog2_part_s(
 )
 {
 	UNUSED(v);
-
+#ifdef __SSE__
 	__m128 buff, z;
 	buff[0] = *ptr0;
 	buff[1] = *ptr1;
 	op4s_sdl2_shuffle_input_low_s_sse(buff, *(__m128 *)c, *(__m128 *)r);
 	op4s_sdl2_op_s_sse(z, *(__m128 *)c, *(__m128 *)w, *(__m128 *)l, *(__m128 *)r);
 	op4s_sdl2_update_s_sse(*(__m128 *)c, *(__m128 *)l, *(__m128 *)r, z);
-}
+#else
+	// TODO: test this
+	float buff[4], z[4];
+	buff[0] = *ptr0;
+	buff[1] = *ptr1;
+	op4s_sdl2_shuffle_input_low_s_ref(buff, c, r);
+	op4s_sdl2_op_s_ref(z, c, w, l, r);
+	op4s_sdl2_update_s_ref(c, l, r, z);
 #endif
+}
+
 
 static
 void accel_lift_op4s_fwd_main_sdl_stride_ref_part_epilog2_s(
@@ -6370,7 +6379,7 @@ do { \
 } while(0)
 #endif
 
-#ifdef __SSE__
+#if 1
 static
 void op4_fwd_sdl_epilog2_part_s(
 	float *ptr0,
@@ -6382,7 +6391,7 @@ void op4_fwd_sdl_epilog2_part_s(
 	float *r
 )
 {
-#if 0
+#ifndef __SSE__
 	float buff[2];
 	float t[4];
 
@@ -6405,6 +6414,7 @@ void op4_fwd_sdl_epilog2_part_s(
 }
 #endif
 
+#ifdef __SSE__
 static
 void op4_fwd_sdl_epilog2_s(
 	float *ptr_6,
@@ -6460,7 +6470,9 @@ void op4_fwd_sdl_epilog2_s(
 	// epilog2: export(0)
 	*ptr0 = l[0]; // base+0
 }
+#endif
 
+#if 1
 static
 void op4_fwd_sdl_epilog2_fast_s(
 	float *ptr0,
@@ -6514,6 +6526,7 @@ void op4_fwd_sdl_epilog2_fast_s(
 	// epilog2: export(0)
 	*ptr6 = (lcr+0)[0]; // base+0
 }
+#endif
 
 static
 void accel_lift_op4s_fwd_main_dl_stride_s(
@@ -12584,7 +12597,9 @@ void dwt_cdf97_2f_inplace_sep_s(
 
 	assert( 1 == dwt_util_get_num_workers() );
 
+#ifdef _OPENMP
 	const int threads = dwt_util_get_num_threads();
+#endif
 
 	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
 	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
@@ -12738,7 +12753,9 @@ void dwt_cdf97_2f_inplace_sep_sdl_s(
 
 	assert( 1 == dwt_util_get_num_workers() );
 
+#ifdef _OPENMP
 	const int threads = dwt_util_get_num_threads();
+#endif
 
 	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
 	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
@@ -12829,8 +12846,11 @@ void dwt_cdf97_2f_inplace_sep_sdl_s(
 				#pragma omp parallel for schedule(static, threads_segment_y)
 				for(int y = 0; y < size_i_src_y; y++)
 				{
-					//dwt_cdf97_f_ex_stride_inplace_part_core_sdl_s(
+#ifdef __SSE__
 					dwt_cdf97_f_ex_stride_inplace_part_core_sdl_sse_s(
+#else
+					dwt_cdf97_f_ex_stride_inplace_part_core_sdl_s(
+#endif
 						addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
 						size_x, // N
 						stride_y_j);
@@ -12841,8 +12861,11 @@ void dwt_cdf97_2f_inplace_sep_sdl_s(
 				#pragma omp parallel for schedule(static, threads_segment_x)
 				for(int x = 0; x < size_x; x++)
 				{
-					//dwt_cdf97_f_ex_stride_inplace_part_core_sdl_s(
+#ifdef __SSE__
 					dwt_cdf97_f_ex_stride_inplace_part_core_sdl_sse_s(
+#else
+					dwt_cdf97_f_ex_stride_inplace_part_core_sdl_s(
+#endif
 						addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
 						size_y, // N
 						stride_x_j);
@@ -12877,6 +12900,7 @@ void dwt_cdf97_2f_inplace_sep_sdl_s(
 	FUNC_END;
 }
 
+#ifdef __SSE__
 static
 void op4_fwd_sdl_2x1A_s(
 	float *ptrL0, float *ptrL1,
@@ -12911,7 +12935,9 @@ void op4_fwd_sdl_2x1A_s(
 	op4s_sdl2_update_s_sse(*(__m128 *)cL, *(__m128 *)lL, *(__m128 *)rL, zL);
 	op4s_sdl2_update_s_sse(*(__m128 *)cR, *(__m128 *)lR, *(__m128 *)rR, zR);
 }
+#endif
 
+#ifdef __SSE__
 static
 void op4_fwd_sdl_2x1B_s(
 	float *ptr, // input as __m128 in format [ L0 L1 R0 R1 ]
@@ -12946,6 +12972,7 @@ void op4_fwd_sdl_2x1B_s(
 	op4s_sdl2_update_s_sse(*(__m128 *)cL, *(__m128 *)lL, *(__m128 *)rL, zL);
 	op4s_sdl2_update_s_sse(*(__m128 *)cR, *(__m128 *)lR, *(__m128 *)rR, zR);
 }
+#endif
 
 #ifdef __SSE__
 static
@@ -13021,6 +13048,7 @@ void cdf97_fwd_core2_sdl_2x2_sc_sse_s(
 }
 #endif
 
+#ifdef __SSE__
 static
 void op4_fwd_sdl_2x2_fast_s(
 	float *ptrL0, float *ptrL1,
@@ -13312,6 +13340,7 @@ void op4_fwd_sdl_2x2_fast_s(
 	*outR1 = buff[3];
 #endif
 }
+#endif
 
 static
 void op4_fwd_sdl_core_s(
@@ -13324,7 +13353,7 @@ void op4_fwd_sdl_core_s(
 	float *l, float *c, float *r
 )
 {
-#if 0
+#ifndef __SSE__
 	float buff[2];
 	float t[4];
 
@@ -13376,7 +13405,7 @@ void op4_fwd_sdl_2x2_s(
 	float *buff_x1
 )
 {
-#if 0
+#ifndef __SSE__
 	float a, b, c, d;
 
 	op4_fwd_sdl_core_s(
@@ -13411,8 +13440,7 @@ void op4_fwd_sdl_2x2_s(
 		w, v,
 		buff_x1+0, buff_x1+4, buff_x1+8
 	);
-#endif
-#if 1
+#else
 	op4_fwd_sdl_2x2_fast_s(
 		ptr_y0_x0, ptr_y0_x1,
 		ptr_y1_x0, ptr_y1_x1,
@@ -13453,7 +13481,7 @@ void op4_fwd_sdl_core_prolog2_2x2_s(
 	float *lcr_x1
 )
 {
-#if 0
+#ifndef __SSE__
 	float a, b, c, d;
 
 	op4_fwd_sdl_core_s(
@@ -13750,7 +13778,7 @@ void op4_fwd_sdl_epilog2_prolog2_2x2_s(
 	float *x1_lcr
 )
 {
-#if 0
+#ifndef __SSE__
 	float tmp[4];
 
 	op4_fwd_sdl_epilog2_part_s(
