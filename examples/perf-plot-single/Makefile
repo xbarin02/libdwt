@@ -24,7 +24,7 @@ $(LIBPATH)/$(LIBNAME).a:
 .PHONY: plot
 plot:
 	-gnuplot plot.txt
-	for f in *.svg; do test -s "$${f}" && inkscape -A "$${f/.svg/.pdf}" "$${f}"; done
+	-for f in *.svg; do test -s "$${f}" && inkscape -A "$${f/.svg/.pdf}" "$${f}"; done
 
 .PHONY: distclean
 distclean: clean
