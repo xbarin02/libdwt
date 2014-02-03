@@ -87,6 +87,8 @@ float ssim(const Mat& a, const Mat& b)
 
 int main(int argc, char **argv)
 {
+	bool crop = true;
+
 	if( 3 != argc )
 	{
 		cerr << "Usage: " << argv[0] << " <reference.png> <compared.png>" << endl;
@@ -120,15 +122,44 @@ int main(int argc, char **argv)
 		cerr << "Sizes: " << img0.size().width << "x" << img0.size().height << endl;
 		cerr << "Sizes: " << img1.size().width << "x" << img1.size().height << endl;
 
-		Size size = img0.size().width > img1.size().width ? img0.size() : img1.size();
+		if( crop )
+		{
+			Mat &big = img0.size().width > img1.size().width
+				? img0
+				: img1;
+			Mat &sml = img0.size().width > img1.size().width
+				? img1
+				: img0;
 
-		if( size != img0.size() )
-			resize(img0, img0, size, 0, 0, INTER_LANCZOS4);
-		if( size != img1.size() )
-			resize(img1, img1, size, 0, 0, INTER_LANCZOS4);;
+			Rect rect(
+				(big.size().width  - sml.size().width )/2,
+				(big.size().height - sml.size().height)/2,
+				sml.size().width,
+				sml.size().height
+			     );
+
+			big = big(rect);
+		}
+		else
+		{
+			Size size = img0.size().width > img1.size().width
+				? img0.size()
+				: img1.size();
+
+			if( size != img0.size() )
+				resize(img0, img0, size, 0, 0, INTER_LANCZOS4);
+			if( size != img1.size() )
+				resize(img1, img1, size, 0, 0, INTER_LANCZOS4);;
+		}
 
 		cerr << "Sizes: " << img0.size().width << "x" << img0.size().height << endl;
 		cerr << "Sizes: " << img1.size().width << "x" << img1.size().height << endl;
+#if 0
+		imshow("img0", img0);
+		imshow("img1", img1);
+
+		waitKey();
+#endif
 	}
 
 	cout << "mse=" << mse(img0, img1) << endl;
