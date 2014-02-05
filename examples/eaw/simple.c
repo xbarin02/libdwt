@@ -32,9 +32,6 @@ int main(int argc, char *argv[])
 	dwt_util_log(LOG_INFO, "Acceleration type is %i.\n", dwt_util_get_accel());
 	dwt_util_log(LOG_INFO, "Using %i threads.\n", dwt_util_get_num_threads());
 	dwt_util_log(LOG_INFO, "Using %i workers.\n", dwt_util_get_num_workers());
-	dwt_util_log(LOG_INFO, "Using image of size of %ix%i pixels.\n", x, y);
-	dwt_util_log(LOG_INFO, "Using stride of %i bytes.\n", stride_x);
-	dwt_util_log(LOG_INFO, "Image occupies %i KiB of memory.\n", dwt_util_image_size(stride_x, stride_y, x, y)/1024);
 
 	dwt_util_log(LOG_INFO, "Loading a file \"%s\"...\n", path);
 
