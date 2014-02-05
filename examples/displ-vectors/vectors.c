@@ -368,32 +368,53 @@ int main(int argc, char *argv[])
 	dwt_util_log(LOG_INFO, "diff_norm = %f\n", diff_norm);
 #endif
 
+	const int border = 4; // FIXME: 0, 4
+	dwt_util_log(LOG_INFO, "Extending by %i pixels...\n", border);
+
+	image_t *edx = image_extend_s(dx, border);
+	image_t *edy = image_extend_s(dy, border);
+
+	const int ecount2_x = count2_x + (1<<levels)*(2*border);
+	const int ecount2_y = count2_y + (1<<levels)*(2*border);
+
 	// (2^...)times bigger matrices "d2?"
 	image_t *d2x = image_create_s(count2_x, count2_y);
 	image_t *d2y = image_create_s(count2_x, count2_y);
+	image_t *ed2x = image_create_s(ecount2_x, ecount2_y);
+	image_t *ed2y = image_create_s(ecount2_x, ecount2_y);
 
 	// fill "d2?" transform with zeros (HL, LH and HH subband)
 	image_zero(d2x);
 	image_zero(d2y);
+	image_zero(ed2x);
+	image_zero(ed2y);
 
 	// copy "d?" into LL subband of "d2?"
 	image_copy(dx, d2x);
 	image_copy(dy, d2y);
+	image_copy(edx, ed2x);
+	image_copy(edy, ed2y);
 
 	// save "d2?" as PGM
 	dwt_util_log(LOG_DBG, "saving transform to PGM...\n");
 	image_save_to_pgm_s(d2x, "displ2_x.pgm");
 	image_save_to_pgm_s(d2y, "displ2_y.pgm");
+	image_save_to_pgm_s(ed2x, "edispl2_x.pgm");
+	image_save_to_pgm_s(ed2y, "edispl2_y.pgm");
 
 	// inverse DWT
 	dwt_util_log(LOG_INFO, "Using wavelet %i...\n", wavelet);
 	image_idwt_s(d2x, levels, wavelet);
 	image_idwt_s(d2y, levels, wavelet);
+	image_idwt_s(ed2x, levels, wavelet);
+	image_idwt_s(ed2y, levels, wavelet);
 
 	// save transformed images again
 	dwt_util_log(LOG_DBG, "saving result to PGM...\n");
 	image_save_to_pgm_s(d2x, "displ2dwt_x.pgm");
 	image_save_to_pgm_s(d2y, "displ2dwt_y.pgm");
+	image_save_to_pgm_s(ed2x, "edispl2dwt_x.pgm");
+	image_save_to_pgm_s(ed2y, "edispl2dwt_y.pgm");
 
 	image_t *output = image_create_s(4, count2_y * count2_x);
 
@@ -403,9 +424,14 @@ int main(int argc, char *argv[])
 	for(int y = 0; y < count2_y; y++)
 		for(int x = 0; x < count2_x; x++)
 		{
+			const int border_shift = (border*(1<<levels));
+#if 0
 			float *coeff_x = image_coeff_s(d2x, y, x);
 			float *coeff_y = image_coeff_s(d2y, y, x);
-
+#else
+			float *coeff_x = image_coeff_s(ed2x, y+border_shift, x+border_shift);
+			float *coeff_y = image_coeff_s(ed2y, y+border_shift, x+border_shift);
+#endif
 			int orig_x = off_x + x*step2_x;
 			int orig_y = off_y + y*step2_y;
 
