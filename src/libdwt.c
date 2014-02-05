@@ -10621,7 +10621,6 @@ float dwt_eaw53_w(float n, float m)
 }
 
 // http://www.cs.huji.ac.il/~raananf/projects/eaw/
-// TODO: use w[] also at the edges of the signal
 // TODO: move calculation of weights outside of this function
 void dwt_eaw53_f_ex_stride_s(
 	const float *src,
@@ -10651,7 +10650,7 @@ void dwt_eaw53_f_ex_stride_s(
 	{
 		w[i] = dwt_eaw53_w(tmp[i], tmp[i+1]);
 	}
-	w[N-1] = dwt_eaw53_w(tmp[N-1], tmp[N-1]); // HACK: is it necessary?
+	w[N-1] = 0.f; // not necessary
 
 	// predict 1 + update 1
 	for(int i=1; i<N-2+(N&1); i+=2)
@@ -10662,12 +10661,27 @@ void dwt_eaw53_f_ex_stride_s(
 		tmp[i] -= (wL * tmp[i-1] + wR * tmp[i+1]) / (wL+wR);
 	}
 
-	if(is_odd(N))
-		tmp[N-1] += 2 * dwt_cdf53_u1_s * tmp[N-2];
-	else
-		tmp[N-1] -= 2 * dwt_cdf53_p1_s * tmp[N-2];
+	if( is_odd(N) )
+	{
+		float wL = w[N-2];
+		float wR = w[N-2];
 
-	tmp[0] += 2 * dwt_cdf53_u1_s * tmp[1];
+		tmp[N-1] += (wL * tmp[N-2] + wR * tmp[N-2]) / ( 2.f * (wL+wR) );
+	}
+	else
+	{
+		float wL = w[N-2];
+		float wR = w[N-2];
+
+		tmp[N-1] -= (wL * tmp[N-2] + wR * tmp[N-2]) / (wL+wR);
+	}
+
+	{
+		float wL = w[0];
+		float wR = w[0];
+
+		tmp[0] += (wL * tmp[1] + wR * tmp[1]) / ( 2.f * (wL+wR) );
+	}
 
 	for(int i=2; i<N-(N&1); i+=2)
 	{
@@ -11205,7 +11219,6 @@ void dwt_cdf53_i_ex_stride_s(
 	dwt_util_memcpy_stride_s(dst, stride, tmp, sizeof(float), N);
 }
 
-// TODO: use w[] also at the edges of the signal
 void dwt_eaw53_i_ex_stride_s(
 	const float *src_l,
 	const float *src_h,
@@ -11245,12 +11258,27 @@ void dwt_eaw53_i_ex_stride_s(
 		tmp[i] -= ( wL*tmp[i-1] + wR*tmp[i+1] ) / ( 2.f*(wL+wR) );
 	}
 
-	tmp[0] -= 2 * dwt_cdf53_u1_s * tmp[1];
+	{
+		float wL = w[0];
+		float wR = w[0];
 
-	if(is_odd(N))
-		tmp[N-1] -= 2 * dwt_cdf53_u1_s * tmp[N-2];
+		tmp[0] -= (wL * tmp[1] + wR * tmp[1]) / ( 2.f * (wL+wR) );
+	}
+
+	if( is_odd(N) )
+	{
+		float wL = w[N-2];
+		float wR = w[N-2];
+		
+		tmp[N-1] -= (wL * tmp[N-2] + wR * tmp[N-2]) / ( 2.f * (wL+wR) );
+	}
 	else
-		tmp[N-1] += 2 * dwt_cdf53_p1_s * tmp[N-2];
+	{
+		float wL = w[N-2];
+		float wR = w[N-2];
+		
+		tmp[N-1] += (wL * tmp[N-2] + wR * tmp[N-2]) / (wL+wR);
+	}
 
 	for(int i=1; i<N-2+(N&1); i+=2)
 	{
