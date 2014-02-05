@@ -70,6 +70,10 @@ int main(int argc, char *argv[])
 #else
 	dwt_cdf53_2f_dummy_s(data1, stride_x, stride_y, x, y, x, y, &j, 0);
 #endif
+
+	// HACK
+	j = 5;
+
 	dwt_util_log(LOG_INFO, "j = %i\n", j);
 
 #ifdef EAW
@@ -97,6 +101,21 @@ int main(int argc, char *argv[])
 	// stop timer
 	time_stop = dwt_util_get_clock(type);
 	dwt_util_log(LOG_INFO, "elapsed time: %f secs\n", (double)(time_stop - time_start) / dwt_util_get_frequency(type));
+
+#if 1
+	// reset transform
+	dwt_util_test_image_zero_s(data1, stride_x, stride_y, x, y);
+	int jj = j;
+	enum dwt_subbands subband = DWT_LL;
+	void *subband_ptr;
+	int subband_size_x;
+	int subband_size_y;
+	dwt_util_subband_s(data1, stride_x, stride_y, x, y, x, y, jj, subband, &subband_ptr, &subband_size_x, &subband_size_y);
+
+	for(int off_x=-3; off_x<=+3; off_x+=2)
+		for(int off_y=-3; off_y<=+3; off_y+=2)
+			*dwt_util_addr_coeff_s(subband_ptr, off_y+subband_size_y/2, off_x+subband_size_x/2, stride_x, stride_y) = 20.f;
+#endif
 
 	// convert transform into viewable format
 	dwt_util_conv_show_s(data1, data3, stride_x, stride_y, x, y);
