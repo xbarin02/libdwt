@@ -115,4 +115,9 @@ void image_idwt_s(
 	enum wavelet_t wavelet
 );
 
+image_t *image_extend_s(
+	const image_t *src,
+	int pixels
+);
+
 #endif

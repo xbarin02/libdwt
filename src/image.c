@@ -5,6 +5,7 @@
 #include "image.h"
 
 #include "libdwt.h"
+#include "inline.h"
 
 #if 0
 struct image_t {
@@ -259,4 +260,73 @@ int image_fdwt_interp53_s(image_t *image, int levels)
 	);
 
 	return levels;
+}
+
+image_t *image_extend_s(
+	const image_t *src,
+	int pixels
+)
+{
+	image_t *dst = image_create_s(2*pixels+src->size_x, 2*pixels+src->size_y);
+
+	dwt_util_copy2_s(
+		src->ptr,
+		addr2_s(dst->ptr, pixels, pixels, dst->stride_x, dst->stride_y),
+		src->stride_x,
+		src->stride_y,
+		dst->stride_x,
+		dst->stride_y,
+		src->size_x,
+		src->size_y
+	);
+
+	// T
+	for(int y = 0; y < pixels; y++)
+		for(int x = 0; x < src->size_x; x++)
+			*addr2_s(dst->ptr, y, pixels+x, dst->stride_x, dst->stride_y) =
+				*addr2_const_s(src->ptr, 0, x, src->stride_x, src->stride_y);
+
+	// B
+	for(int y = 0; y < pixels; y++)
+		for(int x = 0; x < src->size_x; x++)
+			*addr2_s(dst->ptr, pixels+src->size_y+y, pixels+x, dst->stride_x, dst->stride_y) =
+				*addr2_const_s(src->ptr, src->size_y-1, x, src->stride_x, src->stride_y);
+
+	// L
+	for(int y = 0; y < src->size_y; y++)
+		for(int x = 0; x < pixels; x++)
+			*addr2_s(dst->ptr, pixels+y, x, dst->stride_x, dst->stride_y) =
+				*addr2_const_s(src->ptr, y, 0, src->stride_x, src->stride_y);
+	
+	// R
+	for(int y = 0; y < src->size_y; y++)
+		for(int x = 0; x < pixels; x++)
+			*addr2_s(dst->ptr, pixels+y, pixels+src->size_x+x, dst->stride_x, dst->stride_y) =
+				*addr2_const_s(src->ptr, y, src->size_x-1, src->stride_x, src->stride_y);
+
+	// TL
+	for(int y = 0; y < pixels; y++)
+		for(int x = 0; x < pixels; x++)
+			*addr2_s(dst->ptr, y, x, dst->stride_x, dst->stride_y) =
+				*addr2_const_s(src->ptr, 0, 0, src->stride_x, src->stride_y);
+
+	// TR
+	for(int y = 0; y < pixels; y++)
+		for(int x = 0; x < pixels; x++)
+			*addr2_s(dst->ptr, y, pixels+src->size_x+x, dst->stride_x, dst->stride_y) =
+				*addr2_const_s(src->ptr, 0, src->size_x-1, src->stride_x, src->stride_y);
+
+	// BL
+	for(int y = 0; y < pixels; y++)
+		for(int x = 0; x < pixels; x++)
+			*addr2_s(dst->ptr, pixels+src->size_y+y, x, dst->stride_x, dst->stride_y) =
+				*addr2_const_s(src->ptr, src->size_y-1, 0, src->stride_x, src->stride_y);
+
+	// BR
+	for(int y = 0; y < pixels; y++)
+		for(int x = 0; x < pixels; x++)
+			*addr2_s(dst->ptr, pixels+src->size_y+y, pixels+src->size_x+x, dst->stride_x, dst->stride_y) =
+				*addr2_const_s(src->ptr, src->size_y-1, src->size_x-1, src->stride_x, src->stride_y);
+
+	return dst;
 }
