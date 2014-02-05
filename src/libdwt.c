@@ -1523,7 +1523,6 @@ void dwt_util_test_image_fill_i(
 			);
 }
 
-// TODO: propagate type of test image
 void dwt_util_test_image_fill_s(
 	void *ptr,
 	int stride_x,
@@ -1537,6 +1536,8 @@ void dwt_util_test_image_fill_s(
 
 	assert( NULL != ptr );
 
+	const int type = 0;
+
 	for(int y = 0; y < size_i_big_y; y++)
 		for(int x = 0; x < size_i_big_x; x++)
 			dwt_util_test_image_value_i_s(
@@ -1544,7 +1545,34 @@ void dwt_util_test_image_fill_s(
 				x,
 				y,
 				rand,
-				0
+				type
+			);
+
+	FUNC_END;
+}
+
+void dwt_util_test_image_fill2_s(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int rand,
+	int type
+)
+{
+	FUNC_BEGIN;
+
+	assert( NULL != ptr );
+
+	for(int y = 0; y < size_i_big_y; y++)
+		for(int x = 0; x < size_i_big_x; x++)
+			dwt_util_test_image_value_i_s(
+				addr2_s(ptr, y, x, stride_x, stride_y),
+				x,
+				y,
+				rand,
+				type
 			);
 
 	FUNC_END;
@@ -10583,8 +10611,85 @@ void dwt_cdf53_f_ex_stride_s(
 	dwt_util_memcpy_stride_s(dst_h, stride, tmp+1, 2*sizeof(float), floor_div2(N));
 }
 
+static
+float dwt_eaw53_w(float n, float m)
+{
+	const float alpha = 1.0;
+	const float eps = 1.0e-5f;
+
+	return 1.f / (powf(fabsf(n-m), alpha) + eps);
+}
+
+// http://www.cs.huji.ac.il/~raananf/projects/eaw/
+// TODO: use w[] also at the edges of the signal
+// TODO: move calculation of weights outside of this function
+void dwt_eaw53_f_ex_stride_s(
+	const float *src,
+	float *dst_l,
+	float *dst_h,
+	float *tmp,
+	int N,
+	int stride,
+	float *w	// float w[N]
+)
+{
+	assert( N >= 0 && NULL != src && NULL != dst_l && NULL != dst_h && NULL != tmp && 0 != stride );
+
+	// fix for small N
+	if(N < 2)
+	{
+		if(1 == N)
+			dst_l[0] = src[0] * dwt_cdf53_s1_s;
+		return;
+	}
+
+	// copy src into tmp
+	dwt_util_memcpy_stride_s(tmp, sizeof(float), src, stride, N);
+
+	// FIXME: move outside
+	for(int i=0; i<N-1; i++)
+	{
+		w[i] = dwt_eaw53_w(tmp[i], tmp[i+1]);
+	}
+	w[N-1] = dwt_eaw53_w(tmp[N-1], tmp[N-1]); // HACK: is it necessary?
+
+	// predict 1 + update 1
+	for(int i=1; i<N-2+(N&1); i+=2)
+	{
+		float wL = w[i-1];
+		float wR = w[i+0];
+
+		tmp[i] -= (wL * tmp[i-1] + wR * tmp[i+1]) / (wL+wR);
+	}
+
+	if(is_odd(N))
+		tmp[N-1] += 2 * dwt_cdf53_u1_s * tmp[N-2];
+	else
+		tmp[N-1] -= 2 * dwt_cdf53_p1_s * tmp[N-2];
+
+	tmp[0] += 2 * dwt_cdf53_u1_s * tmp[1];
+
+	for(int i=2; i<N-(N&1); i+=2)
+	{
+		float wL = w[i-1];
+		float wR = w[i+0];
+
+		tmp[i] += (wL * tmp[i-1] + wR * tmp[i+1]) / ( 2.f * (wL+wR) );
+	}
+
+	// scale
+	for(int i=0; i<N; i+=2)
+		tmp[i] = tmp[i] * dwt_cdf53_s1_s;
+	for(int i=1; i<N; i+=2)
+		tmp[i] = tmp[i] * dwt_cdf53_s2_s;
+
+	// copy tmp into dst
+	dwt_util_memcpy_stride_s(dst_l, stride, tmp+0, 2*sizeof(float),  ceil_div2(N));
+	dwt_util_memcpy_stride_s(dst_h, stride, tmp+1, 2*sizeof(float), floor_div2(N));
+}
+
 // TODO: interpolating version of CDF 5/3
-// FIXME: scaling
+// FIXME: fix scaling
 void dwt_interp53_f_ex_stride_s(
 	const float *src,
 	float *dst_l,
@@ -11095,6 +11200,65 @@ void dwt_cdf53_i_ex_stride_s(
 
 	for(int i=1; i<N-2+(N&1); i+=2)
 		tmp[i] += dwt_cdf53_p1_s * (tmp[i-1] + tmp[i+1]);
+
+	// copy tmp into dst
+	dwt_util_memcpy_stride_s(dst, stride, tmp, sizeof(float), N);
+}
+
+// TODO: use w[] also at the edges of the signal
+void dwt_eaw53_i_ex_stride_s(
+	const float *src_l,
+	const float *src_h,
+	float *dst,
+	float *tmp,
+	int N,
+	int stride,
+	float *w	// float w[N]
+)
+{
+	assert( N >= 0 && NULL != src_l && NULL != src_h && NULL != dst && NULL != tmp && 0 != stride );
+
+	// fix for small N
+	if(N < 2)
+	{
+		if(1 == N)
+			dst[0] = src_l[0] * dwt_cdf53_s2_s;
+		return;
+	}
+
+	// copy src into tmp
+	dwt_util_memcpy_stride_s(tmp+0, 2*sizeof(float), src_l, stride,  ceil_div2(N));
+	dwt_util_memcpy_stride_s(tmp+1, 2*sizeof(float), src_h, stride, floor_div2(N));
+
+	// inverse scale
+	for(int i=0; i<N; i+=2)
+		tmp[i] = tmp[i] * dwt_cdf53_s2_s;
+	for(int i=1; i<N; i+=2)
+		tmp[i] = tmp[i] * dwt_cdf53_s1_s;
+
+	// backward update 1 + backward predict 1
+	for(int i=2; i<N-(N&1); i+=2)
+	{
+		float wL = w[i-1];
+		float wR = w[i+0];
+
+		tmp[i] -= ( wL*tmp[i-1] + wR*tmp[i+1] ) / ( 2.f*(wL+wR) );
+	}
+
+	tmp[0] -= 2 * dwt_cdf53_u1_s * tmp[1];
+
+	if(is_odd(N))
+		tmp[N-1] -= 2 * dwt_cdf53_u1_s * tmp[N-2];
+	else
+		tmp[N-1] += 2 * dwt_cdf53_p1_s * tmp[N-2];
+
+	for(int i=1; i<N-2+(N&1); i+=2)
+	{
+		float wL = w[i-1];
+		float wR = w[i+0];
+
+		tmp[i] += ( wL*tmp[i-1] + wR*tmp[i+1] ) / (wL+wR);
+	}
 
 	// copy tmp into dst
 	dwt_util_memcpy_stride_s(dst, stride, tmp, sizeof(float), N);
@@ -15649,6 +15813,143 @@ void dwt_cdf53_2f_s(
 	}
 }
 
+void dwt_eaw53_2f_s(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int *j_max_ptr,
+	int decompose_one,
+	int zero_padding,
+	float *wH[],
+	float *wV[]
+)
+{
+	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
+	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
+
+	float temp[size_o_big_max];
+	if(NULL == temp)
+		abort();
+
+	int j = 0;
+
+	const int j_limit = ceil_log2(decompose_one?size_o_big_max:size_o_big_min);
+
+	if( *j_max_ptr < 0 || *j_max_ptr > j_limit )
+		*j_max_ptr = j_limit;
+
+	for(;;)
+	{
+		if( *j_max_ptr == j )
+			break;
+
+// 		dwt_util_log(LOG_DBG, "FWD-EAW-5/3: j = %i with wH[%i] wV[%i]\n", j, j, j);
+
+		const int size_o_src_x = ceil_div_pow2(size_o_big_x, j  );
+		const int size_o_src_y = ceil_div_pow2(size_o_big_y, j  );
+		const int size_o_dst_x = ceil_div_pow2(size_o_big_x, j+1);
+		const int size_o_dst_y = ceil_div_pow2(size_o_big_y, j+1);
+		const int size_i_src_x = ceil_div_pow2(size_i_big_x, j  );
+		const int size_i_src_y = ceil_div_pow2(size_i_big_y, j  );
+
+		wH[j] = dwt_util_alloc(size_o_src_y * size_i_src_x, sizeof(float));
+		wV[j] = dwt_util_alloc(size_o_src_x * size_i_src_y, sizeof(float));
+
+		#pragma omp parallel for private(temp) schedule(static, ceil_div(size_o_src_y, omp_get_num_threads()))
+		for(int y = 0; y < size_o_src_y; y++)
+			dwt_eaw53_f_ex_stride_s(
+				addr2_s(ptr,y,0,stride_x,stride_y),
+				addr2_s(ptr,y,0,stride_x,stride_y),
+				addr2_s(ptr,y,size_o_dst_x,stride_x,stride_y),
+				temp,
+				size_i_src_x, // N
+				stride_y,
+				&wH[j][y*size_i_src_x]
+			);
+		#pragma omp parallel for private(temp) schedule(static, ceil_div(size_o_src_x, omp_get_num_threads()))
+		for(int x = 0; x < size_o_src_x; x++)
+			dwt_eaw53_f_ex_stride_s(
+				addr2_s(ptr,0,x,stride_x,stride_y),
+				addr2_s(ptr,0,x,stride_x,stride_y),
+				addr2_s(ptr,size_o_dst_y,x,stride_x,stride_y),
+				temp,
+				size_i_src_y, // N
+				stride_x,
+				&wV[j][x*size_i_src_y]
+			);
+
+		if(zero_padding)
+		{
+			#pragma omp parallel for schedule(static, ceil_div(size_o_src_y, omp_get_num_threads()))
+			for(int y = 0; y < size_o_src_y; y++)
+				dwt_zero_padding_f_stride_s(
+					addr2_s(ptr,y,0,stride_x,stride_y),
+					addr2_s(ptr,y,size_o_dst_x,stride_x,stride_y),
+					size_i_src_x,
+					size_o_dst_x,
+					size_o_src_x-size_o_dst_x,
+					stride_y);
+			#pragma omp parallel for schedule(static, ceil_div(size_o_src_x, omp_get_num_threads()))
+			for(int x = 0; x < size_o_src_x; x++)
+				dwt_zero_padding_f_stride_s(
+					addr2_s(ptr,0,x,stride_x,stride_y),
+					addr2_s(ptr,size_o_dst_y,x,stride_x,stride_y),
+					size_i_src_y,
+					size_o_dst_y,
+					size_o_src_y-size_o_dst_y,
+					stride_x);
+		}
+
+		j++;
+	}
+}
+
+void dwt_eaw53_2f_dummy_s(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int *j_max_ptr,
+	int decompose_one
+)
+{
+	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
+	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
+
+	const int j_limit = ceil_log2(decompose_one?size_o_big_max:size_o_big_min);
+
+	if( *j_max_ptr < 0 || *j_max_ptr > j_limit )
+		*j_max_ptr = j_limit;
+}
+
+void dwt_cdf53_2f_dummy_s(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int *j_max_ptr,
+	int decompose_one
+)
+{
+	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
+	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
+
+	const int j_limit = ceil_log2(decompose_one?size_o_big_max:size_o_big_min);
+
+	if( *j_max_ptr < 0 || *j_max_ptr > j_limit )
+		*j_max_ptr = j_limit;
+}
+
 void dwt_interp53_2f_s(
 	void *ptr,
 	int stride_x,
@@ -16545,6 +16846,92 @@ void dwt_cdf53_2i_s(
 				temp,
 				size_i_dst_y,
 				stride_x);
+
+		if(zero_padding)
+		{
+			#pragma omp parallel for schedule(static, ceil_div(size_o_dst_y, omp_get_num_threads()))
+			for(int y = 0; y < size_o_dst_y; y++)
+				dwt_zero_padding_i_stride_s(
+					addr2_s(ptr,y,0,stride_x,stride_y),
+					size_i_dst_x,
+					size_o_dst_x,
+					stride_y);
+			#pragma omp parallel for schedule(static, ceil_div(size_o_dst_x, omp_get_num_threads()))
+			for(int x = 0; x < size_o_dst_x; x++)
+				dwt_zero_padding_i_stride_s(
+					addr2_s(ptr,0,x,stride_x,stride_y),
+					size_i_dst_y,
+					size_o_dst_y,
+					stride_x);
+		}
+
+		j--;
+	}
+}
+
+void dwt_eaw53_2i_s(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	int decompose_one,
+	int zero_padding,
+	float *wH[],
+	float *wV[]
+)
+{
+	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
+	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
+
+	float temp[size_o_big_max];
+	if(NULL == temp)
+		abort();
+
+	int j = ceil_log2(decompose_one?size_o_big_max:size_o_big_min);
+
+	if( j_max >= 0 && j_max < j )
+		j = j_max;
+
+	for(;;)
+	{
+		if(0 == j)
+			break;
+
+// 		dwt_util_log(LOG_DBG, "INV-EAW-5/3: j = %i with wH[%i] wV[%i]\n", j, j-1, j-1);
+
+		const int size_o_src_x = ceil_div_pow2(size_o_big_x, j  );
+		const int size_o_src_y = ceil_div_pow2(size_o_big_y, j  );
+		const int size_o_dst_x = ceil_div_pow2(size_o_big_x, j-1);
+		const int size_o_dst_y = ceil_div_pow2(size_o_big_y, j-1);
+		const int size_i_dst_x = ceil_div_pow2(size_i_big_x, j-1);
+		const int size_i_dst_y = ceil_div_pow2(size_i_big_y, j-1);
+
+		#pragma omp parallel for private(temp) schedule(static, ceil_div(size_o_dst_x, omp_get_num_threads()))
+		for(int x = 0; x < size_o_dst_x; x++)
+			dwt_eaw53_i_ex_stride_s(
+				addr2_s(ptr,0,x,stride_x,stride_y),
+				addr2_s(ptr,size_o_src_y,x,stride_x,stride_y),
+				addr2_s(ptr,0,x,stride_x,stride_y),
+				temp,
+				size_i_dst_y, // N
+				stride_x,
+				&wV[j-1][x*size_i_dst_y]
+			);
+		#pragma omp parallel for private(temp) schedule(static, ceil_div(size_o_dst_y, omp_get_num_threads()))
+		for(int y = 0; y < size_o_dst_y; y++)
+			dwt_eaw53_i_ex_stride_s(
+				addr2_s(ptr,y,0,stride_x,stride_y),
+				addr2_s(ptr,y,size_o_src_x,stride_x,stride_y),
+				addr2_s(ptr,y,0,stride_x,stride_y),
+				temp,
+				size_i_dst_x, // N
+				stride_y,
+				&wH[j-1][y*size_i_dst_x]
+			);
 
 		if(zero_padding)
 		{
