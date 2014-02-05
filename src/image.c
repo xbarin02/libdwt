@@ -269,7 +269,7 @@ image_t *image_extend_s(
 {
 	image_t *dst = image_create_s(2*pixels+src->size_x, 2*pixels+src->size_y);
 
-	dwt_util_copy2_s(
+	dwt_util_copy3_s(
 		src->ptr,
 		addr2_s(dst->ptr, pixels, pixels, dst->stride_x, dst->stride_y),
 		src->stride_x,

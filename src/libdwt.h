@@ -1324,7 +1324,7 @@ void dwt_util_copy_s(
 /**
  * @brief Copy one image into another.
  */
-void dwt_util_copy2_s(
+void dwt_util_copy3_s(
 	const void *src,
 	void *dst,
 	int src_stride_x,

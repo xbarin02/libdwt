@@ -19272,7 +19272,7 @@ void dwt_util_copy_s(
 	FUNC_END;
 }
 
-void dwt_util_copy2_s(
+void dwt_util_copy3_s(
 	const void *src,
 	void *dst,
 	int src_stride_x,
