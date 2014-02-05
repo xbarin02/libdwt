@@ -1324,6 +1324,20 @@ void dwt_util_copy_s(
 /**
  * @brief Copy one image into another.
  */
+void dwt_util_copy2_s(
+	const void *src,
+	void *dst,
+	int src_stride_x,
+	int src_stride_y,
+	int dst_stride_x,
+	int dst_stride_y,
+	int size_x,
+	int size_y
+);
+
+/**
+ * @brief Copy one image into another.
+ */
 void dwt_util_copy_i(
 	const void *src,	///< pointer to data of source image
 	void *dst,		///< pointer to (already allocated) data of destination

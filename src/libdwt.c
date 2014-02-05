@@ -19272,6 +19272,35 @@ void dwt_util_copy_s(
 	FUNC_END;
 }
 
+void dwt_util_copy2_s(
+	const void *src,
+	void *dst,
+	int src_stride_x,
+	int src_stride_y,
+	int dst_stride_x,
+	int dst_stride_y,
+	int size_x,
+	int size_y
+)
+{
+	FUNC_BEGIN;
+
+	assert( src != NULL && dst != NULL && size_x >= 0 && size_y >= 0 );
+
+	for(int y = 0; y < size_y; y++)
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			const float src_coeff = *addr2_const_s(src, y, x, src_stride_x, src_stride_y);
+			float *dst_coeff = addr2_s(dst, y, x, dst_stride_x, dst_stride_y);
+
+			*dst_coeff = src_coeff;
+		}
+	}
+
+	FUNC_END;
+}
+
 void dwt_util_copy_d(
 	const void *src,
 	void *dst,
