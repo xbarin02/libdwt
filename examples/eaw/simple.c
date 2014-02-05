@@ -8,17 +8,18 @@
 
 #define EAW
 
-int main()
+int main(int argc, char *argv[])
 {
+	const char *path = argc > 1 ? argv[1] : "Lenna.pgm";
+
 	// init platform
 	dwt_util_init();
 
 	// image size
-	const int x = 512, y = 512;
+	int x, y;
 
-	// compute optimal stride
-	const int stride_y = sizeof(float);
-	const int stride_x = dwt_util_get_opt_stride(stride_y * x);
+	// image strides
+	int stride_x, stride_y;
 
 	// image data
 	void *data1, *data2, *data3;
@@ -35,6 +36,32 @@ int main()
 	dwt_util_log(LOG_INFO, "Using stride of %i bytes.\n", stride_x);
 	dwt_util_log(LOG_INFO, "Image occupies %i KiB of memory.\n", dwt_util_image_size(stride_x, stride_y, x, y)/1024);
 
+	dwt_util_log(LOG_INFO, "Loading a file \"%s\"...\n", path);
+
+	if( dwt_util_load_from_pgm_s(path, 1.0, &data1, &stride_x, &stride_y, &x, &y) )
+	{
+		// error occurred, use default test image
+		dwt_util_log(LOG_ERR, "Unable to load an image, using the default one.\n");
+
+		// default size
+		x = 512;
+		y = 512;
+
+		stride_y = sizeof(float);
+		stride_x = dwt_util_get_opt_stride(stride_y * x);
+
+		dwt_util_alloc_image(&data1, stride_x, stride_y, x, y);
+		const int fill_type = 1;
+		dwt_util_test_image_fill2_s(data1, stride_x, stride_y, x, y, 0, fill_type);
+	}
+
+	dwt_util_log(LOG_INFO, "generating test images...\n");
+
+	// create test images
+	dwt_util_alloc_image(&data2, stride_x, stride_y, x, y);
+	dwt_util_copy_s(data1, data2, stride_x, stride_y, x, y);
+	dwt_util_alloc_image(&data3, stride_x, stride_y, x, y);
+
 	// full decomposition
 	int j = -1;
 
@@ -49,16 +76,6 @@ int main()
 	float *wH[j];
 	float *wV[j];
 #endif
-
-	dwt_util_log(LOG_INFO, "generating test images...\n");
-
-	// create test images
-	dwt_util_alloc_image(&data1, stride_x, stride_y, x, y);
-	const int fill_type = 1;
-	dwt_util_test_image_fill2_s(data1, stride_x, stride_y, x, y, 0, fill_type);
-	dwt_util_alloc_image(&data2, stride_x, stride_y, x, y);
-	dwt_util_copy_s(data1, data2, stride_x, stride_y, x, y);
-	dwt_util_alloc_image(&data3, stride_x, stride_y, x, y);
 
 	// init timer
 	dwt_clock_t time_start;
