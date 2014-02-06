@@ -10612,12 +10612,22 @@ void dwt_cdf53_f_ex_stride_s(
 }
 
 static
-float dwt_eaw53_w(float n, float m)
+float dwt_eaw_w(float n, float m)
 {
 	const float alpha = 1.0;
 	const float eps = 1.0e-5f;
 
 	return 1.f / (powf(fabsf(n-m), alpha) + eps);
+}
+
+static
+void dwt_calc_eaw_w(float *w, float *arr, int N)
+{
+	for(int i = 0; i < N-1; i++)
+	{
+		w[i] = dwt_eaw_w(arr[i], arr[i+1]);
+	}
+	w[N-1] = 0.f; // not necessary
 }
 
 // http://www.cs.huji.ac.il/~raananf/projects/eaw/
@@ -10646,11 +10656,7 @@ void dwt_eaw53_f_ex_stride_s(
 	dwt_util_memcpy_stride_s(tmp, sizeof(float), src, stride, N);
 
 	// FIXME: move outside
-	for(int i=0; i<N-1; i++)
-	{
-		w[i] = dwt_eaw53_w(tmp[i], tmp[i+1]);
-	}
-	w[N-1] = 0.f; // not necessary
+	dwt_calc_eaw_w(w, tmp, N);
 
 	// predict 1 + update 1
 	for(int i=1; i<N-2+(N&1); i+=2)
@@ -15875,8 +15881,6 @@ void dwt_eaw53_2f_s(
 		if( *j_max_ptr == j )
 			break;
 
-// 		dwt_util_log(LOG_DBG, "FWD-EAW-5/3: j = %i with wH[%i] wV[%i]\n", j, j, j);
-
 		const int size_o_src_x = ceil_div_pow2(size_o_big_x, j  );
 		const int size_o_src_y = ceil_div_pow2(size_o_big_y, j  );
 		const int size_o_dst_x = ceil_div_pow2(size_o_big_x, j+1);
@@ -16928,8 +16932,6 @@ void dwt_eaw53_2i_s(
 	{
 		if(0 == j)
 			break;
-
-// 		dwt_util_log(LOG_DBG, "INV-EAW-5/3: j = %i with wH[%i] wV[%i]\n", j, j-1, j-1);
 
 		const int size_o_src_x = ceil_div_pow2(size_o_big_x, j  );
 		const int size_o_src_y = ceil_div_pow2(size_o_big_y, j  );
