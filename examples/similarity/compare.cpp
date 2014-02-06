@@ -1,6 +1,9 @@
+#include <vector>
+#include <algorithm>
+#include <numeric>
 #include <cv.h>
 #include <highgui.h>
-#include <math.h>
+#include <cmath>
 
 using namespace std;
 using namespace cv;
@@ -85,6 +88,129 @@ float ssim(const Mat& a, const Mat& b)
 	return getMSSIM(a, b).val[0];
 }
 
+void findBestOffset(const Mat& a, const Mat& b, int &dx, int &dy, int range = 10)
+{
+	const int size_x = a.size().width -2*range;
+	const int size_y = a.size().height-2*range;
+
+	Mat va(a, Rect(range,range,size_x, size_y));
+
+	float max = 0.f;
+	dx = 0;
+	dy = 0;
+
+	for(int yy=-range; yy<=+range; yy++)
+		for(int xx=-range; xx<=+range; xx++)
+		{
+			Mat vb(b, Rect(range+xx,range+yy,size_x, size_y));
+
+			Scalar s = sum(va.mul(vb));
+
+			if( s[0] > max )
+			{
+				max = s[0];
+				dx = xx;
+				dy = yy;
+			}
+		}
+}
+
+float calcDot(const Mat& A, const Mat& B)
+{
+//	const int ksize = a.size().width;
+// 	Mat k = Mat::zeros(ksize, ksize, CV_32F);
+// 	k.at<float>(ksize/2, ksize/2) = 1.f;
+// 	GaussianBlur(k, k, Size(ksize*2+1, ksize*2+1), 0);
+// 	normalize(k, k, ksize*ksize, 0., NORM_L1);
+// 	imshow("k", k);
+
+	Mat a = A.clone();
+	Mat b = B.clone();
+
+	Scalar amean, astddev;
+	Scalar bmean, bstddev;
+
+	meanStdDev(a, amean, astddev);
+	meanStdDev(b, bmean, bstddev);
+
+	a -= amean;
+	b -= bmean;
+
+// 	Mat m = a.mul(b).mul(k);
+	Mat m = a.mul(b);
+	Scalar s = sum(m);
+
+	return s[0];
+}
+
+float patches(const Mat& a, const Mat& b)
+{
+	std::vector<cv::Point2f> c;
+	const int maxCorners = 128;
+	const double minDistance = 50;
+	goodFeaturesToTrack(a, c, maxCorners, 0.20, minDistance);
+
+	const int radius = 10;
+	const int window = 60;
+
+	cerr << "DEBUG: corners=" << c.size() << endl;
+
+	int total = 0;
+	int hit = 0;
+	std::vector<float> dists;
+
+	for(std::vector<cv::Point2f>::size_type i = 0; i != c.size(); i++)
+	{
+		if( c[i].x < window+radius || c[i].y < window+radius )
+			continue;
+		if( c[i].x > a.size().width-window-radius || c[i].y > a.size().height-window-radius )
+			continue;
+
+		// reference patch
+		Mat r(a, Rect(c[i].x-window/2, c[i].y-window/2, window, window));
+		
+// 		imshow("r", r);
+
+		float max_f = 0.f;
+		int max_xx = 0, max_yy = 0;
+		for(int xx=-radius; xx<=+radius; xx++)
+			for(int yy=-radius; yy<=+radius; yy++)
+			{
+				// test patch
+				Mat t(b, Rect(xx+c[i].x-window/2, yy+c[i].y-window/2, window, window));
+				float f = fabsf(calcDot(r, t));
+
+				if( f > max_f )
+				{
+					max_f = f;
+					max_xx = xx;
+					max_yy = yy;
+				}
+			}
+
+		total++;
+		if( abs(max_xx) >= radius || abs(max_yy) >= radius )
+			continue;
+		hit++;
+		float d = sqrt(max_xx*max_xx+max_yy*max_yy);
+// 		cerr << "d=" << d << endl;
+		dists.push_back(d);
+
+// 		Mat t(b, Rect(max_xx+c[i].x-window/2, max_yy+c[i].y-window/2, window, window));
+// 		imshow("t", t);
+// 		waitKey();
+	}
+
+	sort(dists.begin(), dists.end());
+
+	float med = dists.at(hit/2);
+	float avg = std::accumulate(dists.begin(), dists.end(), 0.f) / (float)dists.size();
+
+	cerr << "DEBUG: hits=" << hit << "/" << total << " med=" << med << " avg=" << avg << endl;
+
+	return avg;
+}
+
 int main(int argc, char **argv)
 {
 	bool crop = true;
@@ -162,9 +288,20 @@ int main(int argc, char **argv)
 #endif
 	}
 
-	cout << "mse=" << mse(img0, img1) << endl;
-	cout << "psnr=" << psnr(img0, img1) << endl;
-	cout << "ssim=" << ssim(img0, img1) << endl;
+	int dx,dy;
+	const int range = 10;
+	findBestOffset(img0, img1, dx, dy, range);
+
+	cout << std::fixed;
+	cout << "global=" << sqrt(dx*dx+dy*dy) << endl;
+
+	img0 = Mat(img0, Rect(range+0,  range+0,  img0.size().width-range*2, img0.size().height-range*2));
+	img1 = Mat(img1, Rect(range+dx, range+dy, img1.size().width-range*2, img1.size().height-range*2));
+
+	cout << "mse="     << mse(img0, img1)     << endl;
+	cout << "psnr="    << psnr(img0, img1)    << endl;
+	cout << "ssim="    << ssim(img0, img1)    << endl;
+	cout << "patches=" << patches(img0, img1) << endl;
 
 	return 0;
 }
