@@ -1611,10 +1611,10 @@ int dwt_util_save_to_pgm_d(
 
 /**
  * @brief Load grayscale image from ASCII-type PGM file.
- * 
+ *
  * See <a href="http://netpbm.sourceforge.net/">the home page for Netpbm</a>.
  * This function works with single precision floating point numbers (i.e. double data type).
- * 
+ *
  * @return Returns zero value if success.
  */
 int dwt_util_load_from_pgm_s(
