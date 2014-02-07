@@ -12,6 +12,8 @@ rm -f "${PLOT_FILE}"
 
 echo "Generating [${START}:${STEP}:${STOP}] test files from ${INPUT_FILE} into ${OUTPUT_DIR}..."
 
+mkdir -p "${OUTPUT_DIR}"
+
 for c in $(seq -w "${START}" "${STEP}" "${STOP}"); do
 	OUTPUT_FILE=${OUTPUT_DIR}/$c.mat
 	NORM=$(./vectors "${INPUT_FILE}" "${OUTPUT_FILE}" $c 0 |& grep "diff_norm = " | sed 's/.*= //')
