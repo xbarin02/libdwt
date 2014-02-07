@@ -13,6 +13,9 @@ clean:
 	$(MAKE) -C $(LIBPATH) $@
 	-$(RM) $(BIN) *.o *.elf *.gdb
 
+distclean: clean
+	-$(RM) *.pgm
+
 $(BIN): $(BIN).o $(LIBPATH)/$(LIBNAME).a
 
 $(LIBPATH)/$(LIBNAME).a:
