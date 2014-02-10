@@ -2,7 +2,8 @@ include ../../common.mk
 
 LIBPATH = $(ROOT)/src
 LIBNAME = libdwt
-CXXFLAGS = `pkg-config --cflags OpenEXR` -std=c++98 -pedantic -Wall -Wextra -O2 -I$(LIBPATH)
+CXXFLAGS = -I$(LIBPATH) `pkg-config --cflags OpenEXR` -std=c++98 -pedantic -Wall -Wextra -O2
+CFLAGS += -I$(LIBPATH)
 LDLIBS += `pkg-config --libs OpenEXR` $(LIBPATH)/$(LIBNAME).a
 BIN = hdr
 
