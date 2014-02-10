@@ -10611,10 +10611,12 @@ void dwt_cdf53_f_ex_stride_s(
 	dwt_util_memcpy_stride_s(dst_h, stride, tmp+1, 2*sizeof(float), floor_div2(N));
 }
 
+float g_alpha = 1.0f;
+
 static
 float dwt_eaw_w(float n, float m)
 {
-	const float alpha = 1.0;
+	const float alpha = g_alpha; // 1.0f
 	const float eps = 1.0e-5f;
 
 	return 1.f / (powf(fabsf(n-m), alpha) + eps);
