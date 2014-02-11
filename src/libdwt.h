@@ -738,7 +738,8 @@ void dwt_eaw53_2f_s(
 	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
 	int zero_padding,	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
 	float *wH[],		///< array (according to @e j_max_ptr) of pointers to prediction weights for horizontal passes (data will be allocated by this function)
-	float *wV[]		///< array (according to @e j_max_ptr) of pointers to prediction weights for vertical passes (data will be allocated by this function)
+	float *wV[],		///< array (according to @e j_max_ptr) of pointers to prediction weights for vertical passes (data will be allocated by this function)
+	float alpha
 );
 
 /**

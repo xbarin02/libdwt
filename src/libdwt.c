@@ -10611,23 +10611,20 @@ void dwt_cdf53_f_ex_stride_s(
 	dwt_util_memcpy_stride_s(dst_h, stride, tmp+1, 2*sizeof(float), floor_div2(N));
 }
 
-float g_alpha = 1.0f;
-
 static
-float dwt_eaw_w(float n, float m)
+float dwt_eaw_w(float n, float m, float alpha)
 {
-	const float alpha = g_alpha; // 1.0f
 	const float eps = 1.0e-5f;
 
 	return 1.f / (powf(fabsf(n-m), alpha) + eps);
 }
 
 static
-void dwt_calc_eaw_w(float *w, float *arr, int N)
+void dwt_calc_eaw_w(float *w, float *arr, int N, float alpha)
 {
 	for(int i = 0; i < N-1; i++)
 	{
-		w[i] = dwt_eaw_w(arr[i], arr[i+1]);
+		w[i] = dwt_eaw_w(arr[i], arr[i+1], alpha);
 	}
 	w[N-1] = 0.f; // not necessary
 }
@@ -10641,7 +10638,8 @@ void dwt_eaw53_f_ex_stride_s(
 	float *tmp,
 	int N,
 	int stride,
-	float *w	// float w[N]
+	float *w,	// float w[N]
+	float alpha
 )
 {
 	assert( N >= 0 && NULL != src && NULL != dst_l && NULL != dst_h && NULL != tmp && 0 != stride );
@@ -10658,7 +10656,7 @@ void dwt_eaw53_f_ex_stride_s(
 	dwt_util_memcpy_stride_s(tmp, sizeof(float), src, stride, N);
 
 	// FIXME: move outside
-	dwt_calc_eaw_w(w, tmp, N);
+	dwt_calc_eaw_w(w, tmp, N, alpha);
 
 	// predict 1 + update 1
 	for(int i=1; i<N-2+(N&1); i+=2)
@@ -15861,7 +15859,8 @@ void dwt_eaw53_2f_s(
 	int decompose_one,
 	int zero_padding,
 	float *wH[],
-	float *wV[]
+	float *wV[],
+	float alpha
 )
 {
 	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
@@ -15902,7 +15901,8 @@ void dwt_eaw53_2f_s(
 				temp,
 				size_i_src_x, // N
 				stride_y,
-				&wH[j][y*size_i_src_x]
+				&wH[j][y*size_i_src_x],
+				alpha
 			);
 		#pragma omp parallel for private(temp) schedule(static, ceil_div(size_o_src_x, omp_get_num_threads()))
 		for(int x = 0; x < size_o_src_x; x++)
@@ -15913,7 +15913,8 @@ void dwt_eaw53_2f_s(
 				temp,
 				size_i_src_y, // N
 				stride_x,
-				&wV[j][x*size_i_src_y]
+				&wV[j][x*size_i_src_y],
+				alpha
 			);
 
 		if(zero_padding)

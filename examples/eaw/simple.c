@@ -59,6 +59,10 @@ int main(int argc, char *argv[])
 	dwt_util_copy_s(data1, data2, stride_x, stride_y, x, y);
 	dwt_util_alloc_image(&data3, stride_x, stride_y, x, y);
 
+#ifdef EAW
+	float alpha = 1.0f;
+#endif
+
 	// full decomposition
 	int j = -1;
 
@@ -92,7 +96,7 @@ int main(int argc, char *argv[])
 #ifndef EAW
 	dwt_cdf53_2f_s(data1, stride_x, stride_y, x, y, x, y, &j, 0, 0);
 #else
-	dwt_eaw53_2f_s(data1, stride_x, stride_y, x, y, x, y, &j, 0, 0, wH, wV);
+	dwt_eaw53_2f_s(data1, stride_x, stride_y, x, y, x, y, &j, 0, 0, wH, wV, alpha);
 #endif
 
 	// stop timer
