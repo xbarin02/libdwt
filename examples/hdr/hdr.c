@@ -132,6 +132,111 @@ void image_save_transform_to_pgm_s(image_t *image, const char *path)
 	image_save_to_pgm_s(show, path);
 }
 
+void image_fdwt_eaw53_s(
+	image_t *image,
+	int *levels,
+	float *wH[],
+	float *wV[],
+	float alpha
+)
+{
+	dwt_eaw53_2f_s(
+		image->ptr,
+		image->stride_x,
+		image->stride_y,
+		image->size_x,
+		image->size_y,
+		image->size_x,
+		image->size_y,
+		levels,
+		0,
+		0,
+		wH,
+		wV,
+		alpha
+	);
+}
+
+void image_idwt_eaw53_s(
+	image_t *image,
+	int levels,
+	float *wH[],
+	float *wV[]
+)
+{
+	dwt_eaw53_2i_s(
+		image->ptr,
+		image->stride_x,
+		image->stride_y,
+		image->size_x,
+		image->size_y,
+		image->size_x,
+		image->size_y,
+		levels,
+		0,
+		0,
+		wH,
+		wV
+	);
+}
+
+void image_shift_s(image_t *image, float a)
+{
+	dwt_util_shift_s(
+		image->ptr,
+		image->size_x,
+		image->size_y,
+		image->stride_x,
+		image->stride_y,
+		a
+	);
+}
+
+void image_log_s(image_t *image, float eps)
+{
+	for(int y = 0; y < image->size_y; y++)
+	{
+		for(int x = 0; x < image->size_x; x++)
+		{
+			float *c = image_coeff_s(image, y, x);
+
+			*c = logf(*c + eps);
+		}
+	}
+}
+
+void image_exp_s(image_t *image, float eps)
+{
+	for(int y = 0; y < image->size_y; y++)
+	{
+		for(int x = 0; x < image->size_x; x++)
+		{
+			float *c = image_coeff_s(image, y, x);
+
+			*c = expf(*c) - eps;
+		}
+	}
+}
+
+int image_levels_eaw53_s(image_t *image)
+{
+	int j;
+
+	dwt_eaw53_2f_dummy_s(image->ptr, image->stride_x, image->stride_y, image->size_x, image->size_y, image->size_x, image->size_y, &j, 0);
+
+	return j;
+}
+
+void image_compress_details_s(image_t *image, int levels, float beta)
+{
+	for(int jj = 1; jj <= levels; jj++)
+	{
+		image_compress_subband_s(image, jj, DWT_LH, beta);
+		image_compress_subband_s(image, jj, DWT_HL, beta);
+		image_compress_subband_s(image, jj, DWT_HH, beta);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	const char *path = argc>1 ? argv[1] : "./data/img_light1_lamp250_pos0.exr";
@@ -180,51 +285,29 @@ int main(int argc, char *argv[])
 
 	image_save_to_pgm_s(&yuv[0], "luma.pgm");
 
-	//const float low = 1.0f - image_min_s(&yuv[0]);
-	const float low = 1e-5 - image_min_s(&yuv[0]);
+	const float low = image_min_s(&yuv[0]);
+	const float eps = 1e-5;
+
+	image_shift_s(&yuv[0], -low);
 
 	dwt_util_log(LOG_INFO, "Y_low = %f\n", low);
 
-	for(int y = 0; y < size_y; y++)
-	{
-		for(int x = 0; x < size_x; x++)
-		{
-			float *pY = image_coeff_s(&yuv[0], y, x);
-
-			if( logf(*pY + low) < 0.f )
-				dwt_util_log(LOG_DBG, "oups: log(%f + %f)\n", *pY, low);
-
-			*pY = logf(*pY + low);
-		}
-	}
+	image_log_s(&yuv[0], eps);
 
 	image_save_to_pgm_s(&yuv[0], "logluma.pgm");
 
-	int j = -1;
-	dwt_eaw53_2f_dummy_s(yuv[0].ptr, yuv[0].stride_x, yuv[0].stride_y, yuv[0].size_x, yuv[0].size_y, yuv[0].size_x, yuv[0].size_y, &j, 0);
+	int j = image_levels_eaw53_s(&yuv[0]);
+
 	dwt_util_log(LOG_INFO, "j = %i\n", j);
+
 	float *wH[j];
 	float *wV[j];
 
-	dwt_eaw53_2f_s(
-		yuv[0].ptr,
-		yuv[0].stride_x,
-		yuv[0].stride_y,
-		yuv[0].size_x,
-		yuv[0].size_y,
-		yuv[0].size_x,
-		yuv[0].size_y,
-		&j,
-		0,
-		0,
-		wH,
-		wV
-	);
+	float alpha = 0.8f;
+
+	image_fdwt_eaw53_s(&yuv[0], &j, wH, wV, alpha);
 
 	image_save_transform_to_pgm_s(&yuv[0], "eaw.pgm");
-
-	extern float g_alpha;
-	g_alpha = 0.8f;
 
 #if 0
 	float beta = 0.15f;
@@ -237,38 +320,20 @@ int main(int argc, char *argv[])
 	}
 	image_scale_subband_s(&yuv[0], j, DWT_LL, beta);
 #else
-	float beta = 0.75f; // FIXME
-	for(int jj = 1; jj <= j; jj++)
-	{
-		image_compress_subband_s(&yuv[0], jj, DWT_LH, beta);
-		image_compress_subband_s(&yuv[0], jj, DWT_HL, beta);
-		image_compress_subband_s(&yuv[0], jj, DWT_HH, beta);
-	}
+	float beta = 0.70f;
+
+	image_compress_details_s(&yuv[0], j, beta);
 #endif
 
 	image_save_transform_to_pgm_s(&yuv[0], "eaw_scaled.pgm");
 
-	dwt_eaw53_2i_s(
-		yuv[0].ptr,
-		yuv[0].stride_x,
-		yuv[0].stride_y,
-		yuv[0].size_x,
-		yuv[0].size_y,
-		yuv[0].size_x,
-		yuv[0].size_y,
-		j, 0, 0, wH, wV);
+	image_idwt_eaw53_s(&yuv[0], j, wH, wV);
 
 	image_save_to_pgm_s(&yuv[0], "logluma_scaled.pgm");
 
-	for(int y = 0; y < size_y; y++)
-	{
-		for(int x = 0; x < size_x; x++)
-		{
-			float *pY = image_coeff_s(&yuv[0], y, x);
+	image_exp_s(&yuv[0], eps);
 
-			*pY = expf(*pY) - low;
-		}
-	}
+	image_shift_s(&yuv[0], +low);
 
 	image_save_to_pgm_s(&yuv[0], "luma_scaled.pgm");
 
