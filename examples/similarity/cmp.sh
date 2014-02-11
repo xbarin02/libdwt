@@ -1,12 +1,14 @@
 #!/bin/bash
 
-REFDIR=tmp/Tst2/refImages
+DIR=tmp/Tst6
+
+REFDIR=${DIR}/refImages
 
 IMAGES=( "${REFDIR}"/* )
 IMAGES=( "${IMAGES[@]##*/}" )
 
-TESTDIR=tmp/Tst2
-TESTS=( "WL0" "WL1" "WL2" )
+TESTDIR=${DIR}
+TESTS=( "WL0" "WL1" "WL2" "openGLinterp" )
 
 BIN=./compare
 
