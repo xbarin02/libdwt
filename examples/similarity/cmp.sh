@@ -1,6 +1,8 @@
 #!/bin/bash
 
-DIR=tmp/Tst6
+: ${TST:=Tst6}
+
+DIR=tmp/${TST}
 
 REFDIR=${DIR}/refImages
 

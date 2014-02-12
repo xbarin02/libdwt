@@ -115,14 +115,24 @@ void findBestOffset(const Mat& a, const Mat& b, int &dx, int &dy, int range = 10
 		}
 }
 
+Mat getWindow(const Mat &r)
+{
+	const int size_x = r.size().width;
+	const int size_y = r.size().height;
+
+	Mat k = Mat::zeros(size_x, size_y, CV_32F);
+	k.at<float>(size_x/2, size_y/2) = 1.f;
+	const int kernel_scale = 2;
+	GaussianBlur(k, k, Size((size_x*kernel_scale)|1, (size_y*kernel_scale)|1), 0);
+	normalize(k, k, size_x*size_y, 0., NORM_L1);
+
+	return k;
+}
+
 float calcDot(const Mat& A, const Mat& B)
 {
-//	const int ksize = a.size().width;
-// 	Mat k = Mat::zeros(ksize, ksize, CV_32F);
-// 	k.at<float>(ksize/2, ksize/2) = 1.f;
-// 	GaussianBlur(k, k, Size(ksize*2+1, ksize*2+1), 0);
-// 	normalize(k, k, ksize*ksize, 0., NORM_L1);
-// 	imshow("k", k);
+	const int size_x = A.size().width;
+	const int size_y = A.size().height;
 
 	Mat a = A.clone();
 	Mat b = B.clone();
@@ -136,11 +146,13 @@ float calcDot(const Mat& A, const Mat& B)
 	a -= amean;
 	b -= bmean;
 
-// 	Mat m = a.mul(b).mul(k);
+	// dot product
 	Mat m = a.mul(b);
 	Scalar s = sum(m);
 
-	return s[0];
+	float ncc = (float)s[0] / (float)astddev[0] / (float)bstddev[0] / (float)size_x / (float)size_y;
+
+	return ncc;
 }
 
 float patches(const Mat& a, const Mat& b)
@@ -168,17 +180,20 @@ float patches(const Mat& a, const Mat& b)
 
 		// reference patch
 		Mat r(a, Rect(c[i].x-window/2, c[i].y-window/2, window, window));
+		Mat k = getWindow(r);
+		Mat rk = r.mul(k);
 		
 // 		imshow("r", r);
 
 		float max_f = 0.f;
 		int max_xx = 0, max_yy = 0;
 		for(int xx=-radius; xx<=+radius; xx++)
+		{
 			for(int yy=-radius; yy<=+radius; yy++)
 			{
 				// test patch
 				Mat t(b, Rect(xx+c[i].x-window/2, yy+c[i].y-window/2, window, window));
-				float f = fabsf(calcDot(r, t));
+				float f = fabsf(calcDot(rk, t));
 
 				if( f > max_f )
 				{
@@ -187,17 +202,15 @@ float patches(const Mat& a, const Mat& b)
 					max_yy = yy;
 				}
 			}
+		}
 
 		total++;
 		if( abs(max_xx) >= radius || abs(max_yy) >= radius )
 			continue;
 		hit++;
 		float d = sqrt(max_xx*max_xx+max_yy*max_yy);
-// 		cerr << "d=" << d << endl;
 		dists.push_back(d);
 
-// 		Mat t(b, Rect(max_xx+c[i].x-window/2, max_yy+c[i].y-window/2, window, window));
-// 		imshow("t", t);
 // 		waitKey();
 	}
 
@@ -280,12 +293,6 @@ int main(int argc, char **argv)
 
 		cerr << "Sizes: " << img0.size().width << "x" << img0.size().height << endl;
 		cerr << "Sizes: " << img1.size().width << "x" << img1.size().height << endl;
-#if 0
-		imshow("img0", img0);
-		imshow("img1", img1);
-
-		waitKey();
-#endif
 	}
 
 	int dx,dy;
