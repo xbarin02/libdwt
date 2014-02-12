@@ -11,8 +11,10 @@
  * implemented in C language, a demonstration application written in C++ and
  * employing OpenCV library is enclosed.
  *
- * See <a href="http://www.fit.vutbr.cz/research/view_product.php?id=211&notitle=1">
+ * See <a href="http://www.fit.vutbr.cz/research/view_product.php?id=211">
  * library home page</a> for the latest version.
+ *
+ * See \subpage tutorial subpage.
  *
  * @section Acknowledgment
  * This work has been supported by the EU FP7-ARTEMIS project
