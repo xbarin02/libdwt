@@ -40,3 +40,4 @@ enable OpenMP with -fopenmp.
 * PicoBlaze C Compiler Toolchain V2 (optional on ASVP)
 * Doxygen (optional)
 * gnuplot (optional for examples)
+* OpenEXR (optional)

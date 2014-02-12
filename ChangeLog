@@ -1,5 +1,6 @@
 2014-02-?? David Barina <ibarina@fit.vutbr.cz>
-* Added initial implementation of WCDF 5/3 wavelet (Edge-Avoiding Wavelets)
+* Added initial implementation of WCDF 5/3 wavelet (Edge-Avoiding Wavelets).
+* Added HDR tone mapping example using EAW.
 
 2014-01-31 David Barina <ibarina@fit.vutbr.cz>
 * Added support for interleaved subband image layout.
