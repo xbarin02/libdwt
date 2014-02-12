@@ -1,4 +1,4 @@
-2014-02-?? David Barina <ibarina@fit.vutbr.cz>
+2014-02-12 David Barina <ibarina@fit.vutbr.cz>
 * Added initial implementation of WCDF 5/3 wavelet (Edge-Avoiding Wavelets).
 * Added HDR tone mapping example using EAW.
 
