@@ -4,6 +4,7 @@
 #include <cv.h>
 #include <highgui.h>
 #include <cmath>
+#include <iterator>
 
 using namespace std;
 using namespace cv;
@@ -155,6 +156,18 @@ float calcDot(const Mat& A, const Mat& B)
 	return ncc;
 }
 
+float sqr(float x)
+{
+	return x*x;
+}
+
+ostream& operator<<(ostream& os, const std::vector<float> &v)
+{
+	copy(v.begin(), v.end(), ostream_iterator<float>(os, " "));
+
+	return os;
+}
+
 float patches(const Mat& a, const Mat& b)
 {
 	std::vector<cv::Point2f> c;
@@ -213,6 +226,13 @@ float patches(const Mat& a, const Mat& b)
 
 // 		waitKey();
 	}
+
+	cout << "DEBUG: dists=" << dists << endl;
+
+	// compute ^2
+	transform(dists.begin(), dists.end(), dists.begin(), sqr);
+
+	cout << "DEBUG: dists^2=" << dists << endl;
 
 	sort(dists.begin(), dists.end());
 
