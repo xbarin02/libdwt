@@ -124,6 +124,7 @@
  * transform | float | double | int
  * --------- | ----- | ------ | ---
  * WCDF 5/3  | yes   | no     | no
+ * WCDF 9/7  | yes   | no     | no
  * CDF 5/3   | yes   | yes    | yes
  * CDF 9/7   | yes<sup>*</sup>| yes    | yes
  *
