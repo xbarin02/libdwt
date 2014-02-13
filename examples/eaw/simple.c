@@ -5,8 +5,10 @@
  */
 
 #include "libdwt.h"
+#include "eaw-experimental.h"
 
 #define EAW
+#define CDF97
 
 int main(int argc, char *argv[])
 {
@@ -94,16 +96,24 @@ int main(int argc, char *argv[])
 
 	// forward transform
 #ifndef EAW
+	#ifdef CDF97
+	dwt_cdf97_2f_s(data1, stride_x, stride_y, x, y, x, y, &j, 0, 0);
+	#else
 	dwt_cdf53_2f_s(data1, stride_x, stride_y, x, y, x, y, &j, 0, 0);
+	#endif
 #else
+	#ifdef CDF97
+	dwt_eaw97_2f_s(data1, stride_x, stride_y, x, y, x, y, &j, 0, 0, wH, wV, alpha);
+	#else
 	dwt_eaw53_2f_s(data1, stride_x, stride_y, x, y, x, y, &j, 0, 0, wH, wV, alpha);
+	#endif
 #endif
 
 	// stop timer
 	time_stop = dwt_util_get_clock(type);
 	dwt_util_log(LOG_INFO, "elapsed time: %f secs\n", (double)(time_stop - time_start) / dwt_util_get_frequency(type));
 
-#if 1
+#if 0
 	// reset transform
 	dwt_util_test_image_zero_s(data1, stride_x, stride_y, x, y);
 	int jj = j;
@@ -128,9 +138,17 @@ int main(int argc, char *argv[])
 
 	// inverse transform
 #ifndef EAW
+	#ifdef CDF97
+	dwt_cdf97_2i_s(data1, stride_x, stride_y, x, y, x, y, j, 0, 0);
+	#else
 	dwt_cdf53_2i_s(data1, stride_x, stride_y, x, y, x, y, j, 0, 0);
+	#endif
 #else
+	#ifdef CDF97
+	dwt_eaw97_2i_s(data1, stride_x, stride_y, x, y, x, y, j, 0, 0, wH, wV);
+	#else
 	dwt_eaw53_2i_s(data1, stride_x, stride_y, x, y, x, y, j, 0, 0, wH, wV);
+	#endif
 #endif
 
 	// stop timer
