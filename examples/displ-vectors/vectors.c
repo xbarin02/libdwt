@@ -415,6 +415,8 @@ int main(int argc, char *argv[])
 	image_save_to_pgm_s(d2y, "displ2dwt_y.pgm");
 	image_save_to_pgm_s(ed2x, "edispl2dwt_x.pgm");
 	image_save_to_pgm_s(ed2y, "edispl2dwt_y.pgm");
+	image_save_to_mat_s(ed2x, "edispl2dwt_x.mat");
+	image_save_to_mat_s(ed2y, "edispl2dwt_y.mat");
 
 	image_t *output = image_create_s(4, count2_y * count2_x);
 
