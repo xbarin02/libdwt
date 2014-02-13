@@ -168,6 +168,13 @@ ostream& operator<<(ostream& os, const std::vector<float> &v)
 	return os;
 }
 
+int map2hist(float x, float x_max, int bins)
+{
+	const int bin = (int)roundf( x/x_max * bins );
+
+	return bin < bins ? bin : bins-1;
+}
+
 float patches(const Mat& a, const Mat& b)
 {
 	std::vector<cv::Point2f> c;
@@ -229,6 +236,30 @@ float patches(const Mat& a, const Mat& b)
 
 	cout << "DEBUG: dists=" << dists << endl;
 
+	const float max_dist = roundf(sqrtf(radius*radius*2));
+	const int bins = 10;
+
+	// histogram
+	int hist[bins];
+
+	std::fill(hist, hist+bins, 0);
+
+	for(std::vector<float>::iterator i = dists.begin(); i != dists.end(); ++i)
+		hist[map2hist(*i, max_dist, bins)]++;
+
+	cout << "DEBUG: histogram=";
+	for(int i = 0; i < bins; i++)
+	{
+		cout << (i/(float)bins*max_dist) << ":" << hist[i] << " ";
+	}
+	cout << endl;
+	cout << "DEBUG: histogram_raw=";
+	for(int i = 0; i < bins; i++)
+	{
+		cout << hist[i] << " ";
+	}
+	cout << endl;
+	
 	// compute ^2
 	transform(dists.begin(), dists.end(), dists.begin(), sqr);
 
