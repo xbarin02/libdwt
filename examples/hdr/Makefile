@@ -19,10 +19,13 @@ distclean: clean
 	-$(RM) *.pgm
 
 # link application
-$(BIN): $(BIN).o $(LIBPATH)/$(LIBNAME).a exr.o
+$(BIN): $(BIN).o $(LIBPATH)/$(LIBNAME).a exr.o $(LIBPATH)/eaw-experimental.o
 
 # compile application
 $(BIN).o: $(BIN).c $(LIBPATH)/$(LIBNAME).h exr.h
+
+$(LIBPATH)/eaw-experimental.o: $(LIBPATH)/eaw-experimental.c $(LIBPATH)/eaw-experimental.h
+	$(MAKE) -C $(LIBPATH) eaw-experimental.o
 
 # compile dependency
 $(LIBPATH)/$(LIBNAME).a:

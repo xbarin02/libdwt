@@ -2,6 +2,9 @@
 #include "exr.h"
 #include "image.h"
 #include <math.h>
+#include "eaw-experimental.h"
+
+//#define CDF97
 
 int image_load_from_exr_s(
 	image_t *image,
@@ -157,6 +160,31 @@ void image_fdwt_eaw53_s(
 	);
 }
 
+void image_fdwt_eaw97_s(
+	image_t *image,
+	int *levels,
+	float *wH[],
+	float *wV[],
+	float alpha
+)
+{
+	dwt_eaw97_2f_s(
+		image->ptr,
+		image->stride_x,
+		image->stride_y,
+		image->size_x,
+		image->size_y,
+		image->size_x,
+		image->size_y,
+		levels,
+		0,
+		0,
+		wH,
+		wV,
+		alpha
+	);
+}
+
 void image_idwt_eaw53_s(
 	image_t *image,
 	int levels,
@@ -165,6 +193,29 @@ void image_idwt_eaw53_s(
 )
 {
 	dwt_eaw53_2i_s(
+		image->ptr,
+		image->stride_x,
+		image->stride_y,
+		image->size_x,
+		image->size_y,
+		image->size_x,
+		image->size_y,
+		levels,
+		0,
+		0,
+		wH,
+		wV
+	);
+}
+
+void image_idwt_eaw97_s(
+	image_t *image,
+	int levels,
+	float *wH[],
+	float *wV[]
+)
+{
+	dwt_eaw97_2i_s(
 		image->ptr,
 		image->stride_x,
 		image->stride_y,
@@ -220,7 +271,7 @@ void image_exp_s(image_t *image, float eps)
 
 int image_levels_eaw53_s(image_t *image)
 {
-	int j;
+	int j = -1;
 
 	dwt_eaw53_2f_dummy_s(image->ptr, image->stride_x, image->stride_y, image->size_x, image->size_y, image->size_x, image->size_y, &j, 0);
 
@@ -305,7 +356,11 @@ int main(int argc, char *argv[])
 
 	float alpha = 0.8f;
 
+#ifdef CDF97
+	image_fdwt_eaw97_s(&yuv[0], &j, wH, wV, alpha);
+#else
 	image_fdwt_eaw53_s(&yuv[0], &j, wH, wV, alpha);
+#endif
 
 	image_save_transform_to_pgm_s(&yuv[0], "eaw.pgm");
 
@@ -327,7 +382,11 @@ int main(int argc, char *argv[])
 
 	image_save_transform_to_pgm_s(&yuv[0], "eaw_scaled.pgm");
 
+#ifdef CDF97
+	image_idwt_eaw97_s(&yuv[0], j, wH, wV);
+#else
 	image_idwt_eaw53_s(&yuv[0], j, wH, wV);
+#endif
 
 	image_save_to_pgm_s(&yuv[0], "logluma_scaled.pgm");
 
