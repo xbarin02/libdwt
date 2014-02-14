@@ -247,8 +247,8 @@ int main(int argc, char *argv[])
 
 	int j;
 	// forward transform
-	j = image_fdwt_interp53_s(dx, -1);
-	j = image_fdwt_interp53_s(dy, -1);
+	j = image_fdwt_s(dx, -1, wavelet);
+	j = image_fdwt_s(dy, -1, wavelet);
 	dwt_util_log(LOG_DBG, "Achieved %i levels of DWT\n", j);
 
 	// magnitudes
@@ -334,8 +334,8 @@ int main(int argc, char *argv[])
 #endif
 
 	// inverse transform
-	image_idwt_interp53_s(dx, -1);
-	image_idwt_interp53_s(dy, -1);
+	image_idwt_s(dx, -1, wavelet);
+	image_idwt_s(dy, -1, wavelet);
 
 	// substract the reconstructed image from the input one
 
