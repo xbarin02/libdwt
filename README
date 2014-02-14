@@ -14,6 +14,8 @@ TRANSFORM/TYPE MATRIX
 	+-----------+-------+--------+-----+
 	| CDF 5/3   | yes   | yes    | yes |
 	| CDF 9/7   | yes*  | yes    | yes |
+	| WCDF 5/3  | yes   | no     | no  |
+	| WCDF 9/7  | yes   | no     | no  |
 	+-----------+-------+--------+-----+
 
 	Notes:
