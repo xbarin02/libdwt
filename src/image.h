@@ -102,6 +102,16 @@ int image_fdwt_interp53_s(
 	int levels
 );
 
+int image_fdwt_cdf53_s(
+	image_t *image,
+	int levels
+);
+
+int image_fdwt_cdf97_s(
+	image_t *image,
+	int levels
+);
+
 enum wavelet_t {
 	WAVELET_CDF97 = 0,
 	WAVELET_CDF53,
@@ -110,6 +120,12 @@ enum wavelet_t {
 };
 
 void image_idwt_s(
+	image_t *image,
+	int levels,
+	enum wavelet_t wavelet
+);
+
+int image_fdwt_s(
 	image_t *image,
 	int levels,
 	enum wavelet_t wavelet

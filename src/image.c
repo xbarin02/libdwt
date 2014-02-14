@@ -244,9 +244,63 @@ void image_idwt_s(
 	image_idwt_func[wavelet](image, levels);
 }
 
+typedef
+int (*image_fdwt_func_t)(image_t *, int);
+
+int image_fdwt_s(
+	image_t *image,
+	int levels,
+	enum wavelet_t wavelet
+)
+{
+	image_fdwt_func_t image_fdwt_func[WAVELET_LAST] = {
+		[WAVELET_CDF97] = image_fdwt_cdf97_s,
+		[WAVELET_CDF53] = image_fdwt_cdf53_s,
+		[WAVELET_INTERP53] = image_fdwt_interp53_s,
+	};
+
+	return image_fdwt_func[wavelet](image, levels);
+}
+
 int image_fdwt_interp53_s(image_t *image, int levels)
 {
 	dwt_interp53_2f_s(
+		image->ptr,
+		image->stride_x,
+		image->stride_y,
+		image->size_x,
+		image->size_y,
+		image->size_x,
+		image->size_y,
+		&levels,
+		0,	///< should be row or column of size one pixel decomposed? zero value if not
+		0	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+	);
+
+	return levels;
+}
+
+int image_fdwt_cdf53_s(image_t *image, int levels)
+{
+	dwt_cdf53_2f_s(
+		image->ptr,
+		image->stride_x,
+		image->stride_y,
+		image->size_x,
+		image->size_y,
+		image->size_x,
+		image->size_y,
+		&levels,
+		0,	///< should be row or column of size one pixel decomposed? zero value if not
+		0	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+	);
+
+	return levels;
+}
+
+int image_fdwt_cdf97_s(image_t *image, int levels)
+{
+	dwt_cdf97_2f_s(
 		image->ptr,
 		image->stride_x,
 		image->stride_y,
