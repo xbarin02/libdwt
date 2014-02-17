@@ -10550,6 +10550,43 @@ void dwt_cdf53_f_ex_stride_s(
 	dwt_util_memcpy_stride_s(dst_h, stride, tmp+1, 2*sizeof(float), floor_div2(N));
 }
 
+void dwt_cdf53_f_ex_stride_inplace_s(
+	float *tmp,
+	int N,
+	int stride
+)
+{
+	assert( N >= 0 && NULL != tmp && 0 != stride );
+
+	// fix for small N
+	if(N < 2)
+	{
+		if(1 == N)
+			*addr1_s(tmp,0,stride) *= dwt_cdf53_s1_s;
+		return;
+	}
+
+	// predict 1 + update 1
+	for(int i=1; i<N-2+(N&1); i+=2)
+		*addr1_s(tmp,i,stride) -= dwt_cdf53_p1_s * (*addr1_s(tmp,i-1,stride) + *addr1_s(tmp,i+1,stride));
+
+	if(is_odd(N))
+		*addr1_s(tmp,N-1,stride) += 2 * dwt_cdf53_u1_s * *addr1_s(tmp,N-2,stride);
+	else
+		*addr1_s(tmp,N-1,stride) -= 2 * dwt_cdf53_p1_s * *addr1_s(tmp,N-2,stride);
+
+	*addr1_s(tmp,0,stride) += 2 * dwt_cdf53_u1_s * *addr1_s(tmp,1,stride);
+
+	for(int i=2; i<N-(N&1); i+=2)
+		*addr1_s(tmp,i,stride) += dwt_cdf53_u1_s * (*addr1_s(tmp,i-1,stride) + *addr1_s(tmp,i+1,stride));
+
+	// scale
+	for(int i=0; i<N; i+=2)
+		*addr1_s(tmp,i,stride) *= dwt_cdf53_s1_s;
+	for(int i=1; i<N; i+=2)
+		*addr1_s(tmp,i,stride) *= dwt_cdf53_s2_s;
+}
+
 static
 float dwt_eaw_w(float n, float m, float alpha)
 {
@@ -10564,6 +10601,23 @@ void dwt_calc_eaw_w(float *w, float *arr, int N, float alpha)
 	for(int i = 0; i < N-1; i++)
 	{
 		w[i] = dwt_eaw_w(arr[i], arr[i+1], alpha);
+	}
+	w[N-1] = 0.f; // not necessary
+}
+
+static
+void dwt_calc_eaw_w_stride_s(
+	float *w,
+	float *arr, int N, int stride,
+	float alpha
+)
+{
+	for(int i = 0; i < N-1; i++)
+	{
+		w[i] = dwt_eaw_w(
+			*addr1_s(arr,i,stride),
+			*addr1_s(arr,i+1,stride),
+			alpha);
 	}
 	w[N-1] = 0.f; // not necessary
 }
@@ -10645,6 +10699,74 @@ void dwt_eaw53_f_ex_stride_s(
 	// copy tmp into dst
 	dwt_util_memcpy_stride_s(dst_l, stride, tmp+0, 2*sizeof(float),  ceil_div2(N));
 	dwt_util_memcpy_stride_s(dst_h, stride, tmp+1, 2*sizeof(float), floor_div2(N));
+}
+
+// TODO: test
+void dwt_eaw53_f_ex_stride_inplace_s(
+	float *tmp,
+	int N,
+	int stride,
+	float *w,	// float w[N]
+	float alpha
+)
+{
+	assert( N >= 0 && NULL != tmp && 0 != stride );
+
+	// fix for small N
+	if(N < 2)
+	{
+		if(1 == N)
+			*addr1_s(tmp, 0, stride) *= dwt_cdf53_s1_s;
+		return;
+	}
+
+	// calc weights
+	dwt_calc_eaw_w_stride_s(w, tmp, N, stride, alpha);
+
+	// predict 1 + update 1
+	for(int i=1; i<N-2+(N&1); i+=2)
+	{
+		float wL = w[i-1];
+		float wR = w[i+0];
+
+		*addr1_s(tmp, i, stride) -= (wL * *addr1_s(tmp, i-1, stride) + wR * *addr1_s(tmp, i+1, stride)) / (wL+wR);
+	}
+
+	if( is_odd(N) )
+	{
+		float wL = w[N-2];
+		float wR = w[N-2];
+
+		*addr1_s(tmp, N-1, stride) += (wL * *addr1_s(tmp, N-2, stride) + wR * *addr1_s(tmp, N-2, stride)) / ( 2.f * (wL+wR) );
+	}
+	else
+	{
+		float wL = w[N-2];
+		float wR = w[N-2];
+
+		*addr1_s(tmp, N-1, stride) -= (wL * *addr1_s(tmp, N-2, stride) + wR * *addr1_s(tmp, N-2, stride)) / (wL+wR);
+	}
+
+	{
+		float wL = w[0];
+		float wR = w[0];
+
+		*addr1_s(tmp, 0, stride) += (wL * *addr1_s(tmp, 1, stride) + wR * *addr1_s(tmp, 1, stride)) / ( 2.f * (wL+wR) );
+	}
+
+	for(int i=2; i<N-(N&1); i+=2)
+	{
+		float wL = w[i-1];
+		float wR = w[i+0];
+
+		*addr1_s(tmp, i, stride) += (wL * *addr1_s(tmp, i-1, stride) + wR * *addr1_s(tmp, i+1, stride)) / ( 2.f * (wL+wR) );
+	}
+
+	// scale
+	for(int i=0; i<N; i+=2)
+		*addr1_s(tmp, i, stride) *= dwt_cdf53_s1_s;
+	for(int i=1; i<N; i+=2)
+		*addr1_s(tmp, i, stride) *= dwt_cdf53_s2_s;
 }
 
 // TODO: interpolating version of CDF 5/3
@@ -11284,6 +11406,70 @@ void dwt_eaw53_i_ex_stride_s(
 
 	// copy tmp into dst
 	dwt_util_memcpy_stride_s(dst, stride, tmp, sizeof(float), N);
+}
+
+// TODO: test
+void dwt_eaw53_i_ex_stride_inplace_s(
+	float *tmp,
+	int N,
+	int stride,
+	float *w	// float w[N]
+)
+{
+	assert( N >= 0 && NULL != tmp && 0 != stride );
+
+	// fix for small N
+	if(N < 2)
+	{
+		if(1 == N)
+			*addr1_s(tmp, 0, stride) *= dwt_cdf53_s2_s;
+		return;
+	}
+
+	// inverse scale
+	for(int i=0; i<N; i+=2)
+		*addr1_s(tmp, i, stride) *= dwt_cdf53_s2_s;
+	for(int i=1; i<N; i+=2)
+		*addr1_s(tmp, i, stride) *= dwt_cdf53_s1_s;
+
+	// backward update 1 + backward predict 1
+	for(int i=2; i<N-(N&1); i+=2)
+	{
+		float wL = w[i-1];
+		float wR = w[i+0];
+
+		*addr1_s(tmp, i, stride) -= ( wL * *addr1_s(tmp, i-1, stride) + wR * *addr1_s(tmp, i+1, stride) ) / ( 2.f*(wL+wR) );
+	}
+
+	{
+		float wL = w[0];
+		float wR = w[0];
+
+		*addr1_s(tmp, 0, stride) -= (wL * *addr1_s(tmp, 1, stride) + wR * *addr1_s(tmp, 1, stride)) / ( 2.f * (wL+wR) );
+	}
+
+	if( is_odd(N) )
+	{
+		float wL = w[N-2];
+		float wR = w[N-2];
+		
+		*addr1_s(tmp, N-1, stride) -= (wL * *addr1_s(tmp, N-2, stride) + wR * *addr1_s(tmp, N-2, stride)) / ( 2.f * (wL+wR) );
+	}
+	else
+	{
+		float wL = w[N-2];
+		float wR = w[N-2];
+		
+		*addr1_s(tmp, N-1, stride) += (wL * *addr1_s(tmp, N-2, stride) + wR * *addr1_s(tmp, N-2, stride)) / (wL+wR);
+	}
+
+	for(int i=1; i<N-2+(N&1); i+=2)
+	{
+		float wL = w[i-1];
+		float wR = w[i+0];
+
+		*addr1_s(tmp, i, stride) += ( wL * *addr1_s(tmp, i-1, stride) + wR * *addr1_s(tmp, i+1, stride) ) / (wL+wR);
+	}
 }
 
 void dwt_interp53_i_ex_stride_s(
@@ -15830,6 +16016,55 @@ void dwt_cdf53_2f_s(
 					size_o_src_y-size_o_dst_y,
 					stride_x);
 		}
+
+		j++;
+	}
+}
+
+void dwt_cdf53_2f_inplace_s(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int *j_max_ptr,
+	int decompose_one,
+	int zero_padding
+)
+{
+	const int size_o_big_min = min(size_o_big_x, size_o_big_y);
+	const int size_o_big_max = max(size_o_big_x, size_o_big_y);
+
+	int j = 0;
+
+	const int j_limit = ceil_log2(decompose_one?size_o_big_max:size_o_big_min);
+
+	if( *j_max_ptr < 0 || *j_max_ptr > j_limit )
+		*j_max_ptr = j_limit;
+
+	for(;;)
+	{
+		if( *j_max_ptr == j )
+			break;
+
+		const int size_i_src_x = ceil_div_pow2(size_i_big_x, j  );
+		const int size_i_src_y = ceil_div_pow2(size_i_big_y, j  );
+
+		const int stride_y_j = stride_y * (1 << (j));
+		const int stride_x_j = stride_x * (1 << (j));
+
+		for(int y = 0; y < size_i_src_y; y++)
+			dwt_cdf53_f_ex_stride_inplace_s(
+				addr2_s(ptr,y,0,stride_x_j,stride_y_j),
+				size_i_src_x,
+				stride_y_j);
+		for(int x = 0; x < size_i_src_x; x++)
+			dwt_cdf53_f_ex_stride_inplace_s(
+				addr2_s(ptr,0,x,stride_x_j,stride_y_j),
+				size_i_src_y,
+				stride_x_j);
 
 		j++;
 	}
