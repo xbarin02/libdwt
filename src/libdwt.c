@@ -781,57 +781,6 @@ int is_pow2(
 	return 0 == (x & (x - 1));
 }
 
-/**
- * @brief Power of two using greater or equal to x, i.e. 2^(ceil(log_2(x)).
- */
-static
-int pow2_ceil_log2(
-	int x
-)
-{
-	assert( x > 0 );
-
-	x--;
-
-	unsigned shift = 1;
-
-	while(shift < sizeof(int) * CHAR_BIT)
-	{
-		x |= x >> shift;
-		shift <<= 1;
-	}
-
-	x++;
-
-	return x;
-}
-
-/**
- * @brief Number of 1-bits in x, in parallel.
- */
-static
-int bits(
-	unsigned x
-)
-{
-	x -= x >> 1 & (unsigned)~(unsigned)0/3;
-	x = (x & (unsigned)~(unsigned)0/15*3) + (x >> 2 & (unsigned)~(unsigned)0/15*3);
-	x = (x + (x >> 4)) & (unsigned)~(unsigned)0/255*15;
-	return (x * ((unsigned)~(unsigned)0/255)) >> (sizeof(unsigned) - 1) * CHAR_BIT;
-}
-
-/**
- * @brief Smallest integer not less than the base 2 logarithm of x, i.e. ceil(log_2(x)).
- * @returns (int)ceil(log2(x))
- */
-static
-int ceil_log2(
-	int x
-)
-{
-	return bits(pow2_ceil_log2(x) - 1);
-}
-
 int dwt_util_ceil_log2(
 	int x
 )
@@ -876,18 +825,6 @@ int dwt_util_floor_div(
 	return floor_div(x, y);
 }
 
-/**
- * @returns (int)ceil(i/(double)(1<<j))
- */
-static
-int ceil_div_pow2(
-	int i,
-	int j
-)
-{
-	return (i + (1 << j) - 1) >> j;
-}
-
 /** @returns (int)floor(x/(double)2) */
 static
 int floor_div2(
@@ -907,30 +844,6 @@ int ceil_div2(
 }
 
 /**
- * @brief Minimum of two integers.
- */
-static
-int min(
-	int a,
-	int b
-)
-{
-	return a > b ? b : a;
-}
-
-/**
- * @brief Maximum of two integers.
- */
-static
-int max(
-	int a,
-	int b
-)
-{
-	return a > b ? a : b;
-}
-
-/**
  * @brief returns 1 if x is odd, 0 otherwise; works also for negative numbers
  */
 static
@@ -939,28 +852,6 @@ int is_odd(
 )
 {
 	return x & 1;
-}
-
-/**
- * @brief returns 1 if x is even, 0 otherwise; works also for negative numbers
- */
-static
-int is_even(
-	int x
-)
-{
-	return 1 & ~x;
-}
-
-/**
- * @brief returns closest even integer not larger than x; works also for negative numbers
- */
-static
-int to_even(
-	int x
-)
-{
-	return x & ~1;
 }
 
 static

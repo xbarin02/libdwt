@@ -1,6 +1,9 @@
 #ifndef INLINE_H
 #define INLINE_H
 
+#include <assert.h>
+#include <limits.h>
+
 #ifdef __GNUC__
 	#define UNUSED_FUNC __attribute__ ((unused))
 #else
@@ -274,6 +277,123 @@ int ceil_div(
 )
 {
 	return (x + y - 1) / y;
+}
+
+/**
+ * @brief Minimum of two integers.
+ */
+UNUSED_FUNC
+static
+int min(
+	int a,
+	int b
+)
+{
+	return a > b ? b : a;
+}
+
+/**
+ * @brief Maximum of two integers.
+ */
+UNUSED_FUNC
+static
+int max(
+	int a,
+	int b
+)
+{
+	return a > b ? a : b;
+}
+
+/**
+ * @brief Power of two using greater or equal to x, i.e. 2^(ceil(log_2(x)).
+ */
+UNUSED_FUNC
+static
+int pow2_ceil_log2(
+	int x
+)
+{
+	assert( x > 0 );
+
+	x--;
+
+	unsigned shift = 1;
+
+	while(shift < sizeof(int) * CHAR_BIT)
+	{
+		x |= x >> shift;
+		shift <<= 1;
+	}
+
+	x++;
+
+	return x;
+}
+
+/**
+ * @brief Number of 1-bits in x, in parallel.
+ */
+UNUSED_FUNC
+static
+int bits(
+	unsigned x
+)
+{
+	x -= x >> 1 & (unsigned)~(unsigned)0/3;
+	x = (x & (unsigned)~(unsigned)0/15*3) + (x >> 2 & (unsigned)~(unsigned)0/15*3);
+	x = (x + (x >> 4)) & (unsigned)~(unsigned)0/255*15;
+	return (x * ((unsigned)~(unsigned)0/255)) >> (sizeof(unsigned) - 1) * CHAR_BIT;
+}
+
+/**
+ * @brief Smallest integer not less than the base 2 logarithm of x, i.e. ceil(log_2(x)).
+ * @returns (int)ceil(log2(x))
+ */
+UNUSED_FUNC
+static
+int ceil_log2(
+	int x
+)
+{
+	return bits(pow2_ceil_log2(x) - 1);
+}
+
+/**
+ * @returns (int)ceil(i/(double)(1<<j))
+ */
+UNUSED_FUNC
+static
+int ceil_div_pow2(
+	int i,
+	int j
+)
+{
+	return (i + (1 << j) - 1) >> j;
+}
+
+/**
+ * @brief returns closest even integer not larger than x; works also for negative numbers
+ */
+UNUSED_FUNC
+static
+int to_even(
+	int x
+)
+{
+	return x & ~1;
+}
+
+/**
+ * @brief returns 1 if x is even, 0 otherwise; works also for negative numbers
+ */
+UNUSED_FUNC
+static
+int is_even(
+	int x
+)
+{
+	return 1 & ~x;
 }
 
 #endif
