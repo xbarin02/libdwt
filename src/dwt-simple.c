@@ -1294,7 +1294,6 @@ void fdwt2_cdf97_vertical_s(
 
 		j++;
 	}
-
 }
 
 void fdwt2_cdf53_vertical_s(
@@ -1427,7 +1426,6 @@ void fdwt2_cdf53_vertical_s(
 
 		j++;
 	}
-
 }
 
 void fdwt2_cdf97_horizontal_s(
@@ -1560,7 +1558,6 @@ void fdwt2_cdf97_horizontal_s(
 
 		j++;
 	}
-
 }
 
 void fdwt2_cdf53_horizontal_s(
@@ -1693,7 +1690,6 @@ void fdwt2_cdf53_horizontal_s(
 
 		j++;
 	}
-
 }
 
 void fdwt2_cdf97_diagonal_s(
@@ -1826,7 +1822,6 @@ void fdwt2_cdf97_diagonal_s(
 
 		j++;
 	}
-
 }
 
 void fdwt2_cdf53_diagonal_s(
@@ -1959,5 +1954,4 @@ void fdwt2_cdf53_diagonal_s(
 
 		j++;
 	}
-
 }
