@@ -10701,7 +10701,6 @@ void dwt_eaw53_f_ex_stride_s(
 	dwt_util_memcpy_stride_s(dst_h, stride, tmp+1, 2*sizeof(float), floor_div2(N));
 }
 
-// TODO: test
 void dwt_eaw53_f_ex_stride_inplace_s(
 	float *tmp,
 	int N,
@@ -11408,7 +11407,6 @@ void dwt_eaw53_i_ex_stride_s(
 	dwt_util_memcpy_stride_s(dst, stride, tmp, sizeof(float), N);
 }
 
-// TODO: test
 void dwt_eaw53_i_ex_stride_inplace_s(
 	float *tmp,
 	int N,
@@ -16070,6 +16068,67 @@ void dwt_cdf53_2f_inplace_s(
 	}
 }
 
+void dwt_eaw53_2f_inplace_s(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int *j_max_ptr,
+	int decompose_one,
+	int zero_padding,
+	float *wH[],
+	float *wV[],
+	float alpha
+)
+{
+	const int size_o_big_min = min(size_o_big_x, size_o_big_y);
+	const int size_o_big_max = max(size_o_big_x, size_o_big_y);
+
+	int j = 0;
+
+	const int j_limit = ceil_log2(decompose_one?size_o_big_max:size_o_big_min);
+
+	if( *j_max_ptr < 0 || *j_max_ptr > j_limit )
+		*j_max_ptr = j_limit;
+
+	for(;;)
+	{
+		if( *j_max_ptr == j )
+			break;
+
+		const int size_i_src_x = ceil_div_pow2(size_i_big_x, j  );
+		const int size_i_src_y = ceil_div_pow2(size_i_big_y, j  );
+
+		const int stride_y_j = stride_y * (1 << (j));
+		const int stride_x_j = stride_x * (1 << (j));
+
+		wH[j] = dwt_util_alloc(size_i_src_y * size_i_src_x, sizeof(float));
+		wV[j] = dwt_util_alloc(size_i_src_x * size_i_src_y, sizeof(float));
+
+		for(int y = 0; y < size_i_src_y; y++)
+			dwt_eaw53_f_ex_stride_inplace_s(
+				addr2_s(ptr,y,0,stride_x_j,stride_y_j),
+				size_i_src_x,
+				stride_y_j,
+				&wH[j][y*size_i_src_x],
+       				alpha
+			);
+		for(int x = 0; x < size_i_src_x; x++)
+			dwt_eaw53_f_ex_stride_inplace_s(
+				addr2_s(ptr,0,x,stride_x_j,stride_y_j),
+				size_i_src_y,
+				stride_x_j,
+				&wV[j][x*size_i_src_y],
+       				alpha
+			);
+
+		j++;
+	}
+}
+
 void dwt_eaw53_2f_s(
 	void *ptr,
 	int stride_x,
@@ -16780,6 +16839,59 @@ void dwt_cdf53_2i_inplace_s(
 				addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
 				size_i_dst_y,
 				stride_x_j);
+
+		j--;
+	}
+}
+
+void dwt_eaw53_2i_inplace_s(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	int decompose_one,
+	int zero_padding,
+	float *wH[],
+	float *wV[]
+)
+{
+	const int size_o_big_min = min(size_o_big_x, size_o_big_y);
+	const int size_o_big_max = max(size_o_big_x, size_o_big_y);
+
+	int j = ceil_log2(decompose_one ? size_o_big_max : size_o_big_min);
+
+	if( j_max >= 0 && j_max < j )
+		j = j_max;
+
+	for(;;)
+	{
+		if(0 == j)
+			break;
+
+		const int size_i_dst_x = ceil_div_pow2(size_i_big_x, j-1);
+		const int size_i_dst_y = ceil_div_pow2(size_i_big_y, j-1);
+
+		const int stride_y_j = stride_y * (1 << (j-1));
+		const int stride_x_j = stride_x * (1 << (j-1));
+
+		for(int x = 0; x < size_i_dst_x; x++)
+			dwt_eaw53_i_ex_stride_inplace_s(
+				addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+				size_i_dst_y,
+				stride_x_j,
+				&wV[j-1][x*size_i_dst_y]
+			);
+		for(int y = 0; y < size_i_dst_y; y++)
+			dwt_eaw53_i_ex_stride_inplace_s(
+				addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+				size_i_dst_x,
+				stride_y_j,
+				&wH[j-1][y*size_i_dst_x]
+			);
 
 		j--;
 	}
