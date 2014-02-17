@@ -157,7 +157,7 @@ void fdwt_cdf97_short_s(
 	int stride
 )
 {
-	// TODO: assert
+	assert( arr );
 
 	float alpha = -dwt_cdf97_p1_s;
 	float beta  = +dwt_cdf97_u1_s;
@@ -329,10 +329,9 @@ void fdwt_cdf97_vertical_core_s(
 	l[3] = r[3];
 }
 
-static
 void fdwt_cdf97_vertical_s(
-	float *ptr,
-	int N,
+	void *ptr,
+	int size,
 	int stride
 )
 {
@@ -342,7 +341,7 @@ void fdwt_cdf97_vertical_s(
 	float delta = +dwt_cdf97_u2_s;
 	float zeta  = +dwt_cdf97_s1_s;
 
-	int pairs = (to_even(N)-4)/2;
+	int pairs = (to_even(size)-4)/2;
 
 	float *begin = addr1_s(ptr, 0, stride);
 
@@ -387,10 +386,9 @@ void fdwt_cdf97_vertical_s(
 	*addr1_s(addr, 3-4, stride) = l[3];
 }
 
-static
 void fdwt_cdf97_horizontal_s(
-	float *ptr,
-	int N,
+	void *ptr,
+	int size,
 	int stride
 )
 {
@@ -400,7 +398,7 @@ void fdwt_cdf97_horizontal_s(
 	float delta = +dwt_cdf97_u2_s;
 	float zeta  = +dwt_cdf97_s1_s;
 
-	int pairs = (to_even(N)-4)/2;
+	int pairs = (to_even(size)-4)/2;
 
 	float *begin = addr1_s(ptr, 0, stride);
 
@@ -543,10 +541,9 @@ void fdwt_cdf97_diagonal_core_s(const float *w, const float *v, float *l, float 
 	*addr = addr1_s(*addr,2,stride);
 }
 
-static
 void fdwt_cdf97_diagonal_s(
-	float *ptr,
-	int N,
+	void *ptr,
+	int size,
 	int stride
 )
 {
@@ -556,7 +553,7 @@ void fdwt_cdf97_diagonal_s(
 	float delta = +dwt_cdf97_u2_s;
 	float zeta  = +dwt_cdf97_s1_s;
 
-	int pairs = (to_even(N)-4)/2;
+	int pairs = (to_even(size)-4)/2;
 
 	float *begin = addr1_s(ptr, 0,       stride);
 	float *end   = addr1_s(ptr, 2*pairs, stride);
@@ -564,7 +561,7 @@ void fdwt_cdf97_diagonal_s(
 	if( pairs < 3 )
 	{
 		// NOTE: unfornunately, the diagonal vectorisation cannot handle less than 3 pairs of coefficients
-		fdwt_cdf97_vertical_s(ptr, N, stride);
+		fdwt_cdf97_vertical_s(ptr, size, stride);
 	}
 
 	if( pairs >= 3 )
@@ -656,17 +653,6 @@ void fdwt_cdf97_epilog_s(
 	}
 }
 
-/**
- * data: 2-D
- * type: single (float)
- * transform: DWT
- * direction: forward
- * wavelet: CDF 9/7
- * layout: interleaved subbands (in-place lifting)
- * approach: separable filtering
- * vectorisation: vertical (DL)
- * parallelization: OpenMP
- */
 void fdwt2_cdf97_vertical_s(
 	void *ptr,
 	int size_x,
@@ -802,17 +788,6 @@ void fdwt2_cdf97_vertical_s(
 
 }
 
-/**
- * data: 2-D
- * type: single (float)
- * transform: DWT
- * direction: forward
- * wavelet: CDF 9/7
- * layout: interleaved subbands (in-place lifting)
- * approach: separable filtering
- * vectorisation: horizontal (ML)
- * parallelization: OpenMP
- */
 void fdwt2_cdf97_horizontal_s(
 	void *ptr,
 	int size_x,
@@ -948,17 +923,6 @@ void fdwt2_cdf97_horizontal_s(
 
 }
 
-/**
- * data: 2-D
- * type: single (float)
- * transform: DWT
- * direction: forward
- * wavelet: CDF 9/7
- * layout: interleaved subbands (in-place lifting)
- * approach: separable filtering
- * vectorisation: diagonal (SDL)
- * parallelization: OpenMP
- */
 void fdwt2_cdf97_diagonal_s(
 	void *ptr,
 	int size_x,

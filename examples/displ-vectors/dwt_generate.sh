@@ -7,8 +7,10 @@
 rm -f "${PLOT_FILE}"
 
 : ${START:=1}
-: ${STEP:=10}
-: ${STOP:=200}
+: ${STEP:=1}
+: ${STOP:=88}
+
+: ${WAVELET:=2}
 
 echo "Generating [${START}:${STEP}:${STOP}] test files from ${INPUT_FILE} into ${OUTPUT_DIR}..."
 
@@ -16,7 +18,7 @@ mkdir -p "${OUTPUT_DIR}"
 
 for c in $(seq -w "${START}" "${STEP}" "${STOP}"); do
 	OUTPUT_FILE=${OUTPUT_DIR}/$c.mat
-	NORM=$(./vectors "${INPUT_FILE}" "${OUTPUT_FILE}" $c 0 |& grep "diff_norm = " | sed 's/.*= //')
+	NORM=$(./vectors "${INPUT_FILE}" "${OUTPUT_FILE}" $c 0 ${WAVELET} |& grep "diff_norm = " | sed 's/.*= //')
 	echo "for $c coefficients: $NORM"
 	echo -e "$c\t$NORM" >> "${PLOT_FILE}"
 done
@@ -24,5 +26,8 @@ done
 mv "${PLOT_FILE}" "${PLOT_FILE}".unsorted
 sort -n "${PLOT_FILE}".unsorted > "${PLOT_FILE}"
 
+eval cp \"\${PLOT_FILE}\" \"\${PLOT_FILE/.dat/-${WAVELET}}.dat\"
+
 gnuplot plot.txt
 inkscape -A error.pdf error.svg
+inkscape -A error-wavelets.pdf error-wavelets.svg
