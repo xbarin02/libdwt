@@ -7,6 +7,9 @@
 #include "libdwt.h"
 #include "dwt-simple.h"
 
+#define WAVELET 1
+#define VECTORISATION 2
+
 int main()
 {
 	// init platform
@@ -18,7 +21,7 @@ int main()
 	dwt_util_set_accel(0);
 
 	// image size
-	for(int size=512; size<=513; size++)
+	for(int size = 512; size <= 513; size++)
 	{
 		dwt_util_log(LOG_INFO, "size=%i\n", size);
 
@@ -54,11 +57,28 @@ int main()
 		time_start = dwt_util_get_clock(type);
 
 		// forward transform
-		//dwt_cdf97_2f_inplace_s(data1, stride_x, stride_y, x, y, x, y, &j, 1, 0);
-		//dwt_cdf97_2f_inplace_sdl_s(data1, stride_x, stride_y, x, y, x, y, &j, 1, 0);
+#if WAVELET == 0
+	#if VECTORISATION == 0
+		fdwt2_cdf97_horizontal_s(
+	#endif
+	#if VECTORISATION == 1
+		fdwt2_cdf97_vertical_s(
+	#endif
+	#if VECTORISATION == 2
 		fdwt2_cdf97_diagonal_s(
-		//fdwt2_cdf97_vertical_s(
-		//fdwt2_cdf97_horizontal_s(
+	#endif
+#endif
+#if WAVELET == 1
+	#if VECTORISATION == 0
+		fdwt2_cdf53_horizontal_s(
+	#endif
+	#if VECTORISATION == 1
+		fdwt2_cdf53_vertical_s(
+	#endif
+	#if VECTORISATION == 2
+		fdwt2_cdf53_diagonal_s(
+	#endif
+#endif
 			data1,
 			x,
 			y,
@@ -81,7 +101,12 @@ int main()
 		time_start = dwt_util_get_clock(type);
 
 		// inverse transform
+#if WAVELET == 0
 		dwt_cdf97_2i_inplace_s(data1, stride_x, stride_y, x, y, x, y, j, 1, 0);
+#endif
+#if WAVELET == 1
+		dwt_cdf53_2i_inplace_s(data1, stride_x, stride_y, x, y, x, y, j, 1, 0);
+#endif
 
 		// stop timer
 		time_stop = dwt_util_get_clock(type);
@@ -92,15 +117,23 @@ int main()
 			dwt_util_log(LOG_INFO, "images differs\n");
 		else
 			dwt_util_log(LOG_INFO, "success\n");
-		
-		// release platform resources
-		dwt_util_finish();
+
+#if 0
+		// save images into files
+		dwt_util_log(LOG_INFO, "saving...\n");
+		dwt_util_save_to_pgm_s("data1.pgm", 1.0, data1, stride_x, stride_y, x, y);
+		dwt_util_save_to_pgm_s("data2.pgm", 1.0, data2, stride_x, stride_y, x, y);
+		dwt_util_save_to_pgm_s("data3.pgm", 1.0, data3, stride_x, stride_y, x, y);
+#endif
 
 		// free allocated memory
 		dwt_util_free_image(&data1);
 		dwt_util_free_image(&data2);
 		dwt_util_free_image(&data3);
 	}
+
+	// release platform resources
+	dwt_util_finish();
 
 	return 0;
 }
