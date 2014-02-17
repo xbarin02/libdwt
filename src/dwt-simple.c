@@ -1248,28 +1248,26 @@ void fdwt2_cdf97_vertical_s(
 			}
 		}
 
+		if( size_x_j > 1 && size_x_j >= 5 )
 		{
-			if( size_x_j > 1 && size_x_j >= 5 )
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < size_y_j; y++)
 			{
-				#pragma omp parallel for schedule(static, threads_segment_y)
-				for(int y = 0; y < size_y_j; y++)
-				{
-					fdwt_cdf97_vertical_s(
-						addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
-						size_x_j-offset,
-						stride_y_j);
-				}
+				fdwt_cdf97_vertical_s(
+					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
+					size_x_j-offset,
+					stride_y_j);
 			}
-			if( size_y_j > 1 && size_y_j >= 5 )
+		}
+		if( size_y_j > 1 && size_y_j >= 5 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_x_j; x++)
 			{
-				#pragma omp parallel for schedule(static, threads_segment_x)
-				for(int x = 0; x < size_x_j; x++)
-				{
-					fdwt_cdf97_vertical_s(
-						addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
-						size_y_j-offset,
-						stride_x_j);
-				}
+				fdwt_cdf97_vertical_s(
+					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
+					size_y_j-offset,
+					stride_x_j);
 			}
 		}
 
@@ -1383,28 +1381,26 @@ void fdwt2_cdf53_vertical_s(
 			}
 		}
 
+		if( size_x_j > 1 && size_x_j >= 3 )
 		{
-			if( size_x_j > 1 && size_x_j >= 3 )
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < size_y_j; y++)
 			{
-				#pragma omp parallel for schedule(static, threads_segment_y)
-				for(int y = 0; y < size_y_j; y++)
-				{
-					fdwt_cdf53_vertical_s(
-						addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
-						size_x_j-offset,
-						stride_y_j);
-				}
+				fdwt_cdf53_vertical_s(
+					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
+					size_x_j-offset,
+					stride_y_j);
 			}
-			if( size_y_j > 1 && size_y_j >= 3 )
+		}
+		if( size_y_j > 1 && size_y_j >= 3 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_x_j; x++)
 			{
-				#pragma omp parallel for schedule(static, threads_segment_x)
-				for(int x = 0; x < size_x_j; x++)
-				{
-					fdwt_cdf53_vertical_s(
-						addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
-						size_y_j-offset,
-						stride_x_j);
-				}
+				fdwt_cdf53_vertical_s(
+					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
+					size_y_j-offset,
+					stride_x_j);
 			}
 		}
 
@@ -1518,28 +1514,26 @@ void fdwt2_cdf97_horizontal_s(
 			}
 		}
 
+		if( size_x_j > 1 && size_x_j >= 5 )
 		{
-			if( size_x_j > 1 && size_x_j >= 5 )
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < size_y_j; y++)
 			{
-				#pragma omp parallel for schedule(static, threads_segment_y)
-				for(int y = 0; y < size_y_j; y++)
-				{
-					fdwt_cdf97_horizontal_s(
-						addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
-						size_x_j-offset,
-						stride_y_j);
-				}
+				fdwt_cdf97_horizontal_s(
+					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
+					size_x_j-offset,
+					stride_y_j);
 			}
-			if( size_y_j > 1 && size_y_j >= 5 )
+		}
+		if( size_y_j > 1 && size_y_j >= 5 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_x_j; x++)
 			{
-				#pragma omp parallel for schedule(static, threads_segment_x)
-				for(int x = 0; x < size_x_j; x++)
-				{
-					fdwt_cdf97_horizontal_s(
-						addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
-						size_y_j-offset,
-						stride_x_j);
-				}
+				fdwt_cdf97_horizontal_s(
+					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
+					size_y_j-offset,
+					stride_x_j);
 			}
 		}
 
@@ -1653,28 +1647,26 @@ void fdwt2_cdf53_horizontal_s(
 			}
 		}
 
+		if( size_x_j > 1 && size_x_j >= 3 )
 		{
-			if( size_x_j > 1 && size_x_j >= 3 )
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < size_y_j; y++)
 			{
-				#pragma omp parallel for schedule(static, threads_segment_y)
-				for(int y = 0; y < size_y_j; y++)
-				{
-					fdwt_cdf53_horizontal_s(
-						addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
-						size_x_j-offset,
-						stride_y_j);
-				}
+				fdwt_cdf53_horizontal_s(
+					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
+					size_x_j-offset,
+					stride_y_j);
 			}
-			if( size_y_j > 1 && size_y_j >= 3 )
+		}
+		if( size_y_j > 1 && size_y_j >= 3 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_x_j; x++)
 			{
-				#pragma omp parallel for schedule(static, threads_segment_x)
-				for(int x = 0; x < size_x_j; x++)
-				{
-					fdwt_cdf53_horizontal_s(
-						addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
-						size_y_j-offset,
-						stride_x_j);
-				}
+				fdwt_cdf53_horizontal_s(
+					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
+					size_y_j-offset,
+					stride_x_j);
 			}
 		}
 
@@ -1788,28 +1780,26 @@ void fdwt2_cdf97_diagonal_s(
 			}
 		}
 
+		if( size_x_j > 1 && size_x_j >= 5 )
 		{
-			if( size_x_j > 1 && size_x_j >= 5 )
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < size_y_j; y++)
 			{
-				#pragma omp parallel for schedule(static, threads_segment_y)
-				for(int y = 0; y < size_y_j; y++)
-				{
-					fdwt_cdf97_diagonal_s(
-						addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
-						size_x_j-offset,
-						stride_y_j);
-				}
+				fdwt_cdf97_diagonal_s(
+					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
+					size_x_j-offset,
+					stride_y_j);
 			}
-			if( size_y_j > 1 && size_y_j >= 5 )
+		}
+		if( size_y_j > 1 && size_y_j >= 5 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_x_j; x++)
 			{
-				#pragma omp parallel for schedule(static, threads_segment_x)
-				for(int x = 0; x < size_x_j; x++)
-				{
-					fdwt_cdf97_diagonal_s(
-						addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
-						size_y_j-offset,
-						stride_x_j);
-				}
+				fdwt_cdf97_diagonal_s(
+					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
+					size_y_j-offset,
+					stride_x_j);
 			}
 		}
 
@@ -1923,28 +1913,26 @@ void fdwt2_cdf53_diagonal_s(
 			}
 		}
 
+		if( size_x_j > 1 && size_x_j >= 3 )
 		{
-			if( size_x_j > 1 && size_x_j >= 3 )
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < size_y_j; y++)
 			{
-				#pragma omp parallel for schedule(static, threads_segment_y)
-				for(int y = 0; y < size_y_j; y++)
-				{
-					fdwt_cdf53_diagonal_s(
-						addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
-						size_x_j-offset,
-						stride_y_j);
-				}
+				fdwt_cdf53_diagonal_s(
+					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
+					size_x_j-offset,
+					stride_y_j);
 			}
-			if( size_y_j > 1 && size_y_j >= 3 )
+		}
+		if( size_y_j > 1 && size_y_j >= 3 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_x_j; x++)
 			{
-				#pragma omp parallel for schedule(static, threads_segment_x)
-				for(int x = 0; x < size_x_j; x++)
-				{
-					fdwt_cdf53_diagonal_s(
-						addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
-						size_y_j-offset,
-						stride_x_j);
-				}
+				fdwt_cdf53_diagonal_s(
+					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
+					size_y_j-offset,
+					stride_x_j);
 			}
 		}
 
