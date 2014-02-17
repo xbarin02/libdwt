@@ -871,6 +871,28 @@ void dwt_cdf97_2i_inplace_s(
 );
 
 /**
+ * @brief Inverse image fast wavelet transform using CDF 5/3 wavelet and lifting scheme, in-place version.
+ *
+ * This function works on image data itself, i.e. no data is copied. That has the consequence the DWT subbands are interleaved in place of the original image.
+ *
+ * This function works with single precision floating point numbers (i.e. float data type).
+ *
+ * @warning experimental
+ */
+void dwt_cdf53_2i_inplace_s(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< pointer to the number of achieved decomposition levels (scales)
+	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+);
+
+/**
  * @brief Inverse image fast wavelet transform using CDF 9/7 wavelet and lifting scheme, out-of-place version.
  *
  * This function works with single precision floating point numbers (i.e. float data type).
