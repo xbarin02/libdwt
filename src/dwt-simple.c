@@ -128,6 +128,20 @@ void op2s_sdl_op_s_ref(float *z, const float *c, const float *w, const float *l,
 }
 
 static
+void op2s_sdl_op_s_ref_eaw(
+	float *z,
+	const float *c,
+	const float *w, // [beta] [alpha]
+	const float *l,
+	const float *r,
+	const float *eaw_w // [betaL] [betaR] [-] [alphaL] [alphaR]
+)
+{
+	z[1] = c[1] + ( eaw_w[3]*l[1] + eaw_w[4]*r[1] ) / (eaw_w[3]+eaw_w[4]) * (2.f*w[1]); // alpha
+	z[0] = c[0] + ( eaw_w[0]*l[0] + eaw_w[1]*r[0] ) / (eaw_w[0]+eaw_w[1]) * (2.f*w[0]); // beta
+}
+
+static
 void op4s_sdl_update_s_ref(float *c, float *l, float *r, const float *z)
 {
 	c[0] = l[0];
@@ -226,6 +240,51 @@ void op2s_sdl_pass_fwd_prolog_stride_s_ref(const float *w, const float *v, float
 }
 
 static
+void op2s_sdl_pass_fwd_prolog_stride_s_ref_eaw(
+	const float *w,
+	const float *v,
+	float *l,
+	float *c,
+	float *r,
+	float *z,
+	float *in,
+	float *out,
+	float **addr,
+	int stride,
+	const float *eaw_w
+)
+{
+	UNUSED(v);
+	UNUSED(out);
+
+	// shuffle
+	op2s_sdl_shuffle_s_ref(c, r);
+
+	// load
+	op2s_sdl_load_stride_s_ref(in, addr1_s(*addr,+2,stride), stride);
+
+	// (descale)
+
+	// input
+	op2s_sdl_input_s_ref(in, c, r);
+
+	// operation
+	op2s_sdl_op_s_ref_eaw(z, c, w, l, r, eaw_w);
+
+	// (output)
+
+	// (scale)
+
+	// (save)
+
+	// update
+	op2s_sdl_update_s_ref(c, l, r, z);
+
+	// pointers
+	*addr = addr1_s(*addr,2,stride);
+}
+
+static
 void op4s_sdl_pass_fwd_epilog_stride_s_ref(const float *w, const float *v, float *l, float *c, float *r, float *z, float *in, float *out, float *restrict *addr, int stride)
 {
 	UNUSED(in);
@@ -274,6 +333,51 @@ void op2s_sdl_pass_fwd_epilog_stride_s_ref(const float *w, const float *v, float
 
 	// operation
 	op2s_sdl_op_s_ref(z, c, w, l, r);
+
+	// output
+	op2s_sdl_output_s_ref(out, l, z);
+
+	// scale
+	op2s_sdl_scale_s_ref(out, v);
+
+	// save
+	op2s_sdl_save_stride_s_ref(out, addr1_s(*addr,-2,stride), stride);
+
+	// update
+	op2s_sdl_update_s_ref(c, l, r, z);
+
+	// pointers
+	(*addr) = addr1_s(*addr,2,stride);
+}
+
+static
+void op2s_sdl_pass_fwd_epilog_stride_s_ref_eaw(
+	const float *w,
+	const float *v,
+	float *l,
+	float *c,
+	float *r,
+	float *z,
+	float *in,
+	float *out,
+	float **addr,
+	int stride,
+	const float *eaw_w
+)
+{
+	UNUSED(in);
+
+	// shuffle
+	op2s_sdl_shuffle_s_ref(c, r);
+
+	// (load)
+
+	// (descale)
+
+	// (input)
+
+	// operation
+	op2s_sdl_op_s_ref_eaw(z, c, w, l, r, eaw_w);
 
 	// output
 	op2s_sdl_output_s_ref(out, l, z);
@@ -1077,6 +1181,32 @@ void fdwt_cdf53_diagonal_prolog_s(
 }
 
 static
+void fdwt_eaw53_diagonal_prolog_s(
+	float *base,
+	const float *w,
+	const float *v,
+	float *l,
+	float *c,
+	float *r,
+	float *z,
+	float *in,
+	float *out,
+	float **addr,
+	int stride,
+	const float *eaw_w
+)
+{
+	// prolog2: import(1)
+	op2s_sdl_import_stride_s_ref(l, base, 1, stride);
+
+	// prolog2: pass-prolog
+	op2s_sdl_pass_fwd_prolog_stride_s_ref_eaw(w, v, l, c, r, z, in, out, addr, stride, eaw_w);
+
+	// prolog2: import(0)
+	op2s_sdl_import_stride_s_ref(l, base, 0, stride);
+}
+
+static
 void fdwt_cdf97_diagonal_epilog_s(
 	float *base,
 	const float *w,
@@ -1139,6 +1269,32 @@ void fdwt_cdf53_diagonal_epilog_s(
 }
 
 static
+void fdwt_eaw53_diagonal_epilog_s(
+	float *base,
+	const float *w,
+	const float *v,
+	float *l,
+	float *c,
+	float *r,
+	float *z,
+	float *in,
+	float *out,
+	float **addr,
+	int stride,
+	const float *eaw_w
+)
+{
+	// epilog2: export(1)
+	op2s_sdl_export_stride_s_ref(l, base, 1, stride);
+
+	// epilog2: pass-epilog
+	op2s_sdl_pass_fwd_epilog_stride_s_ref_eaw(w, v, l, c, r, z, in, out, addr, stride, eaw_w);
+
+	// epilog2: export(0)
+	op2s_sdl_export_stride_s_ref(l, base, 0, stride);
+}
+
+static
 void fdwt_cdf97_diagonal_core_s(const float *w, const float *v, float *l, float *c, float *r, float *z, float *in, float *out, float *restrict *addr, int stride)
 {
 	// shuffle
@@ -1187,6 +1343,51 @@ void fdwt_cdf53_diagonal_core_s(const float *w, const float *v, float *l, float 
 
 	// operation
 	op2s_sdl_op_s_ref(z, c, w, l, r);
+
+	// output
+	op2s_sdl_output_s_ref(out, l, z);
+
+	// scale
+	op2s_sdl_scale_s_ref(out, v);
+
+	// save
+	op2s_sdl_save_stride_s_ref(out, addr1_s(*addr,-2,stride), stride);
+
+	// update
+	op2s_sdl_update_s_ref(c, l, r, z);
+
+	// pointers
+	*addr = addr1_s(*addr,2,stride);
+}
+
+static
+void fdwt_eaw53_diagonal_core_s(
+	const float *w,
+	const float *v,
+	float *l,
+	float *c,
+	float *r,
+	float *z,
+	float *in,
+	float *out,
+	float **addr,
+	int stride,
+	const float *eaw_w
+)
+{
+	// shuffle
+	op2s_sdl_shuffle_s_ref(c, r);
+
+	// load
+	op2s_sdl_load_stride_s_ref(in, addr1_s(*addr,2,stride), stride);
+
+	// (descale)
+
+	// input
+	op2s_sdl_input_s_ref(in, c, r);
+
+	// operation
+	op2s_sdl_op_s_ref_eaw(z, c, w, l, r, eaw_w);
 
 	// output
 	op2s_sdl_output_s_ref(out, l, z);
@@ -1301,6 +1502,66 @@ void fdwt_cdf53_diagonal_s(
 
 		// epilog-diagonal
 		fdwt_cdf53_diagonal_epilog_s(end, w, v, l, c, r, z, in, out, &addr, stride);
+	}
+}
+
+void fdwt_eaw53_diagonal_s(
+	void *ptr,
+	int size,
+	int stride,
+	const float *eaw_w,
+	float eaw_alpha
+)
+{
+	float alpha = -dwt_cdf53_p1_s;
+	float beta  = +dwt_cdf53_u1_s;
+	float zeta  = +dwt_cdf53_s1_s;
+
+	int pairs = (to_even(size)-2)/2;
+
+	float *begin = addr1_s(ptr, 0,       stride);
+	float *end   = addr1_s(ptr, 2*pairs, stride);
+
+	if( pairs < 1 )
+	{
+		// NOTE: unfornunately, the diagonal vectorisation cannot handle less than 1 pair of coefficients
+		fdwt_eaw53_vertical_s(ptr, size, stride, eaw_w, eaw_alpha);
+	}
+
+	if( pairs >= 1 )
+	{
+		const float w[2] = { beta, alpha };
+		const float v[2] = { 1/zeta, zeta };
+
+		float l[2];
+		float c[2];
+		float r[2];
+		float z[2];
+		float in[2];
+		float out[2];
+
+		float *addr = begin;
+
+		// prolog-diagonal
+		fdwt_eaw53_diagonal_prolog_s(
+			begin, w, v, l, c, r, z, in, out, &addr, stride,
+			&eaw_w[-2]
+		);
+
+		// core
+		for(int s = 0; s < pairs-1; s++)
+		{
+			fdwt_eaw53_diagonal_core_s(
+				w, v, l, c, r, z, in, out, &addr, stride,
+				&eaw_w[2*s+0]
+			);
+		}
+
+		// epilog-diagonal
+		fdwt_eaw53_diagonal_epilog_s(
+			end, w, v, l, c, r, z, in, out, &addr, stride,
+			&eaw_w[2*pairs-2]
+		);
 	}
 }
 
@@ -2330,6 +2591,194 @@ void fdwt2_eaw53_vertical_s(
 			for(int x = 0; x < size_x_j; x++)
 			{
 				fdwt_eaw53_vertical_s(
+					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
+					size_y_j-offset,
+					stride_x_j,
+					&wV[j][x*size_y_j+offset],
+					alpha
+				);
+			}
+		}
+		if( size_y_j > 1 && size_y_j >= 3 )
+		{
+			for(int x = 0; x < size_x_j; x++)
+			{
+				fdwt_eaw53_epilog_s(
+					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
+					size_y_j-offset,
+					stride_x_j,
+					&wV[j][x*size_y_j+offset],
+					alpha
+   				);
+			}
+		}
+
+		j++;
+	}
+}
+
+void fdwt2_eaw53_diagonal_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	int *j_max_ptr,
+	int decompose_one,
+	float *wH[],
+	float *wV[],
+	float alpha
+)
+{
+	const int offset = 1;
+
+#ifdef _OPENMP
+	const int threads = dwt_util_get_num_threads();
+#endif
+
+	const int size_min = min(size_x, size_y);
+	const int size_max = max(size_x, size_y);
+
+	int j = 0;
+
+	const int j_limit = ceil_log2( decompose_one ? size_max : size_min );
+
+	if( *j_max_ptr < 0 || *j_max_ptr > j_limit )
+		*j_max_ptr = j_limit;
+
+	for(;;)
+	{
+		if( *j_max_ptr == j )
+			break;
+
+		const int size_x_j = ceil_div_pow2(size_x, j);
+		const int size_y_j = ceil_div_pow2(size_y, j);
+
+		const int stride_y_j = stride_y * (1 << j);
+		const int stride_x_j = stride_x * (1 << j);
+
+#ifdef _OPENMP
+		const int threads_segment_y = ceil_div(size_y_j, threads);
+		const int threads_segment_x = ceil_div(size_x_j, threads);
+#endif
+
+		wH[j] = dwt_util_alloc(size_y_j * size_x_j, sizeof(float));
+		wV[j] = dwt_util_alloc(size_x_j * size_y_j, sizeof(float));
+
+		if( size_x_j > 1 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < size_y_j; y++)
+			{
+				dwt_calc_eaw_w_stride_s(
+					&wH[j][y*size_x_j],
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					size_x_j,
+					stride_y_j,
+					alpha
+				);
+			}
+		}
+		if( size_x_j > 1 && size_x_j < 3 )
+		{
+			for(int y = 0; y < size_y_j; y++)
+			{
+				fdwt_eaw53_short_s(
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					size_x_j,
+					stride_y_j,
+					&wH[j][y*size_x_j],
+					alpha
+				);
+			}
+		}
+		if( size_x_j > 1 && size_x_j >= 3 )
+		{
+			for(int y = 0; y < size_y_j; y++)
+			{
+				fdwt_eaw53_prolog_s(
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					size_x_j,
+					stride_y_j,
+					&wH[j][y*size_x_j],
+					alpha
+				);
+			}
+		}
+		if( size_x_j > 1 && size_x_j >= 3 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < size_y_j; y++)
+			{
+				fdwt_eaw53_diagonal_s(
+					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
+					size_x_j-offset,
+					stride_y_j,
+					&wH[j][y*size_x_j+offset],
+					alpha
+				);
+			}
+		}
+		if( size_x_j > 1 && size_x_j >= 3 )
+		{
+			for(int y = 0; y < size_y_j; y++)
+			{
+				fdwt_eaw53_epilog_s(
+					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
+					size_x_j-offset,
+					stride_y_j,
+					&wH[j][y*size_x_j+offset],
+					alpha
+   				);
+			}
+		}
+
+		if( size_y_j > 1 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_x_j; x++)
+			{
+				dwt_calc_eaw_w_stride_s(
+					&wV[j][x*size_y_j],
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					size_y_j,
+					stride_x_j,
+					alpha
+				);
+			}
+		}
+		if( size_y_j > 1 && size_y_j < 3 )
+		{
+			for(int x = 0; x < size_x_j; x++)
+			{
+				fdwt_eaw53_short_s(
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					size_y_j,
+					stride_x_j,
+					&wV[j][x*size_y_j],
+					alpha
+				);
+			}
+		}
+		if( size_y_j > 1 && size_y_j >= 3 )
+		{
+			for(int x = 0; x < size_x_j; x++)
+			{
+				fdwt_eaw53_prolog_s(
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					size_y_j,
+					stride_x_j,
+					&wV[j][x*size_y_j],
+					alpha
+   				);
+			}
+		}
+		if( size_y_j > 1 && size_y_j >= 3 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_x_j; x++)
+			{
+				fdwt_eaw53_diagonal_s(
 					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
 					size_y_j-offset,
 					stride_x_j,
