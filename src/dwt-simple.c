@@ -1,6 +1,7 @@
 #include "dwt-simple.h"
 #include "libdwt.h"
 #include "inline.h"
+#include <math.h>
 
 static
 void op4s_sdl_import_stride_s_ref(float *l, const float *addr, int idx, int stride)
@@ -412,6 +413,41 @@ void fdwt_cdf53_short_s(
 }
 
 static
+void fdwt_eaw53_short_s(
+	float *arr,
+	int N,
+	int stride,
+	float *w,
+	float eaw_alpha
+)
+{
+	assert( arr );
+
+	float alpha = -dwt_cdf53_p1_s;
+	float beta  = +dwt_cdf53_u1_s;
+	float zeta  = +dwt_cdf53_s1_s;
+
+	if( 1 == N )
+	{
+		*addr1_s(arr, 0, stride) *= zeta;
+	}
+
+	if( 2 == N )
+	{
+
+		// alpha
+		*addr1_s(arr, 1, stride) += 2*alpha*(*addr1_s(arr, 0, stride));
+
+		// beta
+		*addr1_s(arr, 0, stride) += 2*beta*(*addr1_s(arr, 1, stride));
+
+		// scaling
+		*addr1_s(arr, 0, stride) *= zeta;
+		*addr1_s(arr, 1, stride) *= 1/zeta;
+	}
+}
+
+static
 void fdwt_cdf97_prolog_s(
 	float *arr,
 	int N,
@@ -459,6 +495,33 @@ void fdwt_cdf53_prolog_s(
 
 	// alpha
 	*addr1_s(arr, 1, stride) += alpha*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+
+	// beta
+	*addr1_s(arr, 0, stride) += 2*beta*(*addr1_s(arr, 1, stride));
+
+	// scaling
+	*addr1_s(arr, 0, stride) *= zeta;
+}
+
+static
+void fdwt_eaw53_prolog_s(
+	float *arr,
+	int N,
+	int stride,
+	float *w,
+	float eaw_alpha
+)
+{
+	assert( N >= 3 );
+
+	float alpha = -dwt_cdf53_p1_s;
+	float beta  = +dwt_cdf53_u1_s;
+	float zeta  = +dwt_cdf53_s1_s;
+
+	// alpha
+	float wL = w[1-1];
+	float wR = w[1+0];
+	*addr1_s(arr, 1, stride) += ( wL * *addr1_s(arr, 0, stride) + wR * *addr1_s(arr, 2, stride) ) / (wL+wR) * (2.f * alpha);
 
 	// beta
 	*addr1_s(arr, 0, stride) += 2*beta*(*addr1_s(arr, 1, stride));
@@ -756,6 +819,82 @@ void fdwt_cdf53_horizontal_s(
 		for(int s = 0; s < pairs; s++)
 		{
 			*addr1_s(out, 0, stride) += c * (*addr1_s(out, -1, stride) + *addr1_s(out, +1, stride));
+
+			out = addr1_s(out, 2, stride);
+		}
+	}
+
+	// scale
+	float *out = addr1_s(begin, 0, stride);
+
+	for(int s = 0; s < pairs; s++)
+	{
+		*addr1_s(out, 0, stride) *= v[0];
+		*addr1_s(out, 1, stride) *= v[1];
+
+		out = addr1_s(out, 2, stride);
+	}
+}
+
+static
+float dwt_eaw_w(float n, float m, float alpha)
+{
+	const float eps = 1.0e-5f;
+
+	return 1.f / (powf(fabsf(n-m), alpha) + eps);
+}
+
+static
+void dwt_calc_eaw_w_stride_s(
+	float *w,
+	float *arr, int N, int stride,
+	float alpha
+)
+{
+	for(int i = 0; i < N-1; i++)
+	{
+		w[i] = dwt_eaw_w(
+			*addr1_s(arr,i,stride),
+			*addr1_s(arr,i+1,stride),
+			alpha);
+	}
+	w[N-1] = 0.f; // not necessary
+}
+
+void fdwt_eaw53_horizontal_s(
+	void *ptr,
+	int size,
+	int stride,
+	float *w,
+	float eaw_alpha
+)
+{
+	float alpha = -dwt_cdf53_p1_s;
+	float beta  = +dwt_cdf53_u1_s;
+	float zeta  = +dwt_cdf53_s1_s;
+
+	int pairs = (to_even(size)-2)/2;
+
+	float *begin = addr1_s(ptr, 0, stride);
+
+	assert( pairs >= 0 );
+
+	// constants
+	const float c[2] = { beta, alpha };
+	const float v[2] = { 1/zeta, zeta };
+
+	// operations
+	for(int off = 2; off >= 1; off--)
+	{
+		float *out = addr1_s(begin, off, stride);
+		const float coeff = c[off-1];
+
+		for(int s = 0; s < pairs; s++)
+		{
+			float wL = w[off+2*s-1];
+			float wR = w[off+2*s+0];
+
+			*addr1_s(out, 0, stride) += ( wL * *addr1_s(out, -1, stride) + wR * *addr1_s(out, +1, stride) ) / (wL+wR) * (2.f * coeff);
 
 			out = addr1_s(out, 2, stride);
 		}
@@ -1156,6 +1295,50 @@ void fdwt_cdf53_epilog_s(
 
 		// beta
 		*addr1_s(arr, N-2, stride) += beta*(*addr1_s(arr, N-1, stride) + *addr1_s(arr, N-3, stride));
+
+		// scaling
+		*addr1_s(arr, N-3, stride) *= 1/zeta;
+		*addr1_s(arr, N-2, stride) *= zeta;
+		*addr1_s(arr, N-1, stride) *= 1/zeta;
+	}
+}
+
+static
+void fdwt_eaw53_epilog_s(
+	float *arr,
+	int N,
+	int stride,
+	float *w,
+	float eaw_alpha
+)
+{
+	assert( N >= 2 );
+
+	float alpha = -dwt_cdf53_p1_s;
+	float beta  = +dwt_cdf53_u1_s;
+	float zeta  = +dwt_cdf53_s1_s;
+
+	if( is_even(N) )
+	{
+		// alpha
+		// none
+
+		// beta
+		*addr1_s(arr, N-1, stride) += 2*beta*(*addr1_s(arr, N-2, stride));
+
+		// scaling
+		*addr1_s(arr, N-2, stride) *= 1/zeta;
+		*addr1_s(arr, N-1, stride) *= zeta;
+	}
+	else /* is_odd(N) */
+	{
+		// alpha
+		*addr1_s(arr, N-1, stride) += 2*alpha*(*addr1_s(arr, N-2, stride));
+
+		// beta
+		float wL = w[(N-2)-1]; 
+		float wR = w[(N-2)+0];
+		*addr1_s(arr, N-2, stride) += ( wL * *addr1_s(arr, N-3, stride) + wR * *addr1_s(arr, N-1, stride) ) / (wL+wR) * (2.f * beta);
 
 		// scaling
 		*addr1_s(arr, N-3, stride) *= 1/zeta;
@@ -1685,6 +1868,196 @@ void fdwt2_cdf53_horizontal_s(
 					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
 					size_y_j-offset,
 					stride_x_j);
+			}
+		}
+
+		j++;
+	}
+}
+
+void fdwt2_eaw53_horizontal_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	int *j_max_ptr,
+	int decompose_one,
+	float *wH[],
+	float *wV[],
+	float alpha
+)
+{
+	const int offset = 1;
+
+#ifdef _OPENMP
+	const int threads = dwt_util_get_num_threads();
+#endif
+
+	const int size_min = min(size_x, size_y);
+	const int size_max = max(size_x, size_y);
+
+	int j = 0;
+
+	const int j_limit = ceil_log2( decompose_one ? size_max : size_min );
+
+	if( *j_max_ptr < 0 || *j_max_ptr > j_limit )
+		*j_max_ptr = j_limit;
+
+	for(;;)
+	{
+		if( *j_max_ptr == j )
+			break;
+
+		const int size_x_j = ceil_div_pow2(size_x, j);
+		const int size_y_j = ceil_div_pow2(size_y, j);
+
+		const int stride_y_j = stride_y * (1 << j);
+		const int stride_x_j = stride_x * (1 << j);
+
+#ifdef _OPENMP
+		const int threads_segment_y = ceil_div(size_y_j, threads);
+		const int threads_segment_x = ceil_div(size_x_j, threads);
+#endif
+
+		wH[j] = dwt_util_alloc(size_y_j * size_x_j, sizeof(float));
+		wV[j] = dwt_util_alloc(size_x_j * size_y_j, sizeof(float));
+
+		if( size_x_j > 1 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < size_y_j; y++)
+			{
+				dwt_calc_eaw_w_stride_s(
+					&wH[j][y*size_x_j],
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					size_x_j,
+					stride_y_j,
+					alpha
+				);
+			}
+		}
+		if( size_y_j > 1 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_x_j; x++)
+			{
+				dwt_calc_eaw_w_stride_s(
+					&wV[j][x*size_y_j],
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					size_y_j,
+					stride_x_j,
+					alpha
+				);
+			}
+		}
+
+		if( size_x_j > 1 && size_x_j < 3 )
+		{
+			for(int y = 0; y < size_y_j; y++)
+			{
+				fdwt_eaw53_short_s(
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					size_x_j,
+					stride_y_j,
+					&wH[j][y*size_x_j],
+					alpha
+				);
+			}
+		}
+		if( size_y_j > 1 && size_y_j < 3 )
+		{
+			for(int x = 0; x < size_x_j; x++)
+			{
+				fdwt_eaw53_short_s(
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					size_y_j,
+					stride_x_j,
+					&wV[j][x*size_y_j],
+					alpha
+				);
+			}
+		}
+
+		if( size_x_j > 1 && size_x_j >= 3 )
+		{
+			for(int y = 0; y < size_y_j; y++)
+			{
+				fdwt_eaw53_prolog_s(
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					size_x_j,
+					stride_y_j,
+					&wH[j][y*size_x_j],
+					alpha
+				);
+			}
+		}
+		if( size_x_j > 1 && size_x_j >= 3 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < size_y_j; y++)
+			{
+				fdwt_eaw53_horizontal_s(
+					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
+					size_x_j-offset,
+					stride_y_j,
+					&wH[j][y*size_x_j+offset],
+					alpha
+				);
+			}
+		}
+		if( size_x_j > 1 && size_x_j >= 3 )
+		{
+			for(int y = 0; y < size_y_j; y++)
+			{
+				fdwt_eaw53_epilog_s(
+					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
+					size_x_j-offset,
+					stride_y_j,
+					&wH[j][y*size_x_j+offset],
+					alpha
+   				);
+			}
+		}
+
+		if( size_y_j > 1 && size_y_j >= 3 )
+		{
+			for(int x = 0; x < size_x_j; x++)
+			{
+				fdwt_eaw53_prolog_s(
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					size_y_j,
+					stride_x_j,
+					&wV[j][x*size_y_j],
+					alpha
+   				);
+			}
+		}
+		if( size_y_j > 1 && size_y_j >= 3 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_x_j; x++)
+			{
+				fdwt_eaw53_horizontal_s(
+					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
+					size_y_j-offset,
+					stride_x_j,
+					&wV[j][x*size_y_j+offset],
+					alpha
+				);
+			}
+		}
+		if( size_y_j > 1 && size_y_j >= 3 )
+		{
+			for(int x = 0; x < size_x_j; x++)
+			{
+				fdwt_eaw53_epilog_s(
+					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
+					size_y_j-offset,
+					stride_x_j,
+					&wV[j][x*size_y_j+offset],
+					alpha
+   				);
 			}
 		}
 
