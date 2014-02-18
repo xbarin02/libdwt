@@ -1875,6 +1875,9 @@ void fdwt2_cdf53_horizontal_s(
 	}
 }
 
+/**
+ * @warning The EAW decomposition is different if we compute weights "w" for second (vertical) filtering before xor after first (horizontal) filtering.
+ */
 void fdwt2_eaw53_horizontal_s(
 	void *ptr,
 	int size_x,
@@ -1937,21 +1940,6 @@ void fdwt2_eaw53_horizontal_s(
 				);
 			}
 		}
-		if( size_y_j > 1 )
-		{
-			#pragma omp parallel for schedule(static, threads_segment_x)
-			for(int x = 0; x < size_x_j; x++)
-			{
-				dwt_calc_eaw_w_stride_s(
-					&wV[j][x*size_y_j],
-					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
-					size_y_j,
-					stride_x_j,
-					alpha
-				);
-			}
-		}
-
 		if( size_x_j > 1 && size_x_j < 3 )
 		{
 			for(int y = 0; y < size_y_j; y++)
@@ -1965,20 +1953,6 @@ void fdwt2_eaw53_horizontal_s(
 				);
 			}
 		}
-		if( size_y_j > 1 && size_y_j < 3 )
-		{
-			for(int x = 0; x < size_x_j; x++)
-			{
-				fdwt_eaw53_short_s(
-					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
-					size_y_j,
-					stride_x_j,
-					&wV[j][x*size_y_j],
-					alpha
-				);
-			}
-		}
-
 		if( size_x_j > 1 && size_x_j >= 3 )
 		{
 			for(int y = 0; y < size_y_j; y++)
@@ -2020,6 +1994,33 @@ void fdwt2_eaw53_horizontal_s(
 			}
 		}
 
+		if( size_y_j > 1 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_x_j; x++)
+			{
+				dwt_calc_eaw_w_stride_s(
+					&wV[j][x*size_y_j],
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					size_y_j,
+					stride_x_j,
+					alpha
+				);
+			}
+		}
+		if( size_y_j > 1 && size_y_j < 3 )
+		{
+			for(int x = 0; x < size_x_j; x++)
+			{
+				fdwt_eaw53_short_s(
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					size_y_j,
+					stride_x_j,
+					&wV[j][x*size_y_j],
+					alpha
+				);
+			}
+		}
 		if( size_y_j > 1 && size_y_j >= 3 )
 		{
 			for(int x = 0; x < size_x_j; x++)
