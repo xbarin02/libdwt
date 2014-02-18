@@ -164,6 +164,25 @@ void fdwt_eaw53_horizontal_s(
  * @li type: single (float)
  * @li transform: DWT
  * @li direction: forward
+ * @li wavelet: WCDF 5/3
+ * @li layout: interleaved subbands (in-place lifting)
+ * @li vectorisation: vertical
+ */
+void fdwt_eaw53_vertical_s(
+	void *ptr,
+	int size,
+	int stride,
+	float *w,
+	float eaw_alpha
+);
+
+/**
+ * @brief Wavelet transform.
+ *
+ * @li data: 1-D
+ * @li type: single (float)
+ * @li transform: DWT
+ * @li direction: forward
  * @li wavelet: CDF 5/3
  * @li layout: interleaved subbands (in-place lifting)
  * @li vectorisation: vertical
