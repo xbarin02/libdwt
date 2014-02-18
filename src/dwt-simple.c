@@ -636,6 +636,56 @@ void fdwt_cdf53_vertical_core_s(
 	l[1] = r[1];
 }
 
+static
+void fdwt_eaw53_vertical_core_s(
+	float *ptr0,
+	float *ptr1,
+	float *out0,
+	float *out1,
+	float alpha,
+	float beta,
+	float zeta,
+	float *l, // [2]
+	float *eaw_w // [3]: [0] = wL/beta, [1] = wR/beta = wL/alpha, [2] = wR/alpha
+)
+{
+	// constants
+	const float w[2] = { beta, alpha };
+	const float v[2] = { 1/zeta, zeta };
+
+	// aux. variables
+	float x[2];
+	float y[2];
+	float r[2];
+	float c[2];
+
+	// inputs
+	x[0] = *ptr0;
+	x[1] = *ptr1;
+
+	// shuffles
+	y[0] = l[0];
+	c[0] = l[1];
+	c[1] = x[0];
+
+	// operation
+	r[1] = x[1];
+	r[0] = c[1] + (eaw_w[1]*l[1]+eaw_w[2]*r[1]) / (eaw_w[1]+eaw_w[2]) * (2.f*w[1]); // alpha
+	y[1] = c[0] + (eaw_w[0]*l[0]+eaw_w[1]*r[0]) / (eaw_w[0]+eaw_w[1]) * (2.f*w[0]); // beta
+
+	// scales
+	y[0] *= v[0];
+	y[1] *= v[1];
+
+	// outputs
+	*out0 = y[0];
+	*out1 = y[1];
+
+	// update l[]
+	l[0] = r[0];
+	l[1] = r[1];
+}
+
 void fdwt_cdf97_vertical_s(
 	void *ptr,
 	int size,
@@ -731,6 +781,58 @@ void fdwt_cdf53_vertical_s(
 			beta,
 			zeta,
 			l
+		);
+
+		// pointers
+		addr = addr1_s(addr, 2, stride);
+	}
+
+	// epilog-vertical
+	*addr1_s(addr, 0-2, stride) = l[0];
+	*addr1_s(addr, 1-2, stride) = l[1];
+}
+
+void fdwt_eaw53_vertical_s(
+	void *ptr,
+	int size,
+	int stride,
+	float *w,
+	float eaw_alpha
+)
+{
+	float alpha = -dwt_cdf53_p1_s;
+	float beta  = +dwt_cdf53_u1_s;
+	float zeta  = +dwt_cdf53_s1_s;
+
+	int pairs = (to_even(size)-2)/2;
+
+	float *begin = addr1_s(ptr, 0, stride);
+
+	assert( pairs >= 0 );
+
+	// buffer
+	float l[2];
+
+	// prolog-vertical
+	l[0] = *addr1_s(begin, 0, stride);
+	l[1] = *addr1_s(begin, 1, stride);
+
+	// init
+	float *addr = addr1_s(begin, 2, stride);
+
+	// loop by pairs from left to right
+	for(int s = 0; s < pairs; s++)
+	{
+		fdwt_eaw53_vertical_core_s(
+			addr1_s(addr, 0, stride),
+			addr1_s(addr, 1, stride),
+			addr1_s(addr, 0-2, stride),
+			addr1_s(addr, 1-2, stride),
+			alpha,
+			beta,
+			zeta,
+			l,
+			&w[2*s]
 		);
 
 		// pointers
@@ -2040,6 +2142,194 @@ void fdwt2_eaw53_horizontal_s(
 			for(int x = 0; x < size_x_j; x++)
 			{
 				fdwt_eaw53_horizontal_s(
+					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
+					size_y_j-offset,
+					stride_x_j,
+					&wV[j][x*size_y_j+offset],
+					alpha
+				);
+			}
+		}
+		if( size_y_j > 1 && size_y_j >= 3 )
+		{
+			for(int x = 0; x < size_x_j; x++)
+			{
+				fdwt_eaw53_epilog_s(
+					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
+					size_y_j-offset,
+					stride_x_j,
+					&wV[j][x*size_y_j+offset],
+					alpha
+   				);
+			}
+		}
+
+		j++;
+	}
+}
+
+void fdwt2_eaw53_vertical_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	int *j_max_ptr,
+	int decompose_one,
+	float *wH[],
+	float *wV[],
+	float alpha
+)
+{
+	const int offset = 1;
+
+#ifdef _OPENMP
+	const int threads = dwt_util_get_num_threads();
+#endif
+
+	const int size_min = min(size_x, size_y);
+	const int size_max = max(size_x, size_y);
+
+	int j = 0;
+
+	const int j_limit = ceil_log2( decompose_one ? size_max : size_min );
+
+	if( *j_max_ptr < 0 || *j_max_ptr > j_limit )
+		*j_max_ptr = j_limit;
+
+	for(;;)
+	{
+		if( *j_max_ptr == j )
+			break;
+
+		const int size_x_j = ceil_div_pow2(size_x, j);
+		const int size_y_j = ceil_div_pow2(size_y, j);
+
+		const int stride_y_j = stride_y * (1 << j);
+		const int stride_x_j = stride_x * (1 << j);
+
+#ifdef _OPENMP
+		const int threads_segment_y = ceil_div(size_y_j, threads);
+		const int threads_segment_x = ceil_div(size_x_j, threads);
+#endif
+
+		wH[j] = dwt_util_alloc(size_y_j * size_x_j, sizeof(float));
+		wV[j] = dwt_util_alloc(size_x_j * size_y_j, sizeof(float));
+
+		if( size_x_j > 1 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < size_y_j; y++)
+			{
+				dwt_calc_eaw_w_stride_s(
+					&wH[j][y*size_x_j],
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					size_x_j,
+					stride_y_j,
+					alpha
+				);
+			}
+		}
+		if( size_x_j > 1 && size_x_j < 3 )
+		{
+			for(int y = 0; y < size_y_j; y++)
+			{
+				fdwt_eaw53_short_s(
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					size_x_j,
+					stride_y_j,
+					&wH[j][y*size_x_j],
+					alpha
+				);
+			}
+		}
+		if( size_x_j > 1 && size_x_j >= 3 )
+		{
+			for(int y = 0; y < size_y_j; y++)
+			{
+				fdwt_eaw53_prolog_s(
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					size_x_j,
+					stride_y_j,
+					&wH[j][y*size_x_j],
+					alpha
+				);
+			}
+		}
+		if( size_x_j > 1 && size_x_j >= 3 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < size_y_j; y++)
+			{
+				fdwt_eaw53_vertical_s(
+					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
+					size_x_j-offset,
+					stride_y_j,
+					&wH[j][y*size_x_j+offset],
+					alpha
+				);
+			}
+		}
+		if( size_x_j > 1 && size_x_j >= 3 )
+		{
+			for(int y = 0; y < size_y_j; y++)
+			{
+				fdwt_eaw53_epilog_s(
+					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
+					size_x_j-offset,
+					stride_y_j,
+					&wH[j][y*size_x_j+offset],
+					alpha
+   				);
+			}
+		}
+
+		if( size_y_j > 1 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_x_j; x++)
+			{
+				dwt_calc_eaw_w_stride_s(
+					&wV[j][x*size_y_j],
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					size_y_j,
+					stride_x_j,
+					alpha
+				);
+			}
+		}
+		if( size_y_j > 1 && size_y_j < 3 )
+		{
+			for(int x = 0; x < size_x_j; x++)
+			{
+				fdwt_eaw53_short_s(
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					size_y_j,
+					stride_x_j,
+					&wV[j][x*size_y_j],
+					alpha
+				);
+			}
+		}
+		if( size_y_j > 1 && size_y_j >= 3 )
+		{
+			for(int x = 0; x < size_x_j; x++)
+			{
+				fdwt_eaw53_prolog_s(
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					size_y_j,
+					stride_x_j,
+					&wV[j][x*size_y_j],
+					alpha
+   				);
+			}
+		}
+		if( size_y_j > 1 && size_y_j >= 3 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_x_j; x++)
+			{
+				fdwt_eaw53_vertical_s(
 					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
 					size_y_j-offset,
 					stride_x_j,
