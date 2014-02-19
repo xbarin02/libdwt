@@ -2206,6 +2206,21 @@ void fdwt2_eaw53_horizontal_s(
 				);
 			}
 		}
+		if( size_y_j > 1 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_x_j; x++)
+			{
+				dwt_calc_eaw_w_stride_s(
+					&wV[j][x*size_y_j],
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					size_y_j,
+					stride_x_j,
+					alpha
+				);
+			}
+		}
+
 		if( size_x_j > 1 && size_x_j < 3 )
 		{
 			for(int y = 0; y < size_y_j; y++)
@@ -2256,20 +2271,6 @@ void fdwt2_eaw53_horizontal_s(
 			}
 		}
 
-		if( size_y_j > 1 )
-		{
-			#pragma omp parallel for schedule(static, threads_segment_x)
-			for(int x = 0; x < size_x_j; x++)
-			{
-				dwt_calc_eaw_w_stride_s(
-					&wV[j][x*size_y_j],
-					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
-					size_y_j,
-					stride_x_j,
-					alpha
-				);
-			}
-		}
 		if( size_y_j > 1 && size_y_j < 3 )
 		{
 			for(int x = 0; x < size_x_j; x++)
@@ -2386,6 +2387,21 @@ void fdwt2_eaw53_vertical_s(
 				);
 			}
 		}
+		if( size_y_j > 1 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_x_j; x++)
+			{
+				dwt_calc_eaw_w_stride_s(
+					&wV[j][x*size_y_j],
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					size_y_j,
+					stride_x_j,
+					alpha
+				);
+			}
+		}
+
 		if( size_x_j > 1 && size_x_j < 3 )
 		{
 			for(int y = 0; y < size_y_j; y++)
@@ -2436,20 +2452,6 @@ void fdwt2_eaw53_vertical_s(
 			}
 		}
 
-		if( size_y_j > 1 )
-		{
-			#pragma omp parallel for schedule(static, threads_segment_x)
-			for(int x = 0; x < size_x_j; x++)
-			{
-				dwt_calc_eaw_w_stride_s(
-					&wV[j][x*size_y_j],
-					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
-					size_y_j,
-					stride_x_j,
-					alpha
-				);
-			}
-		}
 		if( size_y_j > 1 && size_y_j < 3 )
 		{
 			for(int x = 0; x < size_x_j; x++)
@@ -2566,6 +2568,21 @@ void fdwt2_eaw53_diagonal_s(
 				);
 			}
 		}
+		if( size_y_j > 1 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_x_j; x++)
+			{
+				dwt_calc_eaw_w_stride_s(
+					&wV[j][x*size_y_j],
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					size_y_j,
+					stride_x_j,
+					alpha
+				);
+			}
+		}
+
 		if( size_x_j > 1 && size_x_j < 3 )
 		{
 			for(int y = 0; y < size_y_j; y++)
@@ -2616,20 +2633,6 @@ void fdwt2_eaw53_diagonal_s(
 			}
 		}
 
-		if( size_y_j > 1 )
-		{
-			#pragma omp parallel for schedule(static, threads_segment_x)
-			for(int x = 0; x < size_x_j; x++)
-			{
-				dwt_calc_eaw_w_stride_s(
-					&wV[j][x*size_y_j],
-					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
-					size_y_j,
-					stride_x_j,
-					alpha
-				);
-			}
-		}
 		if( size_y_j > 1 && size_y_j < 3 )
 		{
 			for(int x = 0; x < size_x_j; x++)
