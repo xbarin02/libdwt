@@ -1,3 +1,9 @@
+2014-02-19 David Barina <ibarina@fit.vutbr.cz>
+* Added new "dwt-simple" API with forward DWT for CDF 9/7, CDF 5/3 and WCDF 5/3
+wavelets using 2-D separable transform with horizontal, vertical and diagonal
+vectorisations.
+* Code cleanup.
+
 2014-02-14 David Barina <ibarina@fit.vutbr.cz>
 * Added WCDF 9/7 wavelet.
 * Tutorial added using Doxygen.
