@@ -13,15 +13,12 @@ clean:
 	$(MAKE) -C $(LIBPATH) $@
 	-$(RM) $(BIN) *.o *.elf *.gdb
 
-$(BIN): $(BIN).o $(LIBPATH)/$(LIBNAME).o $(LIBPATH)/eaw-experimental.o
+$(BIN): $(BIN).o $(LIBPATH)/$(LIBNAME).a
 
 $(BIN).o: $(BIN).c $(LIBPATH)/$(LIBNAME).h
 
-$(LIBPATH)/$(LIBNAME).o: $(LIBPATH)/$(LIBNAME).c $(LIBPATH)/$(LIBNAME).h
-	$(MAKE) -C $(LIBPATH) $(LIBNAME).o
-
-$(LIBPATH)/eaw-experimental.o: $(LIBPATH)/eaw-experimental.c $(LIBPATH)/eaw-experimental.h
-	$(MAKE) -C $(LIBPATH) eaw-experimental.o
+$(LIBPATH)/$(LIBNAME).a:
+	$(MAKE) -C $(LIBPATH) $(LIBNAME).a
 
 .PHONY: distclean
 distclean: clean

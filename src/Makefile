@@ -35,10 +35,12 @@ dwt.o: dwt.c dwt.h
 
 dwt-simple.o: dwt-simple.c dwt-simple.h
 
+eaw-experimental.o: eaw-experimental.c eaw-experimental.h
+
 $(LIBNAME).S: $(LIBNAME).c $(LIBNAME).h
 	$(CC) $(CFLAGS) -S -Wa,-adhln -g -fverbose-asm $< -o $@
 
-$(LIBNAME).a: $(LIBNAME).o util.o signal.o image.o swt.o dwt.o dwt-simple.o
+$(LIBNAME).a: $(LIBNAME).o util.o signal.o image.o swt.o dwt.o dwt-simple.o eaw-experimental.o
 	$(AR) -rsc $@ $^
 
 # $(LIBNAME).so: $(LIBNAME).o

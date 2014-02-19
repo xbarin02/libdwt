@@ -16,14 +16,14 @@ clean:
 	-$(RM) *.o $(BIN)
 
 # link application
-$(BIN): $(BIN).o $(LIBPATH)/$(LIBNAME).o $(LIBPATH)/$(LIBNAME_CV).o
+$(BIN): $(BIN).o $(LIBPATH)/$(LIBNAME).a $(LIBPATH)/$(LIBNAME_CV).o
 
 # compile application
 $(BIN).o: $(BIN).cpp $(LIBPATH)/$(LIBNAME).h $(LIBPATH)/$(LIBNAME_CV).h
 
 # compile dependency
-$(LIBPATH)/$(LIBNAME).o: $(LIBPATH)/$(LIBNAME).c $(LIBPATH)/$(LIBNAME).h
-	$(MAKE) -C $(LIBPATH) $(LIBNAME).o
+$(LIBPATH)/$(LIBNAME).a:
+	$(MAKE) -C $(LIBPATH) $(LIBNAME).a
 
 # compile dependency
 $(LIBPATH)/$(LIBNAME_CV).o: $(LIBPATH)/$(LIBNAME_CV).cpp $(LIBPATH)/$(LIBNAME_CV).h
