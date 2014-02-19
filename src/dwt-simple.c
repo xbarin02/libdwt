@@ -546,11 +546,12 @@ void fdwt_eaw53_short_s(
 	float *arr,
 	int N,
 	int stride,
-	float *w,
+	const float *eaw_w,
 	float eaw_alpha
 )
 {
 	assert( arr );
+	UNUSED( eaw_w );
 
 	float alpha = -dwt_cdf53_p1_s;
 	float beta  = +dwt_cdf53_u1_s;
@@ -584,6 +585,7 @@ void fdwt_cdf97_prolog_s(
 )
 {
 	assert( N >= 5 );
+	assert( arr );
 
 	float alpha = -dwt_cdf97_p1_s;
 	float beta  = +dwt_cdf97_u1_s;
@@ -617,6 +619,7 @@ void fdwt_cdf53_prolog_s(
 )
 {
 	assert( N >= 3 );
+	assert( arr );
 
 	float alpha = -dwt_cdf53_p1_s;
 	float beta  = +dwt_cdf53_u1_s;
@@ -637,20 +640,19 @@ void fdwt_eaw53_prolog_s(
 	float *arr,
 	int N,
 	int stride,
-	float *w,
+	const float *eaw_w,
 	float eaw_alpha
 )
 {
 	assert( N >= 3 );
+	assert( arr );
 
 	float alpha = -dwt_cdf53_p1_s;
 	float beta  = +dwt_cdf53_u1_s;
 	float zeta  = +dwt_cdf53_s1_s;
 
 	// alpha
-	float wL = w[1-1];
-	float wR = w[1+0];
-	*addr1_s(arr, 1, stride) += ( wL * *addr1_s(arr, 0, stride) + wR * *addr1_s(arr, 2, stride) ) / (wL+wR) * (2.f * alpha);
+	*addr1_s(arr, 1, stride) += ( eaw_w[1-1] * *addr1_s(arr, 0, stride) + eaw_w[1+0] * *addr1_s(arr, 2, stride) ) / (eaw_w[1-1]+eaw_w[1+0]) * (2.f * alpha);
 
 	// beta
 	*addr1_s(arr, 0, stride) += 2*beta  * (*addr1_s(arr, 1, stride));
@@ -775,7 +777,7 @@ void fdwt_eaw53_vertical_core_s(
 	float beta,
 	float zeta,
 	float *l, // [2]
-	float *eaw_w // [3]: [0] = wL/beta, [1] = wR/beta = wL/alpha, [2] = wR/alpha
+	const float *eaw_w // [3]: [0] = wL/beta, [1] = wR/beta = wL/alpha, [2] = wR/alpha
 )
 {
 	// constants
@@ -821,6 +823,8 @@ void fdwt_cdf97_vertical_s(
 	int stride
 )
 {
+	assert( ptr );
+
 	float alpha = -dwt_cdf97_p1_s;
 	float beta  = +dwt_cdf97_u1_s;
 	float gamma = -dwt_cdf97_p2_s;
@@ -878,6 +882,8 @@ void fdwt_cdf53_vertical_s(
 	int stride
 )
 {
+	assert( ptr );
+
 	float alpha = -dwt_cdf53_p1_s;
 	float beta  = +dwt_cdf53_u1_s;
 	float zeta  = +dwt_cdf53_s1_s;
@@ -925,10 +931,12 @@ void fdwt_eaw53_vertical_s(
 	void *ptr,
 	int size,
 	int stride,
-	float *w,
+	const float *eaw_w,
 	float eaw_alpha
 )
 {
+	assert( ptr );
+
 	float alpha = -dwt_cdf53_p1_s;
 	float beta  = +dwt_cdf53_u1_s;
 	float zeta  = +dwt_cdf53_s1_s;
@@ -961,7 +969,7 @@ void fdwt_eaw53_vertical_s(
 			beta,
 			zeta,
 			l,
-			&w[2*s]
+			&eaw_w[2*s]
 		);
 
 		// pointers
@@ -979,6 +987,8 @@ void fdwt_cdf97_horizontal_s(
 	int stride
 )
 {
+	assert( ptr );
+
 	float alpha = -dwt_cdf97_p1_s;
 	float beta  = +dwt_cdf97_u1_s;
 	float gamma = -dwt_cdf97_p2_s;
@@ -1027,6 +1037,8 @@ void fdwt_cdf53_horizontal_s(
 	int stride
 )
 {
+	assert( ptr );
+
 	float alpha = -dwt_cdf53_p1_s;
 	float beta  = +dwt_cdf53_u1_s;
 	float zeta  = +dwt_cdf53_s1_s;
@@ -1082,6 +1094,9 @@ void dwt_calc_eaw_w_stride_s(
 	float alpha
 )
 {
+	assert( w );
+	assert( arr );
+
 	for(int i = 0; i < N-1; i++)
 	{
 		w[i] = dwt_eaw_w(
@@ -1096,10 +1111,12 @@ void fdwt_eaw53_horizontal_s(
 	void *ptr,
 	int size,
 	int stride,
-	float *w,
+	const float *eaw_w,
 	float eaw_alpha
 )
 {
+	assert( ptr );
+
 	float alpha = -dwt_cdf53_p1_s;
 	float beta  = +dwt_cdf53_u1_s;
 	float zeta  = +dwt_cdf53_s1_s;
@@ -1122,8 +1139,8 @@ void fdwt_eaw53_horizontal_s(
 
 		for(int s = 0; s < pairs; s++)
 		{
-			float wL = w[off+2*s-1];
-			float wR = w[off+2*s+0];
+			float wL = eaw_w[off+2*s-1];
+			float wR = eaw_w[off+2*s+0];
 
 			*addr1_s(out, 0, stride) += ( wL * *addr1_s(out, -1, stride) + wR * *addr1_s(out, +1, stride) ) / (wL+wR) * (2.f * coeff);
 
@@ -1282,6 +1299,8 @@ void fdwt_cdf97_diagonal_s(
 	int stride
 )
 {
+	assert( ptr );
+
 	float alpha = -dwt_cdf97_p1_s;
 	float beta  = +dwt_cdf97_u1_s;
 	float gamma = -dwt_cdf97_p2_s;
@@ -1402,6 +1421,8 @@ void fdwt_eaw53_diagonal_s(
 	float eaw_alpha
 )
 {
+	assert( ptr );
+
 	float alpha = -dwt_cdf53_p1_s;
 	float beta  = +dwt_cdf53_u1_s;
 	float zeta  = +dwt_cdf53_s1_s;
@@ -1458,6 +1479,7 @@ void fdwt_cdf97_epilog_s(
 )
 {
 	assert( N >= 4 );
+	assert( arr );
 
 	float alpha = -dwt_cdf97_p1_s;
 	float beta  = +dwt_cdf97_u1_s;
@@ -1519,6 +1541,7 @@ void fdwt_cdf53_epilog_s(
 )
 {
 	assert( N >= 2 );
+	assert( arr );
 
 	float alpha = -dwt_cdf53_p1_s;
 	float beta  = +dwt_cdf53_u1_s;
@@ -1556,11 +1579,12 @@ void fdwt_eaw53_epilog_s(
 	float *arr,
 	int N,
 	int stride,
-	float *w,
+	const float *eaw_w,
 	float eaw_alpha
 )
 {
 	assert( N >= 2 );
+	assert( arr );
 
 	float alpha = -dwt_cdf53_p1_s;
 	float beta  = +dwt_cdf53_u1_s;
@@ -1584,8 +1608,8 @@ void fdwt_eaw53_epilog_s(
 		*addr1_s(arr, N-1, stride) += 2*alpha*(*addr1_s(arr, N-2, stride));
 
 		// beta
-		float wL = w[(N-2)-1]; 
-		float wR = w[(N-2)+0];
+		float wL = eaw_w[(N-2)-1]; 
+		float wR = eaw_w[(N-2)+0];
 		*addr1_s(arr, N-2, stride) += ( wL * *addr1_s(arr, N-3, stride) + wR * *addr1_s(arr, N-1, stride) ) / (wL+wR) * (2.f * beta);
 
 		// scaling
