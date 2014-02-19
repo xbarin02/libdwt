@@ -153,8 +153,7 @@ void fdwt_eaw53_horizontal_s(
 	void *ptr,
 	int size,
 	int stride,
-	const float *eaw_w,
-	float eaw_alpha
+	const float *eaw_w
 );
 
 /**
@@ -172,8 +171,7 @@ void fdwt_eaw53_vertical_s(
 	void *ptr,
 	int size,
 	int stride,
-	const float *eaw_w,
-	float eaw_alpha
+	const float *eaw_w
 );
 
 /**
@@ -191,8 +189,7 @@ void fdwt_eaw53_diagonal_s(
 	void *ptr,
 	int size,
 	int stride,
-	const float *eaw_w,
-	float eaw_alpha
+	const float *eaw_w
 );
 
 /**

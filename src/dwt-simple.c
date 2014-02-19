@@ -546,8 +546,7 @@ void fdwt_eaw53_short_s(
 	float *arr,
 	int N,
 	int stride,
-	const float *eaw_w,
-	float eaw_alpha
+	const float *eaw_w
 )
 {
 	assert( arr );
@@ -640,8 +639,7 @@ void fdwt_eaw53_prolog_s(
 	float *arr,
 	int N,
 	int stride,
-	const float *eaw_w,
-	float eaw_alpha
+	const float *eaw_w
 )
 {
 	assert( N >= 3 );
@@ -931,8 +929,7 @@ void fdwt_eaw53_vertical_s(
 	void *ptr,
 	int size,
 	int stride,
-	const float *eaw_w,
-	float eaw_alpha
+	const float *eaw_w
 )
 {
 	assert( ptr );
@@ -1111,8 +1108,7 @@ void fdwt_eaw53_horizontal_s(
 	void *ptr,
 	int size,
 	int stride,
-	const float *eaw_w,
-	float eaw_alpha
+	const float *eaw_w
 )
 {
 	assert( ptr );
@@ -1417,8 +1413,7 @@ void fdwt_eaw53_diagonal_s(
 	void *ptr,
 	int size,
 	int stride,
-	const float *eaw_w,
-	float eaw_alpha
+	const float *eaw_w
 )
 {
 	assert( ptr );
@@ -1435,7 +1430,7 @@ void fdwt_eaw53_diagonal_s(
 	if( pairs < 1 )
 	{
 		// NOTE: unfornunately, the diagonal vectorisation cannot handle less than 1 pair of coefficients
-		fdwt_eaw53_vertical_s(ptr, size, stride, eaw_w, eaw_alpha);
+		fdwt_eaw53_vertical_s(ptr, size, stride, eaw_w);
 	}
 
 	if( pairs >= 1 )
@@ -1579,8 +1574,7 @@ void fdwt_eaw53_epilog_s(
 	float *arr,
 	int N,
 	int stride,
-	const float *eaw_w,
-	float eaw_alpha
+	const float *eaw_w
 )
 {
 	assert( N >= 2 );
@@ -2220,8 +2214,7 @@ void fdwt2_eaw53_horizontal_s(
 					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
 					size_x_j,
 					stride_y_j,
-					&wH[j][y*size_x_j],
-					alpha
+					&wH[j][y*size_x_j]
 				);
 			}
 		}
@@ -2233,8 +2226,7 @@ void fdwt2_eaw53_horizontal_s(
 					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
 					size_x_j,
 					stride_y_j,
-					&wH[j][y*size_x_j],
-					alpha
+					&wH[j][y*size_x_j]
 				);
 			}
 		}
@@ -2247,8 +2239,7 @@ void fdwt2_eaw53_horizontal_s(
 					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
 					size_x_j-offset,
 					stride_y_j,
-					&wH[j][y*size_x_j+offset],
-					alpha
+					&wH[j][y*size_x_j+offset]
 				);
 			}
 		}
@@ -2260,9 +2251,8 @@ void fdwt2_eaw53_horizontal_s(
 					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
 					size_x_j-offset,
 					stride_y_j,
-					&wH[j][y*size_x_j+offset],
-					alpha
-   				);
+					&wH[j][y*size_x_j+offset]
+				);
 			}
 		}
 
@@ -2288,8 +2278,7 @@ void fdwt2_eaw53_horizontal_s(
 					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
 					size_y_j,
 					stride_x_j,
-					&wV[j][x*size_y_j],
-					alpha
+					&wV[j][x*size_y_j]
 				);
 			}
 		}
@@ -2301,9 +2290,8 @@ void fdwt2_eaw53_horizontal_s(
 					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
 					size_y_j,
 					stride_x_j,
-					&wV[j][x*size_y_j],
-					alpha
-   				);
+					&wV[j][x*size_y_j]
+				);
 			}
 		}
 		if( size_y_j > 1 && size_y_j >= 3 )
@@ -2315,8 +2303,7 @@ void fdwt2_eaw53_horizontal_s(
 					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
 					size_y_j-offset,
 					stride_x_j,
-					&wV[j][x*size_y_j+offset],
-					alpha
+					&wV[j][x*size_y_j+offset]
 				);
 			}
 		}
@@ -2328,9 +2315,8 @@ void fdwt2_eaw53_horizontal_s(
 					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
 					size_y_j-offset,
 					stride_x_j,
-					&wV[j][x*size_y_j+offset],
-					alpha
-   				);
+					&wV[j][x*size_y_j+offset]
+				);
 			}
 		}
 
@@ -2408,8 +2394,7 @@ void fdwt2_eaw53_vertical_s(
 					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
 					size_x_j,
 					stride_y_j,
-					&wH[j][y*size_x_j],
-					alpha
+					&wH[j][y*size_x_j]
 				);
 			}
 		}
@@ -2421,8 +2406,7 @@ void fdwt2_eaw53_vertical_s(
 					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
 					size_x_j,
 					stride_y_j,
-					&wH[j][y*size_x_j],
-					alpha
+					&wH[j][y*size_x_j]
 				);
 			}
 		}
@@ -2435,8 +2419,7 @@ void fdwt2_eaw53_vertical_s(
 					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
 					size_x_j-offset,
 					stride_y_j,
-					&wH[j][y*size_x_j+offset],
-					alpha
+					&wH[j][y*size_x_j+offset]
 				);
 			}
 		}
@@ -2448,9 +2431,8 @@ void fdwt2_eaw53_vertical_s(
 					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
 					size_x_j-offset,
 					stride_y_j,
-					&wH[j][y*size_x_j+offset],
-					alpha
-   				);
+					&wH[j][y*size_x_j+offset]
+				);
 			}
 		}
 
@@ -2476,8 +2458,7 @@ void fdwt2_eaw53_vertical_s(
 					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
 					size_y_j,
 					stride_x_j,
-					&wV[j][x*size_y_j],
-					alpha
+					&wV[j][x*size_y_j]
 				);
 			}
 		}
@@ -2489,9 +2470,8 @@ void fdwt2_eaw53_vertical_s(
 					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
 					size_y_j,
 					stride_x_j,
-					&wV[j][x*size_y_j],
-					alpha
-   				);
+					&wV[j][x*size_y_j]
+				);
 			}
 		}
 		if( size_y_j > 1 && size_y_j >= 3 )
@@ -2503,8 +2483,7 @@ void fdwt2_eaw53_vertical_s(
 					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
 					size_y_j-offset,
 					stride_x_j,
-					&wV[j][x*size_y_j+offset],
-					alpha
+					&wV[j][x*size_y_j+offset]
 				);
 			}
 		}
@@ -2516,9 +2495,8 @@ void fdwt2_eaw53_vertical_s(
 					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
 					size_y_j-offset,
 					stride_x_j,
-					&wV[j][x*size_y_j+offset],
-					alpha
-   				);
+					&wV[j][x*size_y_j+offset]
+				);
 			}
 		}
 
@@ -2596,8 +2574,7 @@ void fdwt2_eaw53_diagonal_s(
 					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
 					size_x_j,
 					stride_y_j,
-					&wH[j][y*size_x_j],
-					alpha
+					&wH[j][y*size_x_j]
 				);
 			}
 		}
@@ -2609,8 +2586,7 @@ void fdwt2_eaw53_diagonal_s(
 					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
 					size_x_j,
 					stride_y_j,
-					&wH[j][y*size_x_j],
-					alpha
+					&wH[j][y*size_x_j]
 				);
 			}
 		}
@@ -2623,8 +2599,7 @@ void fdwt2_eaw53_diagonal_s(
 					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
 					size_x_j-offset,
 					stride_y_j,
-					&wH[j][y*size_x_j+offset],
-					alpha
+					&wH[j][y*size_x_j+offset]
 				);
 			}
 		}
@@ -2636,9 +2611,8 @@ void fdwt2_eaw53_diagonal_s(
 					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
 					size_x_j-offset,
 					stride_y_j,
-					&wH[j][y*size_x_j+offset],
-					alpha
-   				);
+					&wH[j][y*size_x_j+offset]
+				);
 			}
 		}
 
@@ -2664,8 +2638,7 @@ void fdwt2_eaw53_diagonal_s(
 					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
 					size_y_j,
 					stride_x_j,
-					&wV[j][x*size_y_j],
-					alpha
+					&wV[j][x*size_y_j]
 				);
 			}
 		}
@@ -2677,9 +2650,8 @@ void fdwt2_eaw53_diagonal_s(
 					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
 					size_y_j,
 					stride_x_j,
-					&wV[j][x*size_y_j],
-					alpha
-   				);
+					&wV[j][x*size_y_j]
+				);
 			}
 		}
 		if( size_y_j > 1 && size_y_j >= 3 )
@@ -2691,8 +2663,7 @@ void fdwt2_eaw53_diagonal_s(
 					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
 					size_y_j-offset,
 					stride_x_j,
-					&wV[j][x*size_y_j+offset],
-					alpha
+					&wV[j][x*size_y_j+offset]
 				);
 			}
 		}
@@ -2704,9 +2675,8 @@ void fdwt2_eaw53_diagonal_s(
 					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
 					size_y_j-offset,
 					stride_x_j,
-					&wV[j][x*size_y_j+offset],
-					alpha
-   				);
+					&wV[j][x*size_y_j+offset]
+				);
 			}
 		}
 
