@@ -4,34 +4,15 @@
 #include <math.h>
 
 static
-void op4s_sdl_import_stride_s_ref(float *l, const float *addr, int idx, int stride)
-{
-	l[idx] = *addr1_const_s(addr, idx, stride);
-}
-
-static
-void op2s_sdl_import_stride_s_ref(float *l, const float *addr, int idx, int stride)
-{
-	l[idx] = *addr1_const_s(addr, idx, stride);
-}
-
-static
-void op4s_sdl_export_stride_s_ref(const float *l, float *addr, int idx, int stride)
-{
-	*addr1_s(addr,idx,stride) = l[idx];
-}
-
-static
-void op2s_sdl_export_stride_s_ref(const float *l, float *addr, int idx, int stride)
-{
-	*addr1_s(addr,idx,stride) = l[idx];
-}
-
-static
 void op4s_sdl_shuffle_s_ref(float *c, float *r)
 {
-	c[0]=c[1]; c[1]=c[2]; c[2]=c[3];
-	r[0]=r[1]; r[1]=r[2]; r[2]=r[3];
+	c[0] = c[1];
+	c[1] = c[2];
+	c[2] = c[3];
+
+	r[0] = r[1];
+	r[1] = r[2];
+	r[2] = r[3];
 }
 
 static
@@ -42,73 +23,73 @@ void op2s_sdl_shuffle_s_ref(float *c, float *r)
 }
 
 static
-void op4s_sdl_load_stride_s_ref(float *in, const float *addr, int stride)
+void op4s_sdl_load_stride_s_ref(float *x, const float *addr, int stride)
 {
-	in[0] = *addr1_const_s(addr,0,stride);
-	in[1] = *addr1_const_s(addr,1,stride);
+	x[0] = *addr1_const_s(addr, 0, stride);
+	x[1] = *addr1_const_s(addr, 1, stride);
 }
 
 static
-void op2s_sdl_load_stride_s_ref(float *in, const float *addr, int stride)
+void op2s_sdl_load_stride_s_ref(float *x, const float *addr, int stride)
 {
-	in[0] = *addr1_const_s(addr,0,stride);
-	in[1] = *addr1_const_s(addr,1,stride);
+	x[0] = *addr1_const_s(addr, 0, stride);
+	x[1] = *addr1_const_s(addr, 1, stride);
 }
 
 static
-void op4s_sdl_save_stride_s_ref(float *out, float *addr, int stride)
+void op4s_sdl_save_stride_s_ref(float *y, float *addr, int stride)
 {
-	*addr1_s(addr,0,stride) = out[0];
-	*addr1_s(addr,1,stride) = out[1];
+	*addr1_s(addr, 0, stride) = y[0];
+	*addr1_s(addr, 1, stride) = y[1];
 }
 
 static
-void op2s_sdl_save_stride_s_ref(float *out, float *addr, int stride)
+void op2s_sdl_save_stride_s_ref(float *y, float *addr, int stride)
 {
-	*addr1_s(addr,0,stride) = out[0];
-	*addr1_s(addr,1,stride) = out[1];
+	*addr1_s(addr, 0, stride) = y[0];
+	*addr1_s(addr, 1, stride) = y[1];
 }
 
 static
-void op4s_sdl_input_s_ref(const float *in, float *c, float *r)
+void op4s_sdl_input_s_ref(const float *x, float *c, float *r)
 {
-	c[3] = in[0];
-	r[3] = in[1];
+	c[3] = x[0];
+	r[3] = x[1];
 }
 
 static
-void op2s_sdl_input_s_ref(const float *in, float *c, float *r)
+void op2s_sdl_input_s_ref(const float *x, float *c, float *r)
 {
-	c[1] = in[0];
-	r[1] = in[1];
+	c[1] = x[0];
+	r[1] = x[1];
 }
 
 static
-void op4s_sdl_output_s_ref(float *out, const float *l, const float *z)
+void op4s_sdl_output_s_ref(float *y, const float *l, const float *z)
 {
-	out[0] = l[0];
-	out[1] = z[0];
+	y[0] = l[0];
+	y[1] = z[0];
 }
 
 static
-void op2s_sdl_output_s_ref(float *out, const float *l, const float *z)
+void op2s_sdl_output_s_ref(float *y, const float *l, const float *z)
 {
-	out[0] = l[0];
-	out[1] = z[0];
+	y[0] = l[0];
+	y[1] = z[0];
 }
 
 static
-void op4s_sdl_scale_s_ref(float *out, const float *v)
+void op4s_sdl_scale_s_ref(float *y, const float *v)
 {
-	out[0] *= v[0];
-	out[1] *= v[1];
+	y[0] *= v[0];
+	y[1] *= v[1];
 }
 
 static
-void op2s_sdl_scale_s_ref(float *out, const float *v)
+void op2s_sdl_scale_s_ref(float *y, const float *v)
 {
-	out[0] *= v[0];
-	out[1] *= v[1];
+	y[0] *= v[0];
+	y[1] *= v[1];
 }
 
 static
@@ -174,21 +155,32 @@ void op2s_sdl_update_s_ref(float *c, float *l, float *r, const float *z)
 }
 
 static
-void op4s_sdl_pass_fwd_prolog_stride_s_ref(const float *w, const float *v, float *l, float *c, float *r, float *z, float *in, float *out, float *restrict *addr, int stride)
+void fdwt_cdf97_diagonal_prolog_s(
+	const float *w,
+	const float *v,
+	float *l,
+	float *c,
+	float *r,
+	float *z,
+	float *x,
+	float *y,
+	float **addr,
+	int stride
+)
 {
 	UNUSED(v);
-	UNUSED(out);
+	UNUSED(y);
 
 	// shuffle
 	op4s_sdl_shuffle_s_ref(c, r);
 
 	// load
-	op4s_sdl_load_stride_s_ref(in, addr1_s(*addr,+4,stride), stride);
+	op4s_sdl_load_stride_s_ref(x, addr1_s(*addr, +4, stride), stride);
 
 	// (descale)
 
 	// input
-	op4s_sdl_input_s_ref(in, c, r);
+	op4s_sdl_input_s_ref(x, c, r);
 
 	// operation
 	op4s_sdl_op_s_ref(z, c, w, l, r);
@@ -203,25 +195,36 @@ void op4s_sdl_pass_fwd_prolog_stride_s_ref(const float *w, const float *v, float
 	op4s_sdl_update_s_ref(c, l, r, z);
 
 	// pointers
-	*addr = addr1_s(*addr,2,stride);
+	*addr = addr1_s(*addr, 2, stride);
 }
 
 static
-void op2s_sdl_pass_fwd_prolog_stride_s_ref(const float *w, const float *v, float *l, float *c, float *r, float *z, float *in, float *out, float *restrict *addr, int stride)
+void fdwt_cdf53_diagonal_prolog_s(
+	const float *w,
+	const float *v,
+	float *l,
+	float *c,
+	float *r,
+	float *z,
+	float *x,
+	float *y,
+	float **addr,
+	int stride
+)
 {
 	UNUSED(v);
-	UNUSED(out);
+	UNUSED(y);
 
 	// shuffle
 	op2s_sdl_shuffle_s_ref(c, r);
 
 	// load
-	op2s_sdl_load_stride_s_ref(in, addr1_s(*addr,+2,stride), stride);
+	op2s_sdl_load_stride_s_ref(x, addr1_s(*addr, +2, stride), stride);
 
 	// (descale)
 
 	// input
-	op2s_sdl_input_s_ref(in, c, r);
+	op2s_sdl_input_s_ref(x, c, r);
 
 	// operation
 	op2s_sdl_op_s_ref(z, c, w, l, r);
@@ -236,37 +239,37 @@ void op2s_sdl_pass_fwd_prolog_stride_s_ref(const float *w, const float *v, float
 	op2s_sdl_update_s_ref(c, l, r, z);
 
 	// pointers
-	*addr = addr1_s(*addr,2,stride);
+	*addr = addr1_s(*addr, 2, stride);
 }
 
 static
-void op2s_sdl_pass_fwd_prolog_stride_s_ref_eaw(
+void fdwt_eaw53_diagonal_prolog_s(
 	const float *w,
 	const float *v,
 	float *l,
 	float *c,
 	float *r,
 	float *z,
-	float *in,
-	float *out,
+	float *x,
+	float *y,
 	float **addr,
 	int stride,
 	const float *eaw_w
 )
 {
 	UNUSED(v);
-	UNUSED(out);
+	UNUSED(y);
 
 	// shuffle
 	op2s_sdl_shuffle_s_ref(c, r);
 
 	// load
-	op2s_sdl_load_stride_s_ref(in, addr1_s(*addr,+2,stride), stride);
+	op2s_sdl_load_stride_s_ref(x, addr1_s(*addr, +2, stride), stride);
 
 	// (descale)
 
 	// input
-	op2s_sdl_input_s_ref(in, c, r);
+	op2s_sdl_input_s_ref(x, c, r);
 
 	// operation
 	op2s_sdl_op_s_ref_eaw(z, c, w, l, r, eaw_w);
@@ -281,13 +284,24 @@ void op2s_sdl_pass_fwd_prolog_stride_s_ref_eaw(
 	op2s_sdl_update_s_ref(c, l, r, z);
 
 	// pointers
-	*addr = addr1_s(*addr,2,stride);
+	*addr = addr1_s(*addr, 2, stride);
 }
 
 static
-void op4s_sdl_pass_fwd_epilog_stride_s_ref(const float *w, const float *v, float *l, float *c, float *r, float *z, float *in, float *out, float *restrict *addr, int stride)
+void fdwt_cdf97_diagonal_epilog_s(
+	const float *w,
+	const float *v,
+	float *l,
+	float *c,
+	float *r,
+	float *z,
+	float *x,
+	float *y,
+	float **addr,
+	int stride
+)
 {
-	UNUSED(in);
+	UNUSED(x);
 
 	// shuffle
 	op4s_sdl_shuffle_s_ref(c, r);
@@ -302,25 +316,36 @@ void op4s_sdl_pass_fwd_epilog_stride_s_ref(const float *w, const float *v, float
 	op4s_sdl_op_s_ref(z, c, w, l, r);
 
 	// output
-	op4s_sdl_output_s_ref(out, l, z);
+	op4s_sdl_output_s_ref(y, l, z);
 
 	// scale
-	op4s_sdl_scale_s_ref(out, v);
+	op4s_sdl_scale_s_ref(y, v);
 
 	// save
-	op4s_sdl_save_stride_s_ref(out, addr1_s(*addr,-6,stride), stride);
+	op4s_sdl_save_stride_s_ref(y, addr1_s(*addr, -6, stride), stride);
 
 	// update
 	op4s_sdl_update_s_ref(c, l, r, z);
 
 	// pointers
-	(*addr) = addr1_s(*addr,2,stride);
+	(*addr) = addr1_s(*addr, 2, stride);
 }
 
 static
-void op2s_sdl_pass_fwd_epilog_stride_s_ref(const float *w, const float *v, float *l, float *c, float *r, float *z, float *in, float *out, float *restrict *addr, int stride)
+void fdwt_cdf53_diagonal_epilog_s(
+	const float *w,
+	const float *v,
+	float *l,
+	float *c,
+	float *r,
+	float *z,
+	float *x,
+	float *y,
+	float **addr,
+	int stride
+)
 {
-	UNUSED(in);
+	UNUSED(x);
 
 	// shuffle
 	op2s_sdl_shuffle_s_ref(c, r);
@@ -335,37 +360,37 @@ void op2s_sdl_pass_fwd_epilog_stride_s_ref(const float *w, const float *v, float
 	op2s_sdl_op_s_ref(z, c, w, l, r);
 
 	// output
-	op2s_sdl_output_s_ref(out, l, z);
+	op2s_sdl_output_s_ref(y, l, z);
 
 	// scale
-	op2s_sdl_scale_s_ref(out, v);
+	op2s_sdl_scale_s_ref(y, v);
 
 	// save
-	op2s_sdl_save_stride_s_ref(out, addr1_s(*addr,-2,stride), stride);
+	op2s_sdl_save_stride_s_ref(y, addr1_s(*addr, -2, stride), stride);
 
 	// update
 	op2s_sdl_update_s_ref(c, l, r, z);
 
 	// pointers
-	(*addr) = addr1_s(*addr,2,stride);
+	(*addr) = addr1_s(*addr, 2, stride);
 }
 
 static
-void op2s_sdl_pass_fwd_epilog_stride_s_ref_eaw(
+void fdwt_eaw53_diagonal_epilog_s(
 	const float *w,
 	const float *v,
 	float *l,
 	float *c,
 	float *r,
 	float *z,
-	float *in,
-	float *out,
+	float *x,
+	float *y,
 	float **addr,
 	int stride,
 	const float *eaw_w
 )
 {
-	UNUSED(in);
+	UNUSED(x);
 
 	// shuffle
 	op2s_sdl_shuffle_s_ref(c, r);
@@ -380,19 +405,19 @@ void op2s_sdl_pass_fwd_epilog_stride_s_ref_eaw(
 	op2s_sdl_op_s_ref_eaw(z, c, w, l, r, eaw_w);
 
 	// output
-	op2s_sdl_output_s_ref(out, l, z);
+	op2s_sdl_output_s_ref(y, l, z);
 
 	// scale
-	op2s_sdl_scale_s_ref(out, v);
+	op2s_sdl_scale_s_ref(y, v);
 
 	// save
-	op2s_sdl_save_stride_s_ref(out, addr1_s(*addr,-2,stride), stride);
+	op2s_sdl_save_stride_s_ref(y, addr1_s(*addr, -2, stride), stride);
 
 	// update
 	op2s_sdl_update_s_ref(c, l, r, z);
 
 	// pointers
-	(*addr) = addr1_s(*addr,2,stride);
+	(*addr) = addr1_s(*addr, 2, stride);
 }
 
 static
@@ -419,16 +444,16 @@ void fdwt_cdf97_short_s(
 	{
 
 		// alpha
-		*addr1_s(arr, 1, stride) += 2*alpha*(*addr1_s(arr, 0, stride));
+		*addr1_s(arr, 1, stride) += 2*alpha * (*addr1_s(arr, 0, stride));
 
 		// beta
-		*addr1_s(arr, 0, stride) += 2*beta*(*addr1_s(arr, 1, stride));
+		*addr1_s(arr, 0, stride) += 2*beta  * (*addr1_s(arr, 1, stride));
 
 		// gamma
-		*addr1_s(arr, 1, stride) += 2*gamma*(*addr1_s(arr, 0, stride));
+		*addr1_s(arr, 1, stride) += 2*gamma * (*addr1_s(arr, 0, stride));
 
 		// delta
-		*addr1_s(arr, 0, stride) += 2*delta*(*addr1_s(arr, 1, stride));
+		*addr1_s(arr, 0, stride) += 2*delta * (*addr1_s(arr, 1, stride));
 
 		// scaling
 		*addr1_s(arr, 0, stride) *= zeta;
@@ -438,18 +463,18 @@ void fdwt_cdf97_short_s(
 	if( 3 == N )
 	{
 		// alpha
-		*addr1_s(arr, 1, stride) += alpha*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+		*addr1_s(arr, 1, stride) += alpha * (*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
 
 		// beta
-		*addr1_s(arr, 0, stride) += 2*beta*(*addr1_s(arr, 1, stride));
-		*addr1_s(arr, 2, stride) += 2*beta*(*addr1_s(arr, 1, stride));
+		*addr1_s(arr, 0, stride) += 2*beta  * (*addr1_s(arr, 1, stride));
+		*addr1_s(arr, 2, stride) += 2*beta  * (*addr1_s(arr, 1, stride));
 
 		// gamma
-		*addr1_s(arr, 1, stride) += gamma*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+		*addr1_s(arr, 1, stride) += gamma * (*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
 
 		// delta
-		*addr1_s(arr, 0, stride) += 2*delta*(*addr1_s(arr, 1, stride));
-		*addr1_s(arr, 2, stride) += 2*delta*(*addr1_s(arr, 1, stride));
+		*addr1_s(arr, 0, stride) += 2*delta * (*addr1_s(arr, 1, stride));
+		*addr1_s(arr, 2, stride) += 2*delta * (*addr1_s(arr, 1, stride));
 
 		// scaling
 		*addr1_s(arr, 0, stride) *= zeta;
@@ -460,20 +485,20 @@ void fdwt_cdf97_short_s(
 	if( 4 == N )
 	{
 		// alpha
-		*addr1_s(arr, 1, stride) += alpha*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
-		*addr1_s(arr, 3, stride) += 2*alpha*(*addr1_s(arr, 2, stride));
+		*addr1_s(arr, 1, stride) += alpha * (*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+		*addr1_s(arr, 3, stride) += 2*alpha * (*addr1_s(arr, 2, stride));
 
 		// beta
-		*addr1_s(arr, 0, stride) += 2*beta*(*addr1_s(arr, 1, stride));
-		*addr1_s(arr, 2, stride) += beta*(*addr1_s(arr, 1, stride) + *addr1_s(arr, 3, stride));
+		*addr1_s(arr, 0, stride) += 2*beta  * (*addr1_s(arr, 1, stride));
+		*addr1_s(arr, 2, stride) += beta  * (*addr1_s(arr, 1, stride) + *addr1_s(arr, 3, stride));
 
 		// gamma
-		*addr1_s(arr, 1, stride) += gamma*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
-		*addr1_s(arr, 3, stride) += 2*gamma*(*addr1_s(arr, 2, stride));
+		*addr1_s(arr, 1, stride) += gamma * (*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+		*addr1_s(arr, 3, stride) += 2*gamma * (*addr1_s(arr, 2, stride));
 
 		// delta
-		*addr1_s(arr, 0, stride) += 2*delta*(*addr1_s(arr, 1, stride));
-		*addr1_s(arr, 2, stride) += delta*(*addr1_s(arr, 1, stride) + *addr1_s(arr, 3, stride));
+		*addr1_s(arr, 0, stride) += 2*delta * (*addr1_s(arr, 1, stride));
+		*addr1_s(arr, 2, stride) += delta * (*addr1_s(arr, 1, stride) + *addr1_s(arr, 3, stride));
 
 		// scaling
 		*addr1_s(arr, 0, stride) *= zeta;
@@ -505,10 +530,10 @@ void fdwt_cdf53_short_s(
 	{
 
 		// alpha
-		*addr1_s(arr, 1, stride) += 2*alpha*(*addr1_s(arr, 0, stride));
+		*addr1_s(arr, 1, stride) += 2*alpha * (*addr1_s(arr, 0, stride));
 
 		// beta
-		*addr1_s(arr, 0, stride) += 2*beta*(*addr1_s(arr, 1, stride));
+		*addr1_s(arr, 0, stride) += 2*beta  * (*addr1_s(arr, 1, stride));
 
 		// scaling
 		*addr1_s(arr, 0, stride) *= zeta;
@@ -540,10 +565,10 @@ void fdwt_eaw53_short_s(
 	{
 
 		// alpha
-		*addr1_s(arr, 1, stride) += 2*alpha*(*addr1_s(arr, 0, stride));
+		*addr1_s(arr, 1, stride) += 2*alpha * (*addr1_s(arr, 0, stride));
 
 		// beta
-		*addr1_s(arr, 0, stride) += 2*beta*(*addr1_s(arr, 1, stride));
+		*addr1_s(arr, 0, stride) += 2*beta  * (*addr1_s(arr, 1, stride));
 
 		// scaling
 		*addr1_s(arr, 0, stride) *= zeta;
@@ -567,18 +592,18 @@ void fdwt_cdf97_prolog_s(
 	float zeta  = +dwt_cdf97_s1_s;
 
 	// alpha
-	*addr1_s(arr, 1, stride) += alpha*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
-	*addr1_s(arr, 3, stride) += alpha*(*addr1_s(arr, 2, stride) + *addr1_s(arr, 4, stride));
+	*addr1_s(arr, 1, stride) += alpha * (*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+	*addr1_s(arr, 3, stride) += alpha * (*addr1_s(arr, 2, stride) + *addr1_s(arr, 4, stride));
 
 	// beta
-	*addr1_s(arr, 0, stride) += 2*beta*(*addr1_s(arr, 1, stride));
-	*addr1_s(arr, 2, stride) += beta*(*addr1_s(arr, 1, stride) + *addr1_s(arr, 3, stride));
+	*addr1_s(arr, 0, stride) += 2*beta  * (*addr1_s(arr, 1, stride));
+	*addr1_s(arr, 2, stride) += beta * (*addr1_s(arr, 1, stride) + *addr1_s(arr, 3, stride));
 
 	// gamma
-	*addr1_s(arr, 1, stride) += gamma*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+	*addr1_s(arr, 1, stride) += gamma * (*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
 
 	// delta
-	*addr1_s(arr, 0, stride) += 2*delta*(*addr1_s(arr, 1, stride));
+	*addr1_s(arr, 0, stride) += 2*delta * (*addr1_s(arr, 1, stride));
 
 	// scaling
 	*addr1_s(arr, 0, stride) *= zeta;
@@ -598,10 +623,10 @@ void fdwt_cdf53_prolog_s(
 	float zeta  = +dwt_cdf53_s1_s;
 
 	// alpha
-	*addr1_s(arr, 1, stride) += alpha*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+	*addr1_s(arr, 1, stride) += alpha * (*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
 
 	// beta
-	*addr1_s(arr, 0, stride) += 2*beta*(*addr1_s(arr, 1, stride));
+	*addr1_s(arr, 0, stride) += 2*beta  * (*addr1_s(arr, 1, stride));
 
 	// scaling
 	*addr1_s(arr, 0, stride) *= zeta;
@@ -628,7 +653,7 @@ void fdwt_eaw53_prolog_s(
 	*addr1_s(arr, 1, stride) += ( wL * *addr1_s(arr, 0, stride) + wR * *addr1_s(arr, 2, stride) ) / (wL+wR) * (2.f * alpha);
 
 	// beta
-	*addr1_s(arr, 0, stride) += 2*beta*(*addr1_s(arr, 1, stride));
+	*addr1_s(arr, 0, stride) += 2*beta  * (*addr1_s(arr, 1, stride));
 
 	// scaling
 	*addr1_s(arr, 0, stride) *= zeta;
@@ -653,38 +678,38 @@ void fdwt_cdf97_vertical_core_s(
 	const float v[2] = { 1/zeta, zeta };
 
 	// aux. variables
-	float in[2];
-	float out[2];
+	float x[2];
+	float y[2];
 	float r[4];
 	float c[4];
 
 	// inputs
-	in[0] = *ptr0;
-	in[1] = *ptr1;
+	x[0] = *ptr0;
+	x[1] = *ptr1;
 
 	// shuffles
-	out[0] = l[0];
-	c[0]   = l[1];
-	c[1]   = l[2];
-	c[2]   = l[3];
-	c[3]   = in[0];
+	y[0] = l[0];
+	c[0] = l[1];
+	c[1] = l[2];
+	c[2] = l[3];
+	c[3] = x[0];
 
 	// operation
-	r[3]   = in[1];
-	r[2]   = c[3]+w[3]*(l[3]+r[3]);
-	r[1]   = c[2]+w[2]*(l[2]+r[2]);
-	r[0]   = c[1]+w[1]*(l[1]+r[1]);
-	out[1] = c[0]+w[0]*(l[0]+r[0]);
+	r[3] = x[1];
+	r[2] = c[3] + w[3] * (l[3] + r[3]);
+	r[1] = c[2] + w[2] * (l[2] + r[2]);
+	r[0] = c[1] + w[1] * (l[1] + r[1]);
+	y[1] = c[0] + w[0] * (l[0] + r[0]);
 
 	// scales
-	out[0] = out[0] * v[0];
-	out[1] = out[1] * v[1];
+	y[0] *= v[0];
+	y[1] *= v[1];
 
 	// outputs
-	*out0 = out[0];
-	*out1 = out[1];
+	*out0 = y[0];
+	*out1 = y[1];
 
-	// update l[]
+	// update
 	l[0] = r[0];
 	l[1] = r[1];
 	l[2] = r[2];
@@ -708,34 +733,34 @@ void fdwt_cdf53_vertical_core_s(
 	const float v[2] = { 1/zeta, zeta };
 
 	// aux. variables
-	float in[2];
-	float out[2];
+	float x[2];
+	float y[2];
 	float r[2];
 	float c[2];
 
 	// inputs
-	in[0] = *ptr0;
-	in[1] = *ptr1;
+	x[0] = *ptr0;
+	x[1] = *ptr1;
 
 	// shuffles
-	out[0] = l[0];
-	c[0]   = l[1];
-	c[1]   = in[0];
+	y[0] = l[0];
+	c[0] = l[1];
+	c[1] = x[0];
 
 	// operation
-	r[1]   = in[1];
-	r[0]   = c[1]+w[1]*(l[1]+r[1]);
-	out[1] = c[0]+w[0]*(l[0]+r[0]);
+	r[1] = x[1];
+	r[0] = c[1] + w[1] * (l[1] + r[1]);
+	y[1] = c[0] + w[0] * (l[0] + r[0]);
 
 	// scales
-	out[0] = out[0] * v[0];
-	out[1] = out[1] * v[1];
+	y[0] *= v[0];
+	y[1] *= v[1];
 
 	// outputs
-	*out0 = out[0];
-	*out1 = out[1];
+	*out0 = y[0];
+	*out1 = y[1];
 
-	// update l[]
+	// update
 	l[0] = r[0];
 	l[1] = r[1];
 }
@@ -785,7 +810,7 @@ void fdwt_eaw53_vertical_core_s(
 	*out0 = y[0];
 	*out1 = y[1];
 
-	// update l[]
+	// update
 	l[0] = r[0];
 	l[1] = r[1];
 }
@@ -1060,8 +1085,8 @@ void dwt_calc_eaw_w_stride_s(
 	for(int i = 0; i < N-1; i++)
 	{
 		w[i] = dwt_eaw_w(
-			*addr1_s(arr,i,stride),
-			*addr1_s(arr,i+1,stride),
+			*addr1_s(arr, i+0, stride),
+			*addr1_s(arr, i+1, stride),
 			alpha);
 	}
 	w[N-1] = 0.f; // not necessary
@@ -1119,245 +1144,91 @@ void fdwt_eaw53_horizontal_s(
 }
 
 static
-void fdwt_cdf97_diagonal_prolog_s(
-	float *base,
+void fdwt_cdf97_diagonal_core_s(
 	const float *w,
 	const float *v,
 	float *l,
 	float *c,
 	float *r,
 	float *z,
-	float *in,
-	float *out,
+	float *x,
+	float *y,
 	float **addr,
 	int stride
 )
-{
-	// prolog2: import(3)
-	op4s_sdl_import_stride_s_ref(l, base, 3, stride);
-
-	// prolog2: pass-prolog
-	op4s_sdl_pass_fwd_prolog_stride_s_ref(w, v, l, c, r, z, in, out, addr, stride);
-
-	// prolog2: import(2)
-	op4s_sdl_import_stride_s_ref(l, base, 2, stride);
-
-	// prolog2: pass-prolog
-	op4s_sdl_pass_fwd_prolog_stride_s_ref(w, v, l, c, r, z, in, out, addr, stride);
-
-	// prolog2: import(1)
-	op4s_sdl_import_stride_s_ref(l, base, 1, stride);
-
-	// prolog2: pass-prolog
-	op4s_sdl_pass_fwd_prolog_stride_s_ref(w, v, l, c, r, z, in, out, addr, stride);
-
-	// prolog2: import(0)
-	op4s_sdl_import_stride_s_ref(l, base, 0, stride);
-}
-
-static
-void fdwt_cdf53_diagonal_prolog_s(
-	float *base,
-	const float *w,
-	const float *v,
-	float *l,
-	float *c,
-	float *r,
-	float *z,
-	float *in,
-	float *out,
-	float **addr,
-	int stride
-)
-{
-	// prolog2: import(1)
-	op2s_sdl_import_stride_s_ref(l, base, 1, stride);
-
-	// prolog2: pass-prolog
-	op2s_sdl_pass_fwd_prolog_stride_s_ref(w, v, l, c, r, z, in, out, addr, stride);
-
-	// prolog2: import(0)
-	op2s_sdl_import_stride_s_ref(l, base, 0, stride);
-}
-
-static
-void fdwt_eaw53_diagonal_prolog_s(
-	float *base,
-	const float *w,
-	const float *v,
-	float *l,
-	float *c,
-	float *r,
-	float *z,
-	float *in,
-	float *out,
-	float **addr,
-	int stride,
-	const float *eaw_w
-)
-{
-	// prolog2: import(1)
-	op2s_sdl_import_stride_s_ref(l, base, 1, stride);
-
-	// prolog2: pass-prolog
-	op2s_sdl_pass_fwd_prolog_stride_s_ref_eaw(w, v, l, c, r, z, in, out, addr, stride, eaw_w);
-
-	// prolog2: import(0)
-	op2s_sdl_import_stride_s_ref(l, base, 0, stride);
-}
-
-static
-void fdwt_cdf97_diagonal_epilog_s(
-	float *base,
-	const float *w,
-	const float *v,
-	float *l,
-	float *c,
-	float *r,
-	float *z,
-	float *in,
-	float *out,
-	float **addr,
-	int stride
-)
-{
-	// epilog2: export(3)
-	op4s_sdl_export_stride_s_ref(l, base, 3, stride);
-
-	// epilog2: pass-epilog
-	op4s_sdl_pass_fwd_epilog_stride_s_ref(w, v, l, c, r, z, in, out, addr, stride);
-
-	// epilog2: export(2)
-	op4s_sdl_export_stride_s_ref(l, base, 2, stride);
-
-	// epilog2: pass-epilog
-	op4s_sdl_pass_fwd_epilog_stride_s_ref(w, v, l, c, r, z, in, out, addr, stride);
-
-	// epilog2: export(1)
-	op4s_sdl_export_stride_s_ref(l, base, 1, stride);
-
-	// epilog2: pass-epilog
-	op4s_sdl_pass_fwd_epilog_stride_s_ref(w, v, l, c, r, z, in, out, addr, stride);
-
-	// epilog2: export(0)
-	op4s_sdl_export_stride_s_ref(l, base, 0, stride);
-}
-
-static
-void fdwt_cdf53_diagonal_epilog_s(
-	float *base,
-	const float *w,
-	const float *v,
-	float *l,
-	float *c,
-	float *r,
-	float *z,
-	float *in,
-	float *out,
-	float **addr,
-	int stride
-)
-{
-	// epilog2: export(1)
-	op2s_sdl_export_stride_s_ref(l, base, 1, stride);
-
-	// epilog2: pass-epilog
-	op2s_sdl_pass_fwd_epilog_stride_s_ref(w, v, l, c, r, z, in, out, addr, stride);
-
-	// epilog2: export(0)
-	op2s_sdl_export_stride_s_ref(l, base, 0, stride);
-}
-
-static
-void fdwt_eaw53_diagonal_epilog_s(
-	float *base,
-	const float *w,
-	const float *v,
-	float *l,
-	float *c,
-	float *r,
-	float *z,
-	float *in,
-	float *out,
-	float **addr,
-	int stride,
-	const float *eaw_w
-)
-{
-	// epilog2: export(1)
-	op2s_sdl_export_stride_s_ref(l, base, 1, stride);
-
-	// epilog2: pass-epilog
-	op2s_sdl_pass_fwd_epilog_stride_s_ref_eaw(w, v, l, c, r, z, in, out, addr, stride, eaw_w);
-
-	// epilog2: export(0)
-	op2s_sdl_export_stride_s_ref(l, base, 0, stride);
-}
-
-static
-void fdwt_cdf97_diagonal_core_s(const float *w, const float *v, float *l, float *c, float *r, float *z, float *in, float *out, float *restrict *addr, int stride)
 {
 	// shuffle
 	op4s_sdl_shuffle_s_ref(c, r);
 
 	// load
-	op4s_sdl_load_stride_s_ref(in, addr1_s(*addr,4,stride), stride);
+	op4s_sdl_load_stride_s_ref(x, addr1_s(*addr, +4, stride), stride);
 
 	// (descale)
 
 	// input
-	op4s_sdl_input_s_ref(in, c, r);
+	op4s_sdl_input_s_ref(x, c, r);
 
 	// operation
 	op4s_sdl_op_s_ref(z, c, w, l, r);
 
 	// output
-	op4s_sdl_output_s_ref(out, l, z);
+	op4s_sdl_output_s_ref(y, l, z);
 
 	// scale
-	op4s_sdl_scale_s_ref(out, v);
+	op4s_sdl_scale_s_ref(y, v);
 
 	// save
-	op4s_sdl_save_stride_s_ref(out, addr1_s(*addr,-6,stride), stride);
+	op4s_sdl_save_stride_s_ref(y, addr1_s(*addr, -6, stride), stride);
 
 	// update
 	op4s_sdl_update_s_ref(c, l, r, z);
 
 	// pointers
-	*addr = addr1_s(*addr,2,stride);
+	*addr = addr1_s(*addr, 2, stride);
 }
 
 static
-void fdwt_cdf53_diagonal_core_s(const float *w, const float *v, float *l, float *c, float *r, float *z, float *in, float *out, float *restrict *addr, int stride)
+void fdwt_cdf53_diagonal_core_s(
+	const float *w,
+	const float *v,
+	float *l,
+	float *c,
+	float *r,
+	float *z,
+	float *x,
+	float *y,
+	float **addr,
+	int stride
+)
 {
 	// shuffle
 	op2s_sdl_shuffle_s_ref(c, r);
 
 	// load
-	op2s_sdl_load_stride_s_ref(in, addr1_s(*addr,2,stride), stride);
+	op2s_sdl_load_stride_s_ref(x, addr1_s(*addr, +2, stride), stride);
 
 	// (descale)
 
 	// input
-	op2s_sdl_input_s_ref(in, c, r);
+	op2s_sdl_input_s_ref(x, c, r);
 
 	// operation
 	op2s_sdl_op_s_ref(z, c, w, l, r);
 
 	// output
-	op2s_sdl_output_s_ref(out, l, z);
+	op2s_sdl_output_s_ref(y, l, z);
 
 	// scale
-	op2s_sdl_scale_s_ref(out, v);
+	op2s_sdl_scale_s_ref(y, v);
 
 	// save
-	op2s_sdl_save_stride_s_ref(out, addr1_s(*addr,-2,stride), stride);
+	op2s_sdl_save_stride_s_ref(y, addr1_s(*addr, -2, stride), stride);
 
 	// update
 	op2s_sdl_update_s_ref(c, l, r, z);
 
 	// pointers
-	*addr = addr1_s(*addr,2,stride);
+	*addr = addr1_s(*addr, 2, stride);
 }
 
 static
@@ -1368,8 +1239,8 @@ void fdwt_eaw53_diagonal_core_s(
 	float *c,
 	float *r,
 	float *z,
-	float *in,
-	float *out,
+	float *x,
+	float *y,
 	float **addr,
 	int stride,
 	const float *eaw_w
@@ -1379,30 +1250,30 @@ void fdwt_eaw53_diagonal_core_s(
 	op2s_sdl_shuffle_s_ref(c, r);
 
 	// load
-	op2s_sdl_load_stride_s_ref(in, addr1_s(*addr,2,stride), stride);
+	op2s_sdl_load_stride_s_ref(x, addr1_s(*addr, +2, stride), stride);
 
 	// (descale)
 
 	// input
-	op2s_sdl_input_s_ref(in, c, r);
+	op2s_sdl_input_s_ref(x, c, r);
 
 	// operation
 	op2s_sdl_op_s_ref_eaw(z, c, w, l, r, eaw_w);
 
 	// output
-	op2s_sdl_output_s_ref(out, l, z);
+	op2s_sdl_output_s_ref(y, l, z);
 
 	// scale
-	op2s_sdl_scale_s_ref(out, v);
+	op2s_sdl_scale_s_ref(y, v);
 
 	// save
-	op2s_sdl_save_stride_s_ref(out, addr1_s(*addr,-2,stride), stride);
+	op2s_sdl_save_stride_s_ref(y, addr1_s(*addr, -2, stride), stride);
 
 	// update
 	op2s_sdl_update_s_ref(c, l, r, z);
 
 	// pointers
-	*addr = addr1_s(*addr,2,stride);
+	*addr = addr1_s(*addr, 2, stride);
 }
 
 void fdwt_cdf97_diagonal_s(
@@ -1437,22 +1308,34 @@ void fdwt_cdf97_diagonal_s(
 		float c[4];
 		float r[4];
 		float z[4];
-		float in[4];
-		float out[4];
+		float x[4];
+		float y[4];
 
 		float *addr = begin;
 
 		// prolog-diagonal
-		fdwt_cdf97_diagonal_prolog_s(begin, w, v, l, c, r, z, in, out, &addr, stride);
+		l[3] = *addr1_const_s(begin, 3, stride);
+		fdwt_cdf97_diagonal_prolog_s(w, v, l, c, r, z, x, y, &addr, stride);
+		l[2] = *addr1_const_s(begin, 2, stride);
+		fdwt_cdf97_diagonal_prolog_s(w, v, l, c, r, z, x, y, &addr, stride);
+		l[1] = *addr1_const_s(begin, 1, stride);
+		fdwt_cdf97_diagonal_prolog_s(w, v, l, c, r, z, x, y, &addr, stride);
+		l[0] = *addr1_const_s(begin, 0, stride);
 
 		// core
 		for(int s = 0; s < pairs-3; s++)
 		{
-			fdwt_cdf97_diagonal_core_s(w, v, l, c, r, z, in, out, &addr, stride);
+			fdwt_cdf97_diagonal_core_s(w, v, l, c, r, z, x, y, &addr, stride);
 		}
 
 		// epilog-diagonal
-		fdwt_cdf97_diagonal_epilog_s(end, w, v, l, c, r, z, in, out, &addr, stride);
+		*addr1_s(end, 3, stride) = l[3];
+		fdwt_cdf97_diagonal_epilog_s(w, v, l, c, r, z, x, y, &addr, stride);
+		*addr1_s(end, 2, stride) = l[2];
+		fdwt_cdf97_diagonal_epilog_s(w, v, l, c, r, z, x, y, &addr, stride);
+		*addr1_s(end, 1, stride) = l[1];
+		fdwt_cdf97_diagonal_epilog_s(w, v, l, c, r, z, x, y, &addr, stride);
+		*addr1_s(end, 0, stride) = l[0];
 	}
 }
 
@@ -1462,6 +1345,8 @@ void fdwt_cdf53_diagonal_s(
 	int stride
 )
 {
+	assert( ptr );
+
 	float alpha = -dwt_cdf53_p1_s;
 	float beta  = +dwt_cdf53_u1_s;
 	float zeta  = +dwt_cdf53_s1_s;
@@ -1486,22 +1371,26 @@ void fdwt_cdf53_diagonal_s(
 		float c[2];
 		float r[2];
 		float z[2];
-		float in[2];
-		float out[2];
+		float x[2];
+		float y[2];
 
 		float *addr = begin;
 
 		// prolog-diagonal
-		fdwt_cdf53_diagonal_prolog_s(begin, w, v, l, c, r, z, in, out, &addr, stride);
+		l[1] = *addr1_const_s(begin, 1, stride);
+		fdwt_cdf53_diagonal_prolog_s(w, v, l, c, r, z, x, y, &addr, stride);
+		l[0] = *addr1_const_s(begin, 0, stride);
 
 		// core
 		for(int s = 0; s < pairs-1; s++)
 		{
-			fdwt_cdf53_diagonal_core_s(w, v, l, c, r, z, in, out, &addr, stride);
+			fdwt_cdf53_diagonal_core_s(w, v, l, c, r, z, x, y, &addr, stride);
 		}
 
 		// epilog-diagonal
-		fdwt_cdf53_diagonal_epilog_s(end, w, v, l, c, r, z, in, out, &addr, stride);
+		*addr1_s(end, 1, stride) = l[1];
+		fdwt_cdf53_diagonal_epilog_s(w, v, l, c, r, z, x, y, &addr, stride);
+		*addr1_s(end, 0, stride) = l[0];
 	}
 }
 
@@ -1537,31 +1426,27 @@ void fdwt_eaw53_diagonal_s(
 		float c[2];
 		float r[2];
 		float z[2];
-		float in[2];
-		float out[2];
+		float x[2];
+		float y[2];
 
 		float *addr = begin;
 
 		// prolog-diagonal
-		fdwt_eaw53_diagonal_prolog_s(
-			begin, w, v, l, c, r, z, in, out, &addr, stride,
-			&eaw_w[-2]
-		);
+		l[1] = *addr1_const_s(begin, 1, stride);
+		fdwt_eaw53_diagonal_prolog_s(w, v, l, c, r, z, x, y, &addr, stride, &eaw_w[-2]);
+		l[0] = *addr1_const_s(begin, 0, stride);
 
 		// core
 		for(int s = 0; s < pairs-1; s++)
 		{
-			fdwt_eaw53_diagonal_core_s(
-				w, v, l, c, r, z, in, out, &addr, stride,
-				&eaw_w[2*s+0]
-			);
+			fdwt_eaw53_diagonal_core_s(w, v, l, c, r, z, x, y, &addr, stride, &eaw_w[2*s]);
 		}
 
 		// epilog-diagonal
-		fdwt_eaw53_diagonal_epilog_s(
-			end, w, v, l, c, r, z, in, out, &addr, stride,
-			&eaw_w[2*pairs-2]
-		);
+		*addr1_s(end, 1, stride) = l[1];
+		fdwt_eaw53_diagonal_epilog_s(w, v, l, c, r, z, x, y, &addr, stride, &eaw_w[2*pairs-2]);
+		*addr1_s(end, 0, stride) = l[0];
+		
 	}
 }
 
