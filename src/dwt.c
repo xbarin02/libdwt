@@ -6,6 +6,8 @@
 	#include <xmmintrin.h>
 #endif
 
+#include "inline-sdl.h"
+
 #ifdef _OPENMP
 	#include <omp.h>
 #endif
@@ -16,6 +18,7 @@
 #define MEASURE_PER_PIXEL
 
 #include "inline.h"
+#include "dwt-core.h"
 
 #ifdef __SSE__
 #define op4s_sdl2_update_s_sse(c, l, r, z) \
@@ -181,7 +184,9 @@ int dwt_alg_shift[DWT_ALG_LAST] = {
 	[DWT_ALG_SL_CORE_SDL_SC_SSE] = 10,
 	[DWT_ALG_SL_CORE_SDL_SC_SSE_OFF0] = 10,
 	[DWT_ALG_SL_CORE_SDL_SC_SSE_OFF1] = 10,
+	[DWT_ALG_SL_CORE_SDL_SC_SSE_OFF1_6X2] = 10,
 	[DWT_ALG_SL_CORE_DL_SC_SSE_OFF1] = 4,
+	[DWT_ALG_SL_CORE_DL_SC_SSE_OFF1_4X4] = 4,
 	[DWT_ALG_SL_CORE_SDL_SC_SSE_OFF0_OVL1] = 10,
 	[DWT_ALG_SL_CORE_SDL_SC_SSE_OFF1_OVL1] = 10,
 };
@@ -290,8 +295,8 @@ void cdf97_fwd_core2_sdl_2x2_sse_s(
 	UNUSED(cBR);
 	UNUSED(rBR);
 
-	const float w[4] __attribute__ ((aligned (16))) = { dwt_cdf97_u2_s, -dwt_cdf97_p2_s, dwt_cdf97_u1_s, -dwt_cdf97_p1_s };
-	const float v[4] __attribute__ ((aligned (16))) = { 1/dwt_cdf97_s1_s, dwt_cdf97_s1_s, 1/dwt_cdf97_s1_s, dwt_cdf97_s1_s };
+	const float w[4] ALIGNED(16) = { dwt_cdf97_u2_s, -dwt_cdf97_p2_s, dwt_cdf97_u1_s, -dwt_cdf97_p1_s };
+	const float v[4] ALIGNED(16) = { 1/dwt_cdf97_s1_s, dwt_cdf97_s1_s, 1/dwt_cdf97_s1_s, dwt_cdf97_s1_s };
 
 	__m128 buff;
 	__m128 z;
@@ -411,6 +416,83 @@ void cdf97_fwd_core2_sdl_2x2_sc_sse_s(
 
 	// B/L+R
 	op4s_sdl2_scale_s_sse(buff, v_vert);
+
+	*outL0 = buff[0];
+	*outL1 = buff[1];
+	*outR0 = buff[2];
+	*outR1 = buff[3];
+}
+#endif
+
+#ifdef __SSE__
+static
+void cdf97_inv_core2_sdl_2x2_sc_sse_s(
+	float *ptrL0, float *ptrL1,
+	float *ptrR0, float *ptrR1,
+	float *outL0, float *outL1,
+	float *outR0, float *outR1,
+	float *lAL, float *cAL, float *rAL,
+	float *lAR, float *cAR, float *rAR,
+	float *lBL, float *cBL, float *rBL,
+	float *lBR, float *cBR, float *rBR
+)
+{
+	UNUSED(cAL);
+	UNUSED(rAL);
+	UNUSED(cAR);
+	UNUSED(rAR);
+	UNUSED(cBL);
+	UNUSED(rBL);
+	UNUSED(cBR);
+	UNUSED(rBR);
+
+	// NOTE: reversed with negative signs
+	const __m128 w = { +dwt_cdf97_p1_s, -dwt_cdf97_u1_s, +dwt_cdf97_p2_s, -dwt_cdf97_u2_s };
+	const __m128 v_vert = {
+		1/(dwt_cdf97_s1_s*dwt_cdf97_s1_s), 1.f,
+		1.f, (dwt_cdf97_s1_s*dwt_cdf97_s1_s) };
+
+	__m128 buff;
+	__m128 z;
+
+	buff[0] = *ptrL0;
+	buff[1] = *ptrL1;
+	buff[2] = *ptrR0;
+	buff[3] = *ptrR1;
+
+	// B/L+R
+	op4s_sdl2_scale_s_sse(buff, v_vert);
+
+	// A/L+R
+	op4s_sdl2_shuffle_input_low_s_sse(buff, *(__m128 *)(lAL+4), *(__m128 *)(lAL+8));
+	op4s_sdl2_shuffle_input_high_s_sse(buff, *(__m128 *)(lAR+4), *(__m128 *)(lAR+8));
+
+	// A/L
+	op4s_sdl2_op_s_sse(z, *(__m128 *)(lAL+4), w, *(__m128 *)(lAL+0), *(__m128 *)(lAL+8));
+	op4s_sdl2_output_low_s_sse(buff, *(__m128 *)(lAL+0), z);
+	op4s_sdl2_update_s_sse(*(__m128 *)(lAL+4), *(__m128 *)(lAL+0), *(__m128 *)(lAL+8), z);
+
+	// A/R
+	op4s_sdl2_op_s_sse(z, *(__m128 *)(lAR+4), w, *(__m128 *)(lAR+0), *(__m128 *)(lAR+8));
+	op4s_sdl2_output_high_s_sse(buff, *(__m128 *)(lAR+0), z);
+	op4s_sdl2_update_s_sse(*(__m128 *)(lAR+4), *(__m128 *)(lAR+0), *(__m128 *)(lAR+8), z);
+
+	// swap, this should by done by single shuffle instruction
+	buff = _mm_shuffle_ps(buff, buff, _MM_SHUFFLE(3,1,2,0));
+
+	// B/L+R
+	op4s_sdl2_shuffle_input_low_s_sse(buff, *(__m128 *)(lBL+4), *(__m128 *)(lBL+8));
+	op4s_sdl2_shuffle_input_high_s_sse(buff, *(__m128 *)(lBR+4), *(__m128 *)(lBR+8));
+
+	// B/L
+	op4s_sdl2_op_s_sse(z, *(__m128 *)(lBL+4), w, *(__m128 *)(lBL+0), *(__m128 *)(lBL+8));
+	op4s_sdl2_output_low_s_sse(buff, *(__m128 *)(lBL+0), z);
+	op4s_sdl2_update_s_sse(*(__m128 *)(lBL+4), *(__m128 *)(lBL+0), *(__m128 *)(lBL+8), z);
+
+	// B/R
+	op4s_sdl2_op_s_sse(z, *(__m128 *)(lBR+4), w, *(__m128 *)(lBR+0), *(__m128 *)(lBR+8));
+	op4s_sdl2_output_high_s_sse(buff, *(__m128 *)(lBR+0), z); 
+	op4s_sdl2_update_s_sse(*(__m128 *)(lBR+4), *(__m128 *)(lBR+0), *(__m128 *)(lBR+8), z);
 
 	*outL0 = buff[0];
 	*outL1 = buff[1];
@@ -542,6 +624,102 @@ void cdf97_fwd_core_sdl_2x2_sc_sse_s(
 		buff_y1+0, buff_y1+4, buff_y1+8,
 		buff_x0+0, buff_x0+4, buff_x0+8,
 		buff_x1+0, buff_x1+4, buff_x1+8
+	);
+}
+#endif
+
+#ifdef __SSE__
+static
+void cdf97_inv_core_sdl_2x2_sc_sse_s(
+	float *ptr_y0_x0,
+	float *ptr_y0_x1,
+	float *ptr_y1_x0,
+	float *ptr_y1_x1,
+	float *out_y0_x0,
+	float *out_y0_x1,
+	float *out_y1_x0,
+	float *out_y1_x1,
+	float *buff_y0,
+	float *buff_y1,
+	float *buff_x0,
+	float *buff_x1
+)
+{
+	cdf97_inv_core2_sdl_2x2_sc_sse_s(
+		ptr_y0_x0, ptr_y0_x1,
+		ptr_y1_x0, ptr_y1_x1,
+		out_y0_x0, out_y1_x0,
+		out_y0_x1, out_y1_x1,
+		buff_y0+0, buff_y0+4, buff_y0+8,
+		buff_y1+0, buff_y1+4, buff_y1+8,
+		buff_x0+0, buff_x0+4, buff_x0+8,
+		buff_x1+0, buff_x1+4, buff_x1+8
+	);
+}
+#endif
+
+#ifdef __SSE__
+void fdwt_cdf97_diag_core2x2_sse_s(
+	float *ptr_y0_x0,
+	float *ptr_y0_x1,
+	float *ptr_y1_x0,
+	float *ptr_y1_x1,
+	float *out_y0_x0,
+	float *out_y0_x1,
+	float *out_y1_x0,
+	float *out_y1_x1,
+	float *buff_y0,
+	float *buff_y1,
+	float *buff_x0,
+	float *buff_x1
+)
+{
+	cdf97_fwd_core_sdl_2x2_sc_sse_s(
+		ptr_y0_x0,
+		ptr_y0_x1,
+		ptr_y1_x0,
+		ptr_y1_x1,
+		out_y0_x0,
+		out_y0_x1,
+		out_y1_x0,
+		out_y1_x1,
+		buff_y0,
+		buff_y1,
+		buff_x0,
+		buff_x1
+	);
+}
+#endif
+
+#ifdef __SSE__
+void idwt_cdf97_diag_core2x2_sse_s(
+	float *ptr_y0_x0,
+	float *ptr_y0_x1,
+	float *ptr_y1_x0,
+	float *ptr_y1_x1,
+	float *out_y0_x0,
+	float *out_y0_x1,
+	float *out_y1_x0,
+	float *out_y1_x1,
+	float *buff_y0,
+	float *buff_y1,
+	float *buff_x0,
+	float *buff_x1
+)
+{
+	cdf97_inv_core_sdl_2x2_sc_sse_s(
+		ptr_y0_x0,
+		ptr_y0_x1,
+		ptr_y1_x0,
+		ptr_y1_x1,
+		out_y0_x0,
+		out_y0_x1,
+		out_y1_x0,
+		out_y1_x1,
+		buff_y0,
+		buff_y1,
+		buff_x0,
+		buff_x1
 	);
 }
 #endif
@@ -1866,6 +2044,1083 @@ void cdf97_fwd_core_dl_sc_sse_off1_s(
 #endif
 	}
 #endif
+}
+#endif
+
+#ifdef __SSE__
+static
+void vert_2x4(
+	// left input column [4]
+	__m128 in0,
+	// right input column [4]
+	__m128 in1,
+	// output 0 [4]
+	__m128 *out0,
+	// output 1 [4]
+	__m128 *out1,
+	// 4x buffer "L" with stride = (1*4) * sizeof(float)
+	float *buff
+)
+{
+	// weights
+	const __m128 w0 = { +dwt_cdf97_u2_s, +dwt_cdf97_u2_s, +dwt_cdf97_u2_s, +dwt_cdf97_u2_s };
+	const __m128 w1 = { -dwt_cdf97_p2_s, -dwt_cdf97_p2_s, -dwt_cdf97_p2_s, -dwt_cdf97_p2_s };
+	const __m128 w2 = { +dwt_cdf97_u1_s, +dwt_cdf97_u1_s, +dwt_cdf97_u1_s, +dwt_cdf97_u1_s };
+	const __m128 w3 = { -dwt_cdf97_p1_s, -dwt_cdf97_p1_s, -dwt_cdf97_p1_s, -dwt_cdf97_p1_s };
+
+	// variables
+	__m128 l0, l1, l2, l3;
+	__m128 c0, c1, c2, c3;
+	__m128 r0, r1, r2, r3;
+	__m128 x0, x1;
+	__m128 y0, y1;
+
+	// load "L"
+	l0 = _mm_load_ps(&buff[0*(1*4)]);
+	l1 = _mm_load_ps(&buff[1*(1*4)]);
+	l2 = _mm_load_ps(&buff[2*(1*4)]);
+	l3 = _mm_load_ps(&buff[3*(1*4)]);
+	//_MM_TRANSPOSE4_PS(l0, l1, l2, l3);
+
+	// inputs
+	x0 = in0;
+	x1 = in1;
+
+	// shuffles
+	y0 = l0;
+	c0 = l1;
+	c1 = l2;
+	c2 = l3;
+	c3 = x0;
+
+	// operation
+	r3 = x1;
+	r2 = c3 + w3 * (l3 + r3);
+	r1 = c2 + w2 * (l2 + r2);
+	r0 = c1 + w1 * (l1 + r1);
+	y1 = c0 + w0 * (l0 + r0);
+
+	// update
+	l0 = r0;
+	l1 = r1;
+	l2 = r2;
+	l3 = r3;
+
+	// outputs
+	*out0 = y0;
+	*out1 = y1;
+
+	// store "L"
+	//_MM_TRANSPOSE4_PS(l0, l1, l2, l3);
+	_mm_store_ps(&buff[0*(1*4)], l0);
+	_mm_store_ps(&buff[1*(1*4)], l1);
+	_mm_store_ps(&buff[2*(1*4)], l2);
+	_mm_store_ps(&buff[3*(1*4)], l3);
+}
+#endif
+
+#ifdef __SSE__
+static
+void fdwt_cdf97_vert_cor4x4_sse_s(
+	intptr_t ptr_y0_x0, // pointer to (0,0)
+	intptr_t out_y0_x0, // pointer to (0-shift,0-shift)
+	ptrdiff_t stride_x, // +1 row
+	ptrdiff_t stride_y, // +1 col
+	float *buff_h0, // +(0..3)*(1*4) [ y down> ]
+	float *buff_v0  // +(0..3)*(1*4) [ x right> ]
+)
+{
+	// this 4x4 core approach corresponds to "transpose-SIMD" in Figure 9 in Kutil2006 (the "line-SIMD" should be 8x2 core)
+	__m128 t0, t1, t2, t3;
+
+	// load 4x4
+	t0 = (__m128){
+		*(float *)(ptr_y0_x0 + 0*stride_x + 0*stride_y),
+		*(float *)(ptr_y0_x0 + 1*stride_x + 0*stride_y),
+		*(float *)(ptr_y0_x0 + 2*stride_x + 0*stride_y),
+		*(float *)(ptr_y0_x0 + 3*stride_x + 0*stride_y)
+	};
+	t1 = (__m128){
+		*(float *)(ptr_y0_x0 + 0*stride_x + 1*stride_y),
+		*(float *)(ptr_y0_x0 + 1*stride_x + 1*stride_y),
+		*(float *)(ptr_y0_x0 + 2*stride_x + 1*stride_y),
+		*(float *)(ptr_y0_x0 + 3*stride_x + 1*stride_y)
+	};
+	t2 = (__m128){
+		*(float *)(ptr_y0_x0 + 0*stride_x + 2*stride_y),
+		*(float *)(ptr_y0_x0 + 1*stride_x + 2*stride_y),
+		*(float *)(ptr_y0_x0 + 2*stride_x + 2*stride_y),
+		*(float *)(ptr_y0_x0 + 3*stride_x + 2*stride_y)
+	};
+	t3 = (__m128){
+		*(float *)(ptr_y0_x0 + 0*stride_x + 3*stride_y),
+		*(float *)(ptr_y0_x0 + 1*stride_x + 3*stride_y),
+		*(float *)(ptr_y0_x0 + 2*stride_x + 3*stride_y),
+		*(float *)(ptr_y0_x0 + 3*stride_x + 3*stride_y)
+	};
+
+	// left horiz.
+	vert_2x4(
+		t0,
+		t1,
+		&t0,
+		&t1,
+		buff_h0
+	);
+
+	// right horiz
+	vert_2x4(
+		t2,
+		t3,
+		&t2,
+		&t3,
+		buff_h0
+	);
+
+	// shuffle t0..3
+	_MM_TRANSPOSE4_PS(t0, t1, t2, t3);
+
+	// top vert
+	vert_2x4(
+		t0,
+		t1,
+		&t0,
+		&t1,
+		buff_v0
+	);
+	// bottom vert
+	vert_2x4(
+		t2,
+		t3,
+		&t2,
+		&t3,
+		buff_v0
+	);
+
+	const float z = dwt_cdf97_s1_s;
+	t0 *= (const __m128){ 1/(z*z),   1.f, 1/(z*z),   1.f };
+	t1 *= (const __m128){     1.f, (z*z),     1.f, (z*z) };
+	t2 *= (const __m128){ 1/(z*z),   1.f, 1/(z*z),   1.f };
+	t3 *= (const __m128){     1.f, (z*z),     1.f, (z*z) };
+
+	*(float *)(out_y0_x0 + 0*stride_x + 0*stride_y) = t0[0];
+	*(float *)(out_y0_x0 + 1*stride_x + 0*stride_y) = t1[0];
+	*(float *)(out_y0_x0 + 2*stride_x + 0*stride_y) = t2[0];
+	*(float *)(out_y0_x0 + 3*stride_x + 0*stride_y) = t3[0];
+
+	*(float *)(out_y0_x0 + 0*stride_x + 1*stride_y) = t0[1];
+	*(float *)(out_y0_x0 + 1*stride_x + 1*stride_y) = t1[1];
+	*(float *)(out_y0_x0 + 2*stride_x + 1*stride_y) = t2[1];
+	*(float *)(out_y0_x0 + 3*stride_x + 1*stride_y) = t3[1];
+
+	*(float *)(out_y0_x0 + 0*stride_x + 2*stride_y) = t0[2];
+	*(float *)(out_y0_x0 + 1*stride_x + 2*stride_y) = t1[2];
+	*(float *)(out_y0_x0 + 2*stride_x + 2*stride_y) = t2[2];
+	*(float *)(out_y0_x0 + 3*stride_x + 2*stride_y) = t3[2];
+
+	*(float *)(out_y0_x0 + 0*stride_x + 3*stride_y) = t0[3];
+	*(float *)(out_y0_x0 + 1*stride_x + 3*stride_y) = t1[3];
+	*(float *)(out_y0_x0 + 2*stride_x + 3*stride_y) = t2[3];
+	*(float *)(out_y0_x0 + 3*stride_x + 3*stride_y) = t3[3];
+}
+#endif
+
+#ifdef __SSE__
+static
+void fdwt_cdf97_vert_pro4x4_sse_s(
+	intptr_t ptr_y0_x0, // pointer to (0,0)
+	intptr_t out_y0_x0, // pointer to (0-shift,0-shift)
+	ptrdiff_t stride_x, // +1 row
+	ptrdiff_t stride_y, // +1 col
+	float *buff_h0, // +(0..3)*(1*4) [ y down> ]
+	float *buff_v0  // +(0..3)*(1*4) [ x right> ]
+)
+{
+	// this 4x4 core approach corresponds to "transpose-SIMD" in Figure 9 in Kutil2006 (the "line-SIMD" should be 8x2 core)
+	__m128 t0, t1, t2, t3;
+
+	// load 4x4
+	t0 = (__m128){
+		*(float *)(ptr_y0_x0 + 0*stride_x + 0*stride_y),
+		*(float *)(ptr_y0_x0 + 1*stride_x + 0*stride_y),
+		*(float *)(ptr_y0_x0 + 2*stride_x + 0*stride_y),
+		*(float *)(ptr_y0_x0 + 3*stride_x + 0*stride_y)
+	};
+	t1 = (__m128){
+		*(float *)(ptr_y0_x0 + 0*stride_x + 1*stride_y),
+		*(float *)(ptr_y0_x0 + 1*stride_x + 1*stride_y),
+		*(float *)(ptr_y0_x0 + 2*stride_x + 1*stride_y),
+		*(float *)(ptr_y0_x0 + 3*stride_x + 1*stride_y)
+	};
+	t2 = (__m128){
+		*(float *)(ptr_y0_x0 + 0*stride_x + 2*stride_y),
+		*(float *)(ptr_y0_x0 + 1*stride_x + 2*stride_y),
+		*(float *)(ptr_y0_x0 + 2*stride_x + 2*stride_y),
+		*(float *)(ptr_y0_x0 + 3*stride_x + 2*stride_y)
+	};
+	t3 = (__m128){
+		*(float *)(ptr_y0_x0 + 0*stride_x + 3*stride_y),
+		*(float *)(ptr_y0_x0 + 1*stride_x + 3*stride_y),
+		*(float *)(ptr_y0_x0 + 2*stride_x + 3*stride_y),
+		*(float *)(ptr_y0_x0 + 3*stride_x + 3*stride_y)
+	};
+
+	// left horiz.
+	vert_2x4(
+		t0,
+		t1,
+		&t0,
+		&t1,
+		buff_h0
+	);
+
+	// right horiz
+	vert_2x4(
+		t2,
+		t3,
+		&t2,
+		&t3,
+		buff_h0
+	);
+
+	// shuffle t0..3
+	_MM_TRANSPOSE4_PS(t0, t1, t2, t3);
+
+	// top vert
+	vert_2x4(
+		t0,
+		t1,
+		&t0,
+		&t1,
+		buff_v0
+	);
+	// bottom vert
+	vert_2x4(
+		t2,
+		t3,
+		&t2,
+		&t3,
+		buff_v0
+	);
+}
+#endif
+
+// SL DL/VERT WITH*MERGED-SCALING SSE OFFSET=1 THREADS CORE=4x4
+#ifdef __SSE__
+void cdf97_fwd_core_dl_sc_sse_off1_4x4_s(
+	void *src,
+	void *dst,
+	int src_stride_x,
+	int src_stride_y,
+	int dst_stride_x,
+	int dst_stride_y,
+	int size_x,
+	int size_y
+)
+{
+	assert( (src_stride_x == dst_stride_x) && (src_stride_y == dst_stride_y) );
+#if DEBUG
+	if(!( ((size_x % 4) == 0) && ((size_y % 4) == 0) ))
+		dwt_util_log(LOG_WARN, "size_x=%i size_y=%i\n", size_x, size_y);
+#endif
+// 	assert( ((size_x % 4) == 0) && ((size_y % 4) == 0) );
+
+	const int offset = 1;
+
+	const int words = 1; // vertical
+	const int buff_elem_size = words*4;
+
+	const int threads = dwt_util_get_num_threads(); // 8, 4
+
+	const int thread_size_y = /*dwt_util_up_to_even*/dwt_util_up_to_mul4( ceil_div(size_y, threads) );
+
+	const int prolog_y = 4+4; // 4+4
+	const int overlay_y = 4; // 4
+
+	const int step_y = 4;
+	const int step_x = 4;
+
+#if DEBUG
+	dwt_util_log(LOG_DBG, "threads=%i thread_size_y=%i\n", threads, thread_size_y);
+	for(int t = 0; t < threads; t++)
+		dwt_util_log(LOG_DBG, "thread %i: base=%i src.limit=%i (+%i) (src+dst)\n", t, t*thread_size_y, t*thread_size_y+offset+thread_size_y-1, offset+thread_size_y);
+#endif
+
+	//#pragma omp parallel for
+	//for(int thread = 0; thread < threads; thread++)
+	#pragma omp parallel num_threads(threads)
+	{
+		int thread = omp_get_thread_num();
+
+		void *thread_src = addr2_s(src, /*y*/thread*thread_size_y, 0/*offset*/, src_stride_x, src_stride_y);
+		void *thread_dst = addr2_s(dst, /*y*/thread*thread_size_y, 0/*offset*/, dst_stride_x, dst_stride_y);
+		char thread_dst_buff[(offset+overlay_y)*dst_stride_x];
+		assert(thread_dst_buff);
+
+		float long_buffer[buff_elem_size*size_x] ALIGNED(16);
+		assert(long_buffer);
+
+		dwt_util_zero_vec_s(long_buffer, buff_elem_size*size_x);
+
+		#pragma omp barrier
+
+		for(int y = offset+0-prolog_y; y+(step_y-1) < offset+0; y += step_y)
+		{
+			float *ptr0_x = addr2_s(thread_src, y+0, offset, src_stride_x, src_stride_y);
+			float *out0_x = NULL;
+
+			float *long_buffer_ptr = long_buffer+(buff_elem_size)*(offset+0);
+
+			float short_buffer_4[step_y*buff_elem_size] ALIGNED(16);
+			assert( short_buffer_4 );
+
+			dwt_util_zero_vec_s(short_buffer_4, step_y*buff_elem_size);
+
+			for(int x = 0+offset; x+(step_x-1) < size_x; x += step_x)
+			{
+				fdwt_cdf97_vert_pro4x4_sse_s(
+					// ptr
+					(void *)ptr0_x,
+					// out
+					(void *)out0_x,
+					src_stride_x,
+					src_stride_y,
+					// buffers
+					short_buffer_4,
+					long_buffer_ptr
+				);
+
+				long_buffer_ptr += step_x*(buff_elem_size);
+
+				ptr0_x = addr1_s(ptr0_x, +step_x, src_stride_y);
+			}
+		}
+
+		#pragma omp barrier
+
+		for(int y = offset+0; y+(step_y-1) < offset+overlay_y; y += step_y)
+		{
+			float *ptr0_x = addr2_s(thread_src, y+0, offset, src_stride_x, src_stride_y);
+			float *out0_x = addr2_s(thread_dst_buff, y+0, offset, dst_stride_x, dst_stride_y);
+
+			float *long_buffer_ptr = long_buffer+(buff_elem_size)*(offset+0);
+
+			float short_buffer_4[step_y*buff_elem_size] ALIGNED(16);
+			assert( short_buffer_4 );
+
+			dwt_util_zero_vec_s(short_buffer_4, step_y*buff_elem_size);
+
+			for(int x = 0+offset; x+(step_x-1) < size_x; x += step_x)
+			{
+				fdwt_cdf97_vert_cor4x4_sse_s(
+					// ptr
+					(void *)ptr0_x,
+					// out
+					(void *)out0_x,
+					src_stride_x,
+					src_stride_y,
+					// buffers
+					short_buffer_4,
+					long_buffer_ptr
+				);
+
+				long_buffer_ptr += step_x*(buff_elem_size);
+
+				ptr0_x = addr1_s(ptr0_x, +step_x, src_stride_y);
+				out0_x = addr1_s(out0_x, +step_x, dst_stride_y);
+			}
+		}
+
+		#pragma omp barrier
+
+		for(int y = offset+overlay_y; y+(step_y-1) < offset+thread_size_y; y += step_y)
+		{
+			float *ptr0_x = addr2_s(thread_src, y+0, offset, src_stride_x, src_stride_y);
+			float *out0_x = addr2_s(thread_dst, y+0, offset, dst_stride_x, dst_stride_y);
+
+			float *long_buffer_ptr = long_buffer+(buff_elem_size)*(offset+0);
+
+			float short_buffer_4[step_y*buff_elem_size] ALIGNED(16);
+			assert( short_buffer_4 );
+
+			dwt_util_zero_vec_s(short_buffer_4, step_y*buff_elem_size);
+
+			for(int x = 0+offset; x+(step_x-1) < size_x; x += step_x)
+			{
+				fdwt_cdf97_vert_cor4x4_sse_s(
+					// ptr
+					(void *)ptr0_x,
+					// out
+					(void *)out0_x,
+					src_stride_x,
+					src_stride_y,
+					// buffers
+					short_buffer_4,
+					long_buffer_ptr
+				);
+
+				long_buffer_ptr += step_x*(buff_elem_size);
+
+				ptr0_x = addr1_s(ptr0_x, +step_x, src_stride_y);
+				out0_x = addr1_s(out0_x, +step_x, dst_stride_y);
+			}
+		}
+
+		#pragma omp barrier
+
+		for(int y = offset+0; y+(step_y-1) < offset+overlay_y; y += step_y)
+		{
+			float *ptr0_x = addr2_s(thread_dst_buff, y+0, offset, dst_stride_x, dst_stride_y);
+			float *out0_x = addr2_s(thread_dst, y+0, offset, dst_stride_x, dst_stride_y);
+
+			for(int x = 0+offset; x+(step_x-1) < size_x; x += step_x)
+			{
+				// TODO: copy core
+				for(int yy = 0; yy < step_y; yy++)
+					for(int xx = 0; xx < step_x; xx++)
+						*addr2_s(out0_x, yy, xx, dst_stride_x, dst_stride_y) =
+						*addr2_s(ptr0_x, yy, xx, src_stride_x, src_stride_y);
+
+				ptr0_x = addr1_s(ptr0_x, +step_x, src_stride_y);
+				out0_x = addr1_s(out0_x, +step_x, dst_stride_y);
+			}
+		}
+	}
+}
+#endif
+
+#ifdef __SSE__
+#define diag_horizontally_2x2_FAST_MACRO(in, buff_h0_0, buff_h0_4, buff_h0_8, buff_h1_0, buff_h1_4, buff_h1_8) \
+	do { \
+		const __m128 w = { \
+			+dwt_cdf97_u2_s, \
+			-dwt_cdf97_p2_s, \
+			+dwt_cdf97_u1_s, \
+			-dwt_cdf97_p1_s \
+		}; \
+	 \
+		__m128 z; \
+	 \
+		op4s_sdl2_shuffle_input_low_s_sse(in, *buff_h0_4, *buff_h0_8); \
+		op4s_sdl2_shuffle_input_high_s_sse(in, *buff_h1_4, *buff_h1_8); \
+	 \
+		op4s_sdl2_op_s_sse(z, *buff_h0_4, w, *buff_h0_0, *buff_h0_8); \
+		op4s_sdl2_output_low_s_sse(in, *buff_h0_0, z); \
+		op4s_sdl2_update_s_sse_FAST(*buff_h0_4, *buff_h0_0, *buff_h0_8, z); \
+	 \
+		op4s_sdl2_op_s_sse(z, *buff_h1_4, w, *buff_h1_0, *buff_h1_8); \
+		op4s_sdl2_output_high_s_sse(in, *buff_h1_0, z); \
+		op4s_sdl2_update_s_sse_FAST(*buff_h1_4, *buff_h1_0, *buff_h1_8, z); \
+	} while(0)
+#endif /* __SSE__ */
+
+#ifdef __SSE__
+#define diag_horizontally_2x2_MACRO(in, buff_h0_0, buff_h0_4, buff_h0_8, buff_h1_0, buff_h1_4, buff_h1_8) \
+	do { \
+		const __m128 w = { \
+			+dwt_cdf97_u2_s, \
+			-dwt_cdf97_p2_s, \
+			+dwt_cdf97_u1_s, \
+			-dwt_cdf97_p1_s \
+		}; \
+	 \
+		__m128 z; \
+	 \
+		op4s_sdl2_shuffle_input_low_s_sse(in, *buff_h0_4, *buff_h0_8); \
+		op4s_sdl2_shuffle_input_high_s_sse(in, *buff_h1_4, *buff_h1_8); \
+	 \
+		op4s_sdl2_op_s_sse(z, *buff_h0_4, w, *buff_h0_0, *buff_h0_8); \
+		op4s_sdl2_output_low_s_sse(in, *buff_h0_0, z); \
+		op4s_sdl2_update_s_sse(*buff_h0_4, *buff_h0_0, *buff_h0_8, z); \
+	 \
+		op4s_sdl2_op_s_sse(z, *buff_h1_4, w, *buff_h1_0, *buff_h1_8); \
+		op4s_sdl2_output_high_s_sse(in, *buff_h1_0, z); \
+		op4s_sdl2_update_s_sse(*buff_h1_4, *buff_h1_0, *buff_h1_8, z); \
+	} while(0)
+#endif /* __SSE__ */
+
+#ifdef __SSE__
+#define diag_horizontally_2x2_MACRO_PROLOG(in, buff_h0_0, buff_h0_4, buff_h0_8, buff_h1_0, buff_h1_4, buff_h1_8) \
+	do { \
+		const __m128 w = { \
+			+dwt_cdf97_u2_s, \
+			-dwt_cdf97_p2_s, \
+			+dwt_cdf97_u1_s, \
+			-dwt_cdf97_p1_s \
+		}; \
+	 \
+		__m128 z; \
+	 \
+		op4s_sdl2_shuffle_input_low_s_sse(in, *buff_h0_4, *buff_h0_8); \
+		op4s_sdl2_shuffle_input_high_s_sse(in, *buff_h1_4, *buff_h1_8); \
+	 \
+		op4s_sdl2_op_s_sse(z, *buff_h0_4, w, *buff_h0_0, *buff_h0_8); \
+		op4s_sdl2_update_s_sse(*buff_h0_4, *buff_h0_0, *buff_h0_8, z); \
+	 \
+		op4s_sdl2_op_s_sse(z, *buff_h1_4, w, *buff_h1_0, *buff_h1_8); \
+		op4s_sdl2_update_s_sse(*buff_h1_4, *buff_h1_0, *buff_h1_8, z); \
+	} while(0)
+#endif /* __SSE__ */
+
+#ifdef __SSE__
+static
+void diag_6x2(
+	// input by 2x2 blocks in format [ y0x0 y0x1 y1x0 y1x1 ]
+	__m128 in0,
+	__m128 in1,
+	__m128 in2,
+	// output by 2x2 blocks in format [ y0x0 y1x0 y0x1 y1x1 ]
+	__m128 *out0,
+	__m128 *out1,
+	__m128 *out2,
+	// buffers with stride = (3*4)*sizeof(float)
+	float *buff_h0, // +(0..1)*(3*4) [ y down> ]
+	float *buff_v0  // +(0..5)*(3*4) [ x right> ]
+)
+{
+	float *buff_h1 = buff_h0 + 1*(3*4);
+
+	float *buff_v1 = buff_v0 + 1*(3*4);
+	float *buff_v2 = buff_v0 + 2*(3*4);
+	float *buff_v3 = buff_v0 + 3*(3*4);
+	float *buff_v4 = buff_v0 + 4*(3*4);
+	float *buff_v5 = buff_v0 + 5*(3*4);
+
+	const __m128 w = { +dwt_cdf97_u2_s, -dwt_cdf97_p2_s, +dwt_cdf97_u1_s, -dwt_cdf97_p1_s };
+	const __m128 v = { 1/(dwt_cdf97_s1_s*dwt_cdf97_s1_s), 1.f, 1.f, (dwt_cdf97_s1_s*dwt_cdf97_s1_s) };
+
+	__m128 z;
+
+	// ====== 2x2 y=0..1 x=0..1 ======
+// iter. 1
+#define H0 0
+#define H4 4
+#define H8 8
+	// horizontally
+	diag_horizontally_2x2_FAST_MACRO(
+		in0,
+		(__m128 *)(buff_h0+H0),
+		(__m128 *)(buff_h0+H4),
+		(__m128 *)(buff_h0+H8),
+		(__m128 *)(buff_h1+H0),
+		(__m128 *)(buff_h1+H4),
+		(__m128 *)(buff_h1+H8)
+	);
+
+	_MM_TRANSPOSE1_PS(in0);
+
+	// vertically
+	diag_horizontally_2x2_MACRO(
+		in0,
+		(__m128 *)(buff_v0+0),
+		(__m128 *)(buff_v0+4),
+		(__m128 *)(buff_v0+8),
+		(__m128 *)(buff_v1+0),
+		(__m128 *)(buff_v1+4),
+		(__m128 *)(buff_v1+8)
+	);
+
+	op4s_sdl2_scale_s_sse(in0, v);
+
+	*out0 = in0;
+#undef H0
+#undef H4
+#undef H8
+
+	// ====== 2x2 y=0..1 x=2..3 ======
+// iter. 2
+#define H0 8
+#define H4 0
+#define H8 4
+	// horizontally
+	diag_horizontally_2x2_FAST_MACRO(
+		in1,
+		(__m128 *)(buff_h0+H0),
+		(__m128 *)(buff_h0+H4),
+		(__m128 *)(buff_h0+H8),
+		(__m128 *)(buff_h1+H0),
+		(__m128 *)(buff_h1+H4),
+		(__m128 *)(buff_h1+H8)
+	);
+
+	_MM_TRANSPOSE1_PS(in1);
+
+	// vertically
+	diag_horizontally_2x2_MACRO(
+		in1,
+		(__m128 *)(buff_v2+0),
+		(__m128 *)(buff_v2+4),
+		(__m128 *)(buff_v2+8),
+		(__m128 *)(buff_v3+0),
+		(__m128 *)(buff_v3+4),
+		(__m128 *)(buff_v3+8)
+	);
+
+	op4s_sdl2_scale_s_sse(in1, v);
+
+	*out1 = in1;
+#undef H0
+#undef H4
+#undef H8
+
+	// ====== 2x2 y=0..1 x=4..5 ======
+// iter. 3
+#define H0 4
+#define H4 8
+#define H8 0
+	// horizontally
+	diag_horizontally_2x2_FAST_MACRO(
+		in2,
+		(__m128 *)(buff_h0+H0),
+		(__m128 *)(buff_h0+H4),
+		(__m128 *)(buff_h0+H8),
+		(__m128 *)(buff_h1+H0),
+		(__m128 *)(buff_h1+H4),
+		(__m128 *)(buff_h1+H8)
+	);
+
+	_MM_TRANSPOSE1_PS(in2);
+
+	// vertically
+	diag_horizontally_2x2_MACRO(
+		in2,
+		(__m128 *)(buff_v4+0),
+		(__m128 *)(buff_v4+4),
+		(__m128 *)(buff_v4+8),
+		(__m128 *)(buff_v5+0),
+		(__m128 *)(buff_v5+4),
+		(__m128 *)(buff_v5+8)
+	);
+
+	op4s_sdl2_scale_s_sse(in2, v);
+
+	*out2 = in2;
+#undef H0
+#undef H4
+#undef H8
+}
+#endif
+
+#ifdef __SSE__
+static
+void diag_6x2_prolog(
+	// input by 2x2 blocks in format [ y0x0 y0x1 y1x0 y1x1 ]
+	__m128 in0,
+	__m128 in1,
+	__m128 in2,
+	// output by 2x2 blocks in format [ y0x0 y1x0 y0x1 y1x1 ]
+	__m128 *out0,
+	__m128 *out1,
+	__m128 *out2,
+	// buffers with stride = (3*4)*sizeof(float)
+	float *buff_h0, // +(0..1)*(3*4) [ y down> ]
+	float *buff_v0  // +(0..5)*(3*4) [ x right> ]
+)
+{
+	float *buff_h1 = buff_h0 + 1*(3*4);
+
+	float *buff_v1 = buff_v0 + 1*(3*4);
+	float *buff_v2 = buff_v0 + 2*(3*4);
+	float *buff_v3 = buff_v0 + 3*(3*4);
+	float *buff_v4 = buff_v0 + 4*(3*4);
+	float *buff_v5 = buff_v0 + 5*(3*4);
+
+	const __m128 w = { +dwt_cdf97_u2_s, -dwt_cdf97_p2_s, +dwt_cdf97_u1_s, -dwt_cdf97_p1_s };
+	const __m128 v = { 1/(dwt_cdf97_s1_s*dwt_cdf97_s1_s), 1.f, 1.f, (dwt_cdf97_s1_s*dwt_cdf97_s1_s) };
+
+	__m128 z;
+
+	// ====== 2x2 y=0..1 x=0..1 ======
+// iter. 1
+#define H0 0
+#define H4 4
+#define H8 8
+	// horizontally
+	diag_horizontally_2x2_FAST_MACRO(
+		in0,
+		(__m128 *)(buff_h0+H0),
+		(__m128 *)(buff_h0+H4),
+		(__m128 *)(buff_h0+H8),
+		(__m128 *)(buff_h1+H0),
+		(__m128 *)(buff_h1+H4),
+		(__m128 *)(buff_h1+H8)
+	);
+
+	_MM_TRANSPOSE1_PS(in0);
+
+	// vertically
+	diag_horizontally_2x2_MACRO_PROLOG(
+		in0,
+		(__m128 *)(buff_v0+0),
+		(__m128 *)(buff_v0+4),
+		(__m128 *)(buff_v0+8),
+		(__m128 *)(buff_v1+0),
+		(__m128 *)(buff_v1+4),
+		(__m128 *)(buff_v1+8)
+	);
+
+// 	op4s_sdl2_scale_s_sse(in0, v);
+
+// 	*out0 = in0;
+#undef H0
+#undef H4
+#undef H8
+
+	// ====== 2x2 y=0..1 x=2..3 ======
+// iter. 2
+#define H0 8
+#define H4 0
+#define H8 4
+	// horizontally
+	diag_horizontally_2x2_FAST_MACRO(
+		in1,
+		(__m128 *)(buff_h0+H0),
+		(__m128 *)(buff_h0+H4),
+		(__m128 *)(buff_h0+H8),
+		(__m128 *)(buff_h1+H0),
+		(__m128 *)(buff_h1+H4),
+		(__m128 *)(buff_h1+H8)
+	);
+
+	_MM_TRANSPOSE1_PS(in1);
+
+	// vertically
+	diag_horizontally_2x2_MACRO_PROLOG(
+		in1,
+		(__m128 *)(buff_v2+0),
+		(__m128 *)(buff_v2+4),
+		(__m128 *)(buff_v2+8),
+		(__m128 *)(buff_v3+0),
+		(__m128 *)(buff_v3+4),
+		(__m128 *)(buff_v3+8)
+	);
+
+// 	op4s_sdl2_scale_s_sse(in1, v);
+
+// 	*out1 = in1;
+#undef H0
+#undef H4
+#undef H8
+
+	// ====== 2x2 y=0..1 x=4..5 ======
+// iter. 3
+#define H0 4
+#define H4 8
+#define H8 0
+	// horizontally
+	diag_horizontally_2x2_FAST_MACRO(
+		in2,
+		(__m128 *)(buff_h0+H0),
+		(__m128 *)(buff_h0+H4),
+		(__m128 *)(buff_h0+H8),
+		(__m128 *)(buff_h1+H0),
+		(__m128 *)(buff_h1+H4),
+		(__m128 *)(buff_h1+H8)
+	);
+
+	_MM_TRANSPOSE1_PS(in2);
+
+	// vertically
+	diag_horizontally_2x2_MACRO_PROLOG(
+		in2,
+		(__m128 *)(buff_v4+0),
+		(__m128 *)(buff_v4+4),
+		(__m128 *)(buff_v4+8),
+		(__m128 *)(buff_v5+0),
+		(__m128 *)(buff_v5+4),
+		(__m128 *)(buff_v5+8)
+	);
+
+// 	op4s_sdl2_scale_s_sse(in2, v);
+
+// 	*out2 = in2;
+#undef H0
+#undef H4
+#undef H8
+}
+#endif
+
+#ifdef __SSE__
+static
+void fdwt_cdf97_diag_cor6x2_sse_s(
+	intptr_t ptr_y0_x0,
+	intptr_t out_y0_x0,
+	ptrdiff_t stride_x, // +1 row
+	ptrdiff_t stride_y, // +1 col
+	float *buff_h0, // +(0..?)*(3*4) [ y down> ]
+	float *buff_v0  // +(0..?)*(3*4) [ x right> ]
+)
+{
+	__m128 t0, t1, t2;
+
+	t0 = (__m128){
+		/* y= x= */ *(float *)(ptr_y0_x0 + 0*stride_x + 0*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 0*stride_x + 1*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 1*stride_x + 0*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 1*stride_x + 1*stride_y)
+	};
+	t1 = (__m128){
+		/* y= x= */ *(float *)(ptr_y0_x0 + 0*stride_x + 2*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 0*stride_x + 3*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 1*stride_x + 2*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 1*stride_x + 3*stride_y)
+	};
+	t2 = (__m128){
+		/* y= x= */ *(float *)(ptr_y0_x0 + 0*stride_x + 4*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 0*stride_x + 5*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 1*stride_x + 4*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 1*stride_x + 5*stride_y)
+	};
+
+	diag_6x2(
+		// input by 2x2 blocks in format [ y0x0 y0x1 y1x0 y1x1 ]
+		t0,
+		t1,
+		t2,
+		// output by 2x2 blocks in format [ y0x0 y1x0 y0x1 y1x1 ]
+		&t0,
+		&t1,
+		&t2,
+		// buffers with stride = (3*4)*sizeof(float)
+		buff_h0, // +(0..1)*(3*4) [ y down> ]
+		buff_v0  // +(0..5)*(3*4) [ x right> ]
+	);
+
+	/* y= x= */ *(float *)(out_y0_x0 + 0*stride_x + 0*stride_y) = t0[0];
+	/* y= x= */ *(float *)(out_y0_x0 + 0*stride_x + 1*stride_y) = t0[2];
+	/* y= x= */ *(float *)(out_y0_x0 + 1*stride_x + 0*stride_y) = t0[1];
+	/* y= x= */ *(float *)(out_y0_x0 + 1*stride_x + 1*stride_y) = t0[3];
+
+	/* y= x= */ *(float *)(out_y0_x0 + 0*stride_x + 2*stride_y) = t1[0];
+	/* y= x= */ *(float *)(out_y0_x0 + 0*stride_x + 3*stride_y) = t1[2];
+	/* y= x= */ *(float *)(out_y0_x0 + 1*stride_x + 2*stride_y) = t1[1];
+	/* y= x= */ *(float *)(out_y0_x0 + 1*stride_x + 3*stride_y) = t1[3];
+
+	/* y= x= */ *(float *)(out_y0_x0 + 0*stride_x + 4*stride_y) = t2[0];
+	/* y= x= */ *(float *)(out_y0_x0 + 0*stride_x + 5*stride_y) = t2[2];
+	/* y= x= */ *(float *)(out_y0_x0 + 1*stride_x + 4*stride_y) = t2[1];
+	/* y= x= */ *(float *)(out_y0_x0 + 1*stride_x + 5*stride_y) = t2[3];
+}
+#endif
+
+#ifdef __SSE__
+static
+void fdwt_cdf97_diag_pro6x2_sse_s(
+	intptr_t ptr_y0_x0,
+	intptr_t out_y0_x0,
+	ptrdiff_t stride_x, // +1 row
+	ptrdiff_t stride_y, // +1 col
+	float *buff_h0, // +(0..?)*(3*4) [ y down> ]
+	float *buff_v0  // +(0..?)*(3*4) [ x right> ]
+)
+{
+	__m128 t0, t1, t2;
+
+	t0 = (__m128){
+		/* y= x= */ *(float *)(ptr_y0_x0 + 0*stride_x + 0*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 0*stride_x + 1*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 1*stride_x + 0*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 1*stride_x + 1*stride_y)
+	};
+	t1 = (__m128){
+		/* y= x= */ *(float *)(ptr_y0_x0 + 0*stride_x + 2*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 0*stride_x + 3*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 1*stride_x + 2*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 1*stride_x + 3*stride_y)
+	};
+	t2 = (__m128){
+		/* y= x= */ *(float *)(ptr_y0_x0 + 0*stride_x + 4*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 0*stride_x + 5*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 1*stride_x + 4*stride_y),
+		/* y= x= */ *(float *)(ptr_y0_x0 + 1*stride_x + 5*stride_y)
+	};
+
+	diag_6x2_prolog(
+		// input by 2x2 blocks in format [ y0x0 y0x1 y1x0 y1x1 ]
+		t0,
+		t1,
+		t2,
+		// output by 2x2 blocks in format [ y0x0 y1x0 y0x1 y1x1 ]
+		0,
+		0,
+		0,
+		// buffers with stride = (3*4)*sizeof(float)
+		buff_h0, // +(0..1)*(3*4) [ y down> ]
+		buff_v0  // +(0..5)*(3*4) [ x right> ]
+	);
+}
+#endif
+
+// SL DL/VERT WITH*MERGED-SCALING SSE OFFSET=1 THREADS CORE=4x4
+#ifdef __SSE__
+void cdf97_fwd_core_sdl_sc_sse_off1_6x2_s(
+	void *src,
+	void *dst,
+	int src_stride_x,
+	int src_stride_y,
+	int dst_stride_x,
+	int dst_stride_y,
+	int size_x,
+	int size_y
+)
+{
+	assert( (src_stride_x == dst_stride_x) && (src_stride_y == dst_stride_y) );
+
+#if DEBUG
+	if(!( ((size_x % 6) == 0) && ((size_y % 6) == 0) ))
+		dwt_util_log(LOG_WARN, "size_x=%i size_y=%i\n", size_x, size_y);
+#endif
+// 	assert( ((size_x % 4) == 0) && ((size_y % 4) == 0) );
+
+	const int offset = 1;
+
+	const int words = 3; // diagonal
+	const int buff_elem_size = words*4;
+
+	int threads = dwt_util_get_num_threads(); // 8, 4
+
+	int thread_size_y = dwt_util_up_to_even( ceil_div(size_y, threads) );
+
+	const int prolog_y = 10+4;
+	const int overlay_y = 10;
+
+	const int step_y = 2;
+	const int step_x = 6;
+
+	#pragma omp parallel num_threads(threads)
+	{
+		int thread = omp_get_thread_num();
+
+		void *thread_src = addr2_s(src, /*y*/thread*thread_size_y, 0/*offset*/, src_stride_x, src_stride_y);
+		void *thread_dst = addr2_s(dst, /*y*/thread*thread_size_y, 0/*offset*/, dst_stride_x, dst_stride_y);
+		void *thread_dst_null = NULL;
+		char thread_dst_buff[(offset+overlay_y)*dst_stride_x];
+
+		float long_buffer[buff_elem_size*size_x] ALIGNED(16);
+
+		dwt_util_zero_vec_s(long_buffer, buff_elem_size*size_x);
+
+		#pragma omp barrier
+
+		for(int y = offset+0-prolog_y; y+(step_y-1) < offset+0; y += step_y)
+		{
+			float *ptr0_x = addr2_s(thread_src, y+0, offset, src_stride_x, src_stride_y);
+			float *out0_x = NULL;
+
+			float *long_buffer_ptr = long_buffer+(buff_elem_size)*(offset+0);
+
+			float short_buffer_4[step_y*buff_elem_size] ALIGNED(16);
+
+			dwt_util_zero_vec_s(short_buffer_4, step_y*buff_elem_size);
+
+			for(int x = 0+offset; x+(step_x-1) < size_x; x += step_x)
+			{
+				fdwt_cdf97_diag_pro6x2_sse_s(
+					// ptr
+					(void *)ptr0_x,
+					// out
+					(void *)out0_x,
+					src_stride_x,
+					src_stride_y,
+					// buffers
+					short_buffer_4,
+					long_buffer_ptr
+				);
+
+				long_buffer_ptr += step_x*(buff_elem_size);
+
+				ptr0_x = addr1_s(ptr0_x, +step_x, src_stride_y);
+			}
+		}
+
+		#pragma omp barrier
+
+		for(int y = offset+0; y+(step_y-1) < offset+overlay_y; y += step_y)
+		{
+			float *ptr0_x = addr2_s(thread_src, y+0, offset, src_stride_x, src_stride_y);
+			float *out0_x = addr2_s(thread_dst_buff, y+0, offset, dst_stride_x, dst_stride_y);
+
+			float *long_buffer_ptr = long_buffer+(buff_elem_size)*(offset+0);
+
+			float short_buffer_4[step_y*buff_elem_size] ALIGNED(16);
+
+			dwt_util_zero_vec_s(short_buffer_4, step_y*buff_elem_size);
+
+			for(int x = 0+offset; x+(step_x-1) < size_x; x += step_x)
+			{
+				fdwt_cdf97_diag_cor6x2_sse_s(
+					// ptr
+					(void *)ptr0_x,
+					// out
+					(void *)out0_x,
+					src_stride_x,
+					src_stride_y,
+					// buffers
+					short_buffer_4,
+					long_buffer_ptr
+				);
+
+				long_buffer_ptr += step_x*(buff_elem_size);
+
+				ptr0_x = addr1_s(ptr0_x, +step_x, src_stride_y);
+				out0_x = addr1_s(out0_x, +step_x, dst_stride_y);
+			}
+		}
+
+		#pragma omp barrier
+
+		for(int y = offset+overlay_y; y+(step_y-1) < offset+thread_size_y; y += step_y)
+		{
+			float *ptr0_x = addr2_s(thread_src, y+0, offset, src_stride_x, src_stride_y);
+			float *out0_x = addr2_s(thread_dst, y+0, offset, dst_stride_x, dst_stride_y);
+
+			float *long_buffer_ptr = long_buffer+(buff_elem_size)*(offset+0);
+
+			float short_buffer_4[step_y*buff_elem_size] ALIGNED(16);
+
+			dwt_util_zero_vec_s(short_buffer_4, step_y*buff_elem_size);
+
+			for(int x = 0+offset; x+(step_x-1) < size_x; x += step_x)
+			{
+				fdwt_cdf97_diag_cor6x2_sse_s(
+					// ptr
+					(void *)ptr0_x,
+					// out
+					(void *)out0_x,
+					src_stride_x,
+					src_stride_y,
+					// buffers
+					short_buffer_4,
+					long_buffer_ptr
+				);
+
+				long_buffer_ptr += step_x*(buff_elem_size);
+
+				ptr0_x = addr1_s(ptr0_x, +step_x, src_stride_y);
+				out0_x = addr1_s(out0_x, +step_x, dst_stride_y);
+			}
+		}
+
+		#pragma omp barrier
+
+		for(int y = offset+0; y+(step_y-1) < offset+overlay_y; y += step_y)
+		{
+			float *ptr0_x = addr2_s(thread_dst_buff, y+0, offset, dst_stride_x, dst_stride_y);
+			float *out0_x = addr2_s(thread_dst, y+0, offset, dst_stride_x, dst_stride_y);
+
+			for(int x = 0+offset; x+(step_x-1) < size_x; x += step_x)
+			{
+				// TODO: copy core
+				for(int yy = 0; yy < step_y; yy++)
+					for(int xx = 0; xx < step_x; xx++)
+						*addr2_s(out0_x, yy, xx, dst_stride_x, dst_stride_y) =
+						*addr2_s(ptr0_x, yy, xx, src_stride_x, src_stride_y);
+
+				ptr0_x = addr1_s(ptr0_x, +step_x, src_stride_y);
+				out0_x = addr1_s(out0_x, +step_x, dst_stride_y);
+			}
+		}
+	}
 }
 #endif
 
@@ -3886,6 +5141,8 @@ void dwt_cdf97_2f_inplace_alg_s(
 		[DWT_ALG_SL_CORE_DL_SSE] = cdf97_fwd_core_dl_sse_s, 		// 0.043767
 		[DWT_ALG_SL_CORE_DL_SC] = cdf97_fwd_core_dl_sc_s,		// 0.042255
 		[DWT_ALG_SL_CORE_DL_SC_SSE] = cdf97_fwd_core_dl_sc_sse_s,	// 0.041465
+		[DWT_ALG_SL_CORE_DL_SC_SSE_OFF1_4X4] = cdf97_fwd_core_dl_sc_sse_off1_4x4_s,
+		[DWT_ALG_SL_CORE_SDL_SC_SSE_OFF1_6X2] = cdf97_fwd_core_sdl_sc_sse_off1_6x2_s,
 	};
 
 	core_func[alg](
@@ -4151,6 +5408,369 @@ void dwt_util_measure_perf_cdf97_2_inplace_alg_s(
 	//FUNC_END;
 }
 
+void dwt_util_measure_perf_cdf97_2_inplace_new_s(
+	int min_x,
+	int max_x,
+	int opt_stride,
+	int M,
+	int N,
+	int clock_type,
+	FILE *fwd_plot_data,
+	FILE *inv_plot_data,
+	enum order order,
+	int strip_x,
+	int strip_y
+)
+{
+	//FUNC_BEGIN;
+
+	assert( min_x > 0 && min_x < max_x );
+
+	assert( M > 0 && N > 0 );
+
+	assert( fwd_plot_data && inv_plot_data );
+
+	const float growth_factor = g_growth_factor_s;
+
+	// for x = min_x to max_x
+	for(int x = min_x; x <= max_x; x = ceilf(x * growth_factor))
+	{
+		// y is equal to x
+		const int y = x;
+
+		int mod_x = (x+10+4)%6; // HACK: 10(diag)+4(decay) modulo 6
+		int mod_y = (y+10+4)%6; // HACK: 10(diag)+4(decay) modulo 6
+	
+		int size_x = x-mod_x; // HACK
+		int size_y = y-mod_y; // HACK
+
+		dwt_util_log(LOG_DBG, "performance test for [%ix%i]...\n", size_x, size_y);
+
+		float fwd_secs;
+		float inv_secs;
+
+		// call perf()
+		dwt_util_perf_cdf97_2_inplace_new_s(
+			size_x,
+			size_y,
+			opt_stride,
+			M,
+			N,
+			clock_type,
+			&fwd_secs,
+			&inv_secs,
+			1, // flush
+			order,
+			strip_x,
+			strip_y
+		);
+
+#ifdef MEASURE_PER_PIXEL
+		const int denominator = x*y;
+#else
+		const int denominator = 1;
+#endif
+
+		// printf into file
+		fprintf(fwd_plot_data, "%i\t%.10f\n", x*y, fwd_secs/denominator);
+		fprintf(inv_plot_data, "%i\t%.10f\n", x*y, inv_secs/denominator);
+
+	}
+
+	//FUNC_END;
+}
+
+void dwt_util_measure_perf_cdf97_2_inplace_new_VERT_s(
+	int min_x,
+	int max_x,
+	int opt_stride,
+	int M,
+	int N,
+	int clock_type,
+	FILE *fwd_plot_data,
+	FILE *inv_plot_data,
+	enum order order,
+	int strip_x,
+	int strip_y
+)
+{
+	//FUNC_BEGIN;
+
+	assert( min_x > 0 && min_x < max_x );
+
+	assert( M > 0 && N > 0 );
+
+	assert( fwd_plot_data && inv_plot_data );
+
+	const float growth_factor = g_growth_factor_s;
+
+	// for x = min_x to max_x
+	for(int x = min_x; x <= max_x; x = ceilf(x * growth_factor))
+	{
+		// y is equal to x
+		const int y = x;
+#if 1
+		int mod_vert8_x = (x+ 4+4)%8; // HACK:  4(vert)+4(decay) modulo 8(super-core)
+		int mod_vert8_y = (y+ 4+4)%8; // HACK:  4(vert)+4(decay) modulo 8(super-core)
+	
+		int size_x = /*to_even8*/(x)-mod_vert8_x; // HACK
+		int size_y = /*to_even8*/(y)-mod_vert8_y; // HACK
+#else
+		int size_x = to_even8(x); // HACK
+		int size_y = to_even8(y); // HACK
+#endif
+		dwt_util_log(LOG_DBG, "performance test for [%ix%i]...\n", size_x, size_y);
+
+		float fwd_secs;
+		float inv_secs;
+
+		// call perf()
+		dwt_util_perf_cdf97_2_inplace_new_VERT_s(
+			size_x,
+			size_y,
+			opt_stride,
+			M,
+			N,
+			clock_type,
+			&fwd_secs,
+			&inv_secs,
+			1, // flush
+			order,
+			strip_x,
+			strip_y
+		);
+
+#ifdef MEASURE_PER_PIXEL
+		const int denominator = x*y;
+#else
+		const int denominator = 1;
+#endif
+
+		// printf into file
+		fprintf(fwd_plot_data, "%i\t%.10f\n", x*y, fwd_secs/denominator);
+		fprintf(inv_plot_data, "%i\t%.10f\n", x*y, inv_secs/denominator);
+
+	}
+
+	//FUNC_END;
+}
+
+void dwt_util_perf_cdf97_2_inplace_diag2x2_frame4_s(
+	enum dwt_alg alg,
+	int size_x,
+	int size_y,
+	int opt_stride,
+	int M,
+	int N,
+	int clock_type,
+	float *fwd_secs,
+	float *inv_secs,
+	int flush
+)
+{
+	assert( M > 0 && N > 0 && fwd_secs && inv_secs );
+
+	// currently, only even size
+	size_x = to_even(size_x);
+	size_y = to_even(size_y);
+
+	// declare template
+	void *template_ptr;
+	int template_size_x = size_x;
+	int template_size_y = size_y;
+	int template_stride_y = sizeof(float);
+	int template_stride_x = dwt_util_get_stride(template_stride_y * template_size_x, opt_stride);
+
+	// allocate template
+	dwt_util_alloc_image(
+		&template_ptr,
+		template_stride_x,
+		template_stride_y,
+		template_size_x,
+		template_size_y);
+
+	// fill template with test pattern
+	dwt_util_test_image_fill2_s(
+		template_ptr,
+		template_stride_x,
+		template_stride_y,
+		template_size_x,
+		template_size_y,
+		0, 0);
+
+	// offset
+	int offset = 1;
+
+	// decay
+	int border = 4;
+
+	// declare frame
+	void *frame_ptr[M];
+	int frame_size_x = offset+border+size_x+border+offset; // FIXME: stačí pouze 1x +offset
+	int frame_size_y = offset+border+size_y+border+offset; // FIXME: stačí pouze 1x +offset
+	int frame_stride_y = sizeof(float);
+	int frame_stride_x = dwt_util_get_stride(frame_stride_y * frame_size_x, opt_stride);
+
+	// log
+	dwt_util_log(LOG_DBG, "frame: size=(%i,%i) stride=(%i,%i) image=(%i,%i)\n", frame_size_x, frame_size_y, frame_stride_y, frame_stride_x, size_x, size_y);
+
+	// allocate M images
+	for(int m = 0; m < M; m++)
+	{
+		dwt_util_alloc_image(
+			&frame_ptr[m],
+			frame_stride_x,
+			frame_stride_y,
+			frame_size_x,
+			frame_size_y
+		);
+	}
+
+	// frame.image
+	void *image_ptr[M];
+	for(int m = 0; m < M; m++)
+	{
+		image_ptr[m] = dwt_util_viewport(
+			frame_ptr[m],
+			frame_size_x,
+			frame_size_y,
+			frame_stride_x,
+			frame_stride_y,
+			offset+border,
+			offset+border);
+	}
+
+	*fwd_secs = +INFINITY;
+	*inv_secs = +INFINITY;
+
+	// perform N test loops, select minimum
+	for(int n = 0; n < N; n++)
+	{
+		// copy template into frame.src_img
+		for(int m = 0; m < M; m++)
+		{
+			// zero
+			dwt_util_test_image_zero_s(
+				frame_ptr[m],
+				frame_stride_x,
+				frame_stride_y,
+				frame_size_x,
+				frame_size_y
+			);
+
+			// copy
+			dwt_util_copy2_s(
+				template_ptr,
+				template_stride_x,
+				template_stride_y,
+				image_ptr[m],
+				frame_stride_x,
+				frame_stride_y,
+				template_size_x,
+				template_size_y
+			);
+		}
+
+		// flush memory
+		if( flush )
+		{
+			for(int m = 0; m < M; m++)
+			{
+				dwt_util_flush_cache(frame_ptr[m], dwt_util_image_size(frame_stride_x, frame_stride_y, frame_size_x, frame_size_y) );
+			}
+		}
+
+		// start timer
+		const dwt_clock_t time_fwd_start = dwt_util_get_clock(clock_type);
+		// perform M fwd transforms
+		for(int m = 0; m < M; m++)
+		{
+			// forward transform
+			fdwt_diag_2x2(
+			//fdwt_diag_2x2_full(
+			//fdwt_diag_2x2_test(
+				addr2_s(frame_ptr[m], offset, offset, frame_stride_x, frame_stride_y),
+				frame_stride_x,
+				frame_stride_y,
+				frame_size_x-2*offset, // FIXME
+				frame_size_y-2*offset
+			);
+		}
+		// stop timer
+		const dwt_clock_t time_fwd_stop = dwt_util_get_clock(clock_type);
+		// calc avg
+		const float time_fwd_secs = (float)(time_fwd_stop - time_fwd_start) / M * MEASURE_FACTOR / dwt_util_get_frequency(clock_type);
+		// select min
+		if( time_fwd_secs < *fwd_secs )
+			*fwd_secs = time_fwd_secs;
+
+		// flush memory
+		if( flush )
+		{
+			for(int m = 0; m < M; m++)
+			{
+				dwt_util_flush_cache(frame_ptr[m], dwt_util_image_size(frame_stride_x, frame_stride_y, frame_size_x, frame_size_y) );
+			}
+		}
+
+		int inv_offset = 1-offset;
+
+		// start timer
+		const dwt_clock_t time_inv_start = dwt_util_get_clock(clock_type);
+		// perform M inv transforms
+		for(int m = 0; m < M; m++)
+		{
+			// inverse transform
+			dwt_cdf97_2i_inplace_s(
+				frame_ptr[m],
+				frame_stride_x,
+				frame_stride_y,
+				frame_size_x-0, // FIXME
+				frame_size_y-0, // FIXME
+				frame_size_x-0, // FIXME
+				frame_size_y-0, // FIXME
+				/*j*/1,
+				0,
+				0
+			);
+		}
+		// stop timer
+		const dwt_clock_t time_inv_stop = dwt_util_get_clock(clock_type);
+		// calc avg
+		const float time_inv_secs = (float)(time_inv_stop - time_inv_start) / M * MEASURE_FACTOR / dwt_util_get_frequency(clock_type);
+		// select min
+		if( time_inv_secs < *inv_secs )
+			*inv_secs = time_inv_secs;
+
+		// compare template and dst_img
+		for(int m = 0; m < M; m++)
+		{
+			// compare
+			if( dwt_util_compare2_s(
+				image_ptr[m], // 1
+				template_ptr, // 2
+				frame_stride_x,
+				frame_stride_y,
+				template_stride_x,
+				template_stride_y,
+				template_size_x,
+				template_size_y
+				) )
+			{
+				dwt_util_log(LOG_INFO, "compare: fails\n");
+			}
+		}
+	}
+
+	// free
+	for(int m = 0; m < M; m++)
+	{
+		dwt_util_free_image(&frame_ptr[m]);
+	}
+	dwt_util_free_image(&template_ptr);
+}
+
+// TODO: duplicate this!
 // core transform with overlapping src/dst areas
 void dwt_util_perf_cdf97_2_inplaceB_alg_s(
 	enum dwt_alg alg,
@@ -4169,6 +5789,24 @@ void dwt_util_perf_cdf97_2_inplaceB_alg_s(
 	//FUNC_BEGIN;
 
 	assert( M > 0 && N > 0 && fwd_secs && inv_secs );
+
+	// HACK
+#if 1
+	int mod_diag6_x = (size_x+10+4)%6;
+	int mod_diag6_y = (size_y+10+4)%6;
+	int mod_vert8_x = (size_x+ 4+4)%8;
+	int mod_vert8_y = (size_y+ 4+4)%8;
+	if( DWT_ALG_SL_CORE_DL_SC_SSE_OFF1_4X4 == alg )
+	{
+		size_x -= mod_vert8_x;
+		size_y -= mod_vert8_y;
+	}
+	if( DWT_ALG_SL_CORE_SDL_SC_SSE_OFF1_6X2 == alg )
+	{
+		size_x -= mod_diag6_x;
+		size_y -= mod_diag6_y;
+	}
+#endif
 
 	// template
 	void *template_ptr;
@@ -4201,10 +5839,17 @@ void dwt_util_perf_cdf97_2_inplaceB_alg_s(
 	//int offset = 1;
 	int offset = ( DWT_ALG_SL_CORE_SDL_SC_SSE_OFF0!=alg && DWT_ALG_SL_CORE_SDL_SC_SSE_OFF0_OVL1!=alg ) ? 1 : 0;
 
+	int decay = 4;
+
+#if 0
+	dwt_util_log(LOG_DBG, "shift=%i offset=%i\n", shift, offset);
+	dwt_util_log(LOG_DBG, "size_x=%i size_y=%i\n", size_x, size_y);
+#endif
+
 	// frame
 	void *out_ptr[M];
-	int out_size_x = offset+shift+size_x+shift+4;
-	int out_size_y = offset+shift+size_y+shift+4;
+	int out_size_x = offset+shift+size_x+shift+decay;
+	int out_size_y = offset+shift+size_y+shift+decay;
 	int out_stride_y = sizeof(float);
 	int out_stride_x = dwt_util_get_stride(out_stride_y * out_size_x, opt_stride);
 
@@ -4213,6 +5858,9 @@ void dwt_util_perf_cdf97_2_inplaceB_alg_s(
 	void *src_ptr[M]; // transform 1+img_size_x+shift+2+2 x 1+img_size_y+shift+2+2
 	void *dst_img[M]; // image size_x x size_y
 	void *dst_ptr[M]; // transform 1+img_size_x+shift+2+2 x 1+img_size_y+shift+2+2
+
+#define HACK_1 21
+#define HACK_2 20
 
 	// allocate M images
 	for(int m = 0; m < M; m++)
@@ -4223,7 +5871,7 @@ void dwt_util_perf_cdf97_2_inplaceB_alg_s(
 			out_stride_x,
 			out_stride_y,
 			out_size_x,
-			out_size_y*2+21 // HACK: splitting among threads causes access up to up_to_even( Y/(Y-1) ) ~= Y*2 rows
+			out_size_y*2+HACK_1 // HACK: splitting among threads causes access up to up_to_even( Y/(Y-1) ) ~= Y*2 rows
 		);
 		// HACK: read area have to be filled with zeros
 		dwt_util_test_image_zero_s(
@@ -4231,9 +5879,9 @@ void dwt_util_perf_cdf97_2_inplaceB_alg_s(
 			out_stride_x,
 			out_stride_y,
 			out_size_x,
-			out_size_y*2+21
+			out_size_y*2+HACK_1
 		);
-		out_ptr[m] += out_stride_x*20; // HACK: need to read some area before image beginning (threads)
+		out_ptr[m] += out_stride_x*HACK_2; // HACK: need to read some area before image beginning (threads)
 
 		src_ptr[m] = dwt_util_viewport(out_ptr[m], out_size_x, out_size_y, out_stride_x, out_stride_y, shift, shift);
 		src_img[m] = dwt_util_viewport(out_ptr[m], out_size_x, out_size_y, out_stride_x, out_stride_y, offset+shift, offset+shift);
@@ -4293,6 +5941,7 @@ void dwt_util_perf_cdf97_2_inplaceB_alg_s(
 		// perform M fwd transforms
 		for(int m = 0; m < M; m++)
 		{
+#if 1
 			dwt_cdf97_2f_inplace_alg_s(
 				alg,
 				src_ptr[m],
@@ -4301,9 +5950,18 @@ void dwt_util_perf_cdf97_2_inplaceB_alg_s(
 				out_stride_y,
 				out_stride_x,
 				out_stride_y,
-				offset+size_x+shift+4,
-				offset+size_y+shift+4
+				offset+size_x+shift+decay,
+				offset+size_y+shift+decay
 			);
+#else
+			fdwt_diag_2x2_full(
+				addr2_s(dst_ptr[m],1,1,out_stride_x,out_stride_y),
+				out_stride_x,
+				out_stride_y,
+				size_x+shift+decay,
+				size_y+shift+decay
+			);
+#endif
 		}
 		// stop timer
 		const dwt_clock_t time_fwd_stop = dwt_util_get_clock(clock_type);
@@ -4312,6 +5970,11 @@ void dwt_util_perf_cdf97_2_inplaceB_alg_s(
 		// select min
 		if( time_fwd_secs < *fwd_secs )
 			*fwd_secs = time_fwd_secs;
+
+#if 0
+		// HACK
+		dwt_util_save_to_pgm_s("hack.pgm", 1.0, dst_img[0], out_stride_x, out_stride_y, size_x, size_y);
+#endif
 
 		// flush memory
 		if( flush )
@@ -4367,7 +6030,7 @@ void dwt_util_perf_cdf97_2_inplaceB_alg_s(
 		{
 			if( dwt_util_compare2_s(dst_img[m], template_ptr, out_stride_x, out_stride_y, template_stride_x, template_stride_y, size_x, size_y) )
 			{
-				dwt_util_log(LOG_INFO, "images differs (%i,%i) overlap=%i alg=%i\n", size_x, size_y, overlap, (int)alg);
+				dwt_util_log(LOG_ERR, "images differs (%i,%i) overlap=%i alg=%i\n", size_x, size_y, overlap, (int)alg);
 				dwt_util_save_to_pgm_s("debug.pgm", 1.0, dst_img[m], out_stride_x, out_stride_y, size_x, size_y);
 				dwt_util_save_to_pgm_s("ref.pgm", 1.0, template_ptr, template_stride_x, template_stride_y, size_x, size_y);
 			}
@@ -4377,7 +6040,468 @@ void dwt_util_perf_cdf97_2_inplaceB_alg_s(
 	// free M images
 	for(int m = 0; m < M; m++)
 	{
-		out_ptr[m] -= out_stride_x*20; // HACK
+		out_ptr[m] -= out_stride_x*HACK_2; // HACK
+		dwt_util_free_image(&out_ptr[m]);
+	}
+	dwt_util_free_image(&template_ptr);
+
+	//FUNC_END;
+}
+
+void dwt_util_perf_cdf97_2_inplace_new_s(
+	int size_x,
+	int size_y,
+	int opt_stride,
+	int M,
+	int N,
+	int clock_type,
+	float *fwd_secs,
+	float *inv_secs,
+	int flush,
+	// new
+	enum order order,
+	int strip_x,
+	int strip_y
+)
+{
+	//FUNC_BEGIN;
+
+	extern int g_strip_x;
+	g_strip_x = strip_x;
+	extern int g_strip_y;
+	g_strip_y = strip_y;
+
+	assert( M > 0 && N > 0 && fwd_secs && inv_secs );
+
+	// template
+	void *template_ptr;
+	int template_size_x = size_x;
+	int template_size_y = size_y;
+	int template_stride_y = sizeof(float);
+	int template_stride_x = dwt_util_get_stride(template_stride_y * template_size_x, opt_stride);
+
+	// allocate template
+	dwt_util_alloc_image(
+		&template_ptr,
+		template_stride_x,
+		template_stride_y,
+		template_size_x,
+		template_size_y
+	);
+
+	// fill template with test pattern
+	dwt_util_test_image_fill2_s(
+		template_ptr,
+		template_stride_x,
+		template_stride_y,
+		template_size_x,
+		template_size_y,
+		0,
+		0 // NOTE: type
+	);
+
+	// shift
+	int shift = 10; // FIXME: diagonal/SDL
+
+	// offset
+	int offset = 1; // FIXME
+
+	// border
+	int decay = 4; // FIXME: CDF 9/7
+
+	// frame
+	void *out_ptr[M];
+	int out_size_x = offset+(shift+size_x+shift+decay);
+	int out_size_y = offset+(shift+size_y+shift+decay);
+	int out_stride_y = sizeof(float);
+	int out_stride_x = dwt_util_get_stride(out_stride_y * out_size_x, opt_stride);
+
+	// pointers
+	void *src_img[M]; // image (size_x, size_y)
+	void *src_ptr[M]; // transform
+	void *dst_img[M]; // image (size_x, size_y)
+	void *dst_ptr[M]; // transform
+
+	// allocate M images
+	for(int m = 0; m < M; m++)
+	{
+		// allocate
+		dwt_util_alloc_image(
+			&out_ptr[m],
+			out_stride_x,
+			out_stride_y,
+			out_size_x,
+			out_size_y
+		);
+
+		src_ptr[m] = dwt_util_viewport(out_ptr[m], out_size_x, out_size_y, out_stride_x, out_stride_y, offset+shift, offset+shift);
+		src_img[m] = dwt_util_viewport(out_ptr[m], out_size_x, out_size_y, out_stride_x, out_stride_y, offset+shift, offset+shift);
+		dst_ptr[m] = dwt_util_viewport(out_ptr[m], out_size_x, out_size_y, out_stride_x, out_stride_y, 0, 0);
+		dst_img[m] = dwt_util_viewport(out_ptr[m], out_size_x, out_size_y, out_stride_x, out_stride_y, offset+shift, offset+shift);
+	}
+
+	*fwd_secs = +INFINITY;
+	*inv_secs = +INFINITY;
+
+	// perform N test loops, select minimum
+	for(int n = 0; n < N; n++)
+	{
+		// copy template into frame.src_img
+		for(int m = 0; m < M; m++)
+		{
+			// this is necessary
+			dwt_util_test_image_zero_s(
+				out_ptr[m],
+				out_stride_x,
+				out_stride_y,
+				out_size_x,
+				out_size_y
+			);
+
+			dwt_util_copy2_s(
+				template_ptr,
+				template_stride_x,
+				template_stride_y,
+				src_img[m],
+				out_stride_x,
+				out_stride_y,
+				template_size_x,
+				template_size_y
+			);
+		}
+
+		// flush memory
+		if( flush )
+		{
+			for(int m = 0; m < M; m++)
+			{
+				dwt_util_flush_cache(out_ptr[m], dwt_util_image_size(out_stride_x, out_stride_y, out_size_x, out_size_y) );
+			}
+		}
+
+		// select the proper function
+		fdwt_diag_2x2_func_t func = get_fdwt_diag_2x2_func(order);
+
+		// start timer
+		const dwt_clock_t time_fwd_start = dwt_util_get_clock(clock_type);
+		// perform M fwd transforms
+		for(int m = 0; m < M; m++)
+		{
+			func(
+				src_ptr[m],
+				out_stride_x,
+				out_stride_y,
+				size_x+shift+decay,
+				size_y+shift+decay
+			);
+		}
+		// stop timer
+		const dwt_clock_t time_fwd_stop = dwt_util_get_clock(clock_type);
+		// calc avg
+		const float time_fwd_secs = (float)(time_fwd_stop - time_fwd_start) / M * MEASURE_FACTOR / dwt_util_get_frequency(clock_type);
+		// select min
+		if( time_fwd_secs < *fwd_secs )
+			*fwd_secs = time_fwd_secs;
+
+		// flush memory
+		if( flush )
+		{
+			for(int m = 0; m < M; m++)
+			{
+				dwt_util_flush_cache(out_ptr[m], dwt_util_image_size(out_stride_x, out_stride_y, out_size_x, out_size_y) );
+			}
+		}
+
+		// start timer
+		const dwt_clock_t time_inv_start = dwt_util_get_clock(clock_type);
+		// perform M inv transforms
+		for(int m = 0; m < M; m++)
+		{
+			dwt_cdf97_2i_inplace_s(
+				dst_ptr[m],
+				out_stride_x,
+				out_stride_y,
+				out_size_x,
+				out_size_y,
+				out_size_x,
+				out_size_y,
+				1,
+				0,
+				0
+			);
+		}
+		// stop timer
+		const dwt_clock_t time_inv_stop = dwt_util_get_clock(clock_type);
+		// calc avg
+		const float time_inv_secs = (float)(time_inv_stop - time_inv_start) / M * MEASURE_FACTOR / dwt_util_get_frequency(clock_type);
+		// select min
+		if( time_inv_secs < *inv_secs )
+			*inv_secs = time_inv_secs;
+
+		// compare template and dst_img
+		for(int m = 0; m < M; m++)
+		{
+			if( dwt_util_compare2_s(dst_img[m], template_ptr, out_stride_x, out_stride_y, template_stride_x, template_stride_y, size_x, size_y) )
+			{
+				dwt_util_log(LOG_INFO, "images differs (%i,%i)\n", size_x, size_y);
+				dwt_util_save_to_pgm_s("debug.pgm", 1.0, dst_img[m], out_stride_x, out_stride_y, size_x, size_y);
+				dwt_util_save_to_pgm_s("template.pgm", 1.0, template_ptr, template_stride_x, template_stride_y, size_x, size_y);
+			}
+		}
+	}
+
+	// free M images
+	for(int m = 0; m < M; m++)
+	{
+		dwt_util_free_image(&out_ptr[m]);
+	}
+	dwt_util_free_image(&template_ptr);
+
+	//FUNC_END;
+}
+
+void dwt_util_perf_cdf97_2_inplace_new_VERT_s(
+	int size_x,
+	int size_y,
+	int opt_stride,
+	int M,
+	int N,
+	int clock_type,
+	float *fwd_secs,
+	float *inv_secs,
+	int flush,
+	// new
+	enum order order,
+	int strip_x,
+	int strip_y
+)
+{
+	//FUNC_BEGIN;
+
+	extern int g_strip_x;
+	g_strip_x = strip_x;
+	extern int g_strip_y;
+	g_strip_y = strip_y;
+
+	assert( M > 0 && N > 0 && fwd_secs && inv_secs );
+
+	// template
+	void *template_ptr;
+	int template_size_x = size_x;
+	int template_size_y = size_y;
+	int template_stride_y = sizeof(float);
+	int template_stride_x = dwt_util_get_stride(template_stride_y * template_size_x, opt_stride);
+
+	// allocate template
+	dwt_util_alloc_image(
+		&template_ptr,
+		template_stride_x,
+		template_stride_y,
+		template_size_x,
+		template_size_y
+	);
+
+#if 1
+	// fill template with test pattern
+	dwt_util_test_image_fill2_s(
+		template_ptr,
+		template_stride_x,
+		template_stride_y,
+		template_size_x,
+		template_size_y,
+		0,
+		0 // NOTE: type
+	);
+#else
+	// fill template with test pattern
+	dwt_util_test_image_fill_s(
+		template_ptr,
+		template_stride_x,
+		template_stride_y,
+		template_size_x,
+		template_size_y,
+		0
+	);
+#endif
+
+	// shift
+	int shift = 4; // FIXME: vertical/DL
+
+	// offset
+	int offset = 1; // FIXME
+
+	// border
+	int decay = 4; // FIXME: CDF 9/7
+
+	// frame
+	void *out_ptr[M];
+	int out_size_x = offset+(shift+size_x+shift+decay);
+	int out_size_y = offset+(shift+size_y+shift+decay);
+	int out_stride_y = sizeof(float);
+	int out_stride_x = dwt_util_get_stride(out_stride_y * out_size_x, opt_stride);
+
+	// pointers
+	void *src_img[M]; // image (size_x, size_y)
+	void *src_ptr[M]; // transform
+	void *dst_img[M]; // image (size_x, size_y)
+	void *dst_ptr[M]; // transform
+
+	// allocate M images
+	for(int m = 0; m < M; m++)
+	{
+		// allocate
+		dwt_util_alloc_image(
+			&out_ptr[m],
+			out_stride_x,
+			out_stride_y,
+			out_size_x,
+			out_size_y
+		);
+
+		src_ptr[m] = dwt_util_viewport(out_ptr[m], out_size_x, out_size_y, out_stride_x, out_stride_y, offset+shift, offset+shift);
+		src_img[m] = dwt_util_viewport(out_ptr[m], out_size_x, out_size_y, out_stride_x, out_stride_y, offset+shift, offset+shift);
+		dst_ptr[m] = dwt_util_viewport(out_ptr[m], out_size_x, out_size_y, out_stride_x, out_stride_y, 0, 0);
+		dst_img[m] = dwt_util_viewport(out_ptr[m], out_size_x, out_size_y, out_stride_x, out_stride_y, offset+shift, offset+shift);
+	}
+
+	*fwd_secs = +INFINITY;
+	*inv_secs = +INFINITY;
+
+	// perform N test loops, select minimum
+	for(int n = 0; n < N; n++)
+	{
+		// copy template into frame.src_img
+		for(int m = 0; m < M; m++)
+		{
+			// this is necessary
+			dwt_util_test_image_zero_s(
+				out_ptr[m],
+				out_stride_x,
+				out_stride_y,
+				out_size_x,
+				out_size_y
+			);
+
+			dwt_util_copy2_s(
+				template_ptr,
+				template_stride_x,
+				template_stride_y,
+				src_img[m],
+				out_stride_x,
+				out_stride_y,
+				template_size_x,
+				template_size_y
+			);
+		}
+
+		// flush memory
+		if( flush )
+		{
+			for(int m = 0; m < M; m++)
+			{
+				dwt_util_flush_cache(out_ptr[m], dwt_util_image_size(out_stride_x, out_stride_y, out_size_x, out_size_y) );
+			}
+		}
+
+		// select the proper function
+		fdwt_vert_2x2_func_t func = get_fdwt_vert_2x2_func(order);
+
+		// start timer
+		const dwt_clock_t time_fwd_start = dwt_util_get_clock(clock_type);
+		// perform M fwd transforms
+		for(int m = 0; m < M; m++)
+		{
+			func(
+			//fdwt_vert_2x2_HORIZ_test(
+				src_ptr[m],
+				out_stride_x,
+				out_stride_y,
+				size_x+shift+decay,
+				size_y+shift+decay
+			);
+		}
+		// stop timer
+		const dwt_clock_t time_fwd_stop = dwt_util_get_clock(clock_type);
+		// calc avg
+		const float time_fwd_secs = (float)(time_fwd_stop - time_fwd_start) / M * MEASURE_FACTOR / dwt_util_get_frequency(clock_type);
+		// select min
+		if( time_fwd_secs < *fwd_secs )
+			*fwd_secs = time_fwd_secs;
+
+		// HACK
+#if 0
+		{
+			dwt_util_log(LOG_DBG, "saving transform...\n");
+			void *show;
+			dwt_util_alloc_image(
+				&show,
+				out_stride_x,
+				out_stride_y,
+				size_x,
+				size_y
+			);
+			dwt_util_conv_show_s(
+				dst_img[0],
+				show,
+				out_stride_x,
+				out_stride_y,
+				size_x,
+				size_y
+			);
+			dwt_util_save_to_pgm_s("transform.pgm", 1.0, show, out_stride_x, out_stride_y, size_x, size_y);
+			dwt_util_save_to_pgm_s("frame.pgm", 1.0, out_ptr[0], out_stride_x, out_stride_y, out_size_x, out_size_y);
+		}
+#endif
+		// flush memory
+		if( flush )
+		{
+			for(int m = 0; m < M; m++)
+			{
+				dwt_util_flush_cache(out_ptr[m], dwt_util_image_size(out_stride_x, out_stride_y, out_size_x, out_size_y) );
+			}
+		}
+
+		// start timer
+		const dwt_clock_t time_inv_start = dwt_util_get_clock(clock_type);
+		// perform M inv transforms
+		for(int m = 0; m < M; m++)
+		{
+			dwt_cdf97_2i_inplace_s(
+				dst_ptr[m],
+				out_stride_x,
+				out_stride_y,
+				out_size_x,
+				out_size_y,
+				out_size_x,
+				out_size_y,
+				1,
+				0,
+				0
+			);
+		}
+		// stop timer
+		const dwt_clock_t time_inv_stop = dwt_util_get_clock(clock_type);
+		// calc avg
+		const float time_inv_secs = (float)(time_inv_stop - time_inv_start) / M * MEASURE_FACTOR / dwt_util_get_frequency(clock_type);
+		// select min
+		if( time_inv_secs < *inv_secs )
+			*inv_secs = time_inv_secs;
+
+		// compare template and dst_img
+		for(int m = 0; m < M; m++)
+		{
+			if( dwt_util_compare2_s(dst_img[m], template_ptr, out_stride_x, out_stride_y, template_stride_x, template_stride_y, size_x, size_y) )
+			{
+				dwt_util_log(LOG_INFO, "images differs (%i,%i)\n", size_x, size_y);
+				dwt_util_save_to_pgm_s("debug.pgm", 1.0, dst_img[m], out_stride_x, out_stride_y, size_x, size_y);
+				dwt_util_save_to_pgm_s("template.pgm", 1.0, template_ptr, template_stride_x, template_stride_y, size_x, size_y);
+			}
+		}
+	}
+
+	// free M images
+	for(int m = 0; m < M; m++)
+	{
 		dwt_util_free_image(&out_ptr[m]);
 	}
 	dwt_util_free_image(&template_ptr);

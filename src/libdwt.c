@@ -862,6 +862,14 @@ int up_to_even(
 	return (x+1) & ~1;
 }
 
+static
+int up_to_mul4(
+	int x
+)
+{
+	return (x+3) & ~3;
+}
+
 int dwt_util_to_even(
 	int x
 )
@@ -874,6 +882,13 @@ int dwt_util_up_to_even(
 )
 {
 	return up_to_even(x);
+}
+
+int dwt_util_up_to_mul4(
+	int x
+)
+{
+	return up_to_mul4(x);
 }
 
 /**
@@ -1347,6 +1362,9 @@ void dwt_util_test_image_value_i_s(
 	int type
 )
 {
+	x++;
+	y++;
+
 	switch(type)
 	{
 		case 0:
@@ -1359,6 +1377,19 @@ void dwt_util_test_image_value_i_s(
 			*dest = 2*x*y / (float)(x*x + y*y + 1) * fabsf(sinf(x/10.f)) * fabsf(cosf(y*x/5.f));
 			break;
 #endif
+		case 2:
+		{
+			int i = x^y;
+			i &= 0xff;
+			*dest = (float)i/32;
+			break;
+		}
+		case 3:
+		{
+			int v = (((x&1)<<1)|(y&1))+1;
+			*dest = v/4.f;
+			break;
+		}
 		default:
 		{
 			dwt_util_log(LOG_ERR, "Unknown test image type.\n");
@@ -1658,6 +1689,8 @@ int dwt_util_compare2_s(
 {
 	assert( ptr1 != NULL && ptr2 != NULL && size_x >= 0 && size_y >= 0 );
 
+	int ret = 0;
+
 	const float eps = 1e-3;
 
 	for(int y = 0; y < size_y; y++)
@@ -1668,14 +1701,30 @@ int dwt_util_compare2_s(
 			const float b = *addr2_s(ptr2, y, x, stride2_x, stride2_y);
 
 			if( isnan(a) || isinf(a) || isnan(b) || isinf(b) )
-				return 1;
+			{
+#ifdef COMPARE_DESTROY
+				*addr2_s(ptr1, y, x, stride1_x, stride1_y) = 1.0f;
+#endif
+				ret = 1;
+			}
 
 			if( fabsf(a - b) > eps )
-				return 1;
+			{
+#ifdef COMPARE_DESTROY
+				*addr2_s(ptr1, y, x, stride1_x, stride1_y) = 1.0f;
+#endif
+				ret = 1;
+			}
+			else
+			{
+#ifdef COMPARE_DESTROY
+				*addr2_s(ptr1, y, x, stride1_x, stride1_y) = 0.0f;
+#endif
+			}
 		}
 	}
 
-	return 0;
+	return ret;
 }
 
 void dwt_cdf97_f_d(
@@ -9543,6 +9592,179 @@ void accel_lift_op4s_prolog_stride_s(
 	}
 }
 
+// hole
+static
+void accel_lift_op4s_prolog_stride_hole_s(
+	float *arr,
+	int off,
+	int N,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	int scaling,
+	int stride
+)
+{
+	assert( N-off >= 4 );
+
+#ifdef NDEBUG
+	UNUSED(N);
+#endif
+
+	assert( 1 == dwt_util_get_num_workers() );
+	{
+		if( off )
+		{
+			// inv-scaling
+			if( scaling < 0 )
+			{
+				// TODO
+			}
+
+			// alpha
+			*addr1_s(arr, 1, stride) += alpha*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+			*addr1_s(arr, 3, stride) += alpha*(*addr1_s(arr, 2, stride) + *addr1_s(arr, 4, stride));
+
+			// beta
+			*addr1_s(arr, 0, stride) += beta *(*addr1_s(arr, 1, stride) + 0.f);
+			*addr1_s(arr, 2, stride) += beta *(*addr1_s(arr, 1, stride) + *addr1_s(arr, 3, stride));
+
+			// gamma
+			*addr1_s(arr, 1, stride) += gamma*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+
+			// delta
+			*addr1_s(arr, 0, stride) += delta*(*addr1_s(arr, 1, stride) + 0.f);
+
+			// scaling
+			if( scaling > 0)
+			{
+				*addr1_s(arr, 0, stride) *= zeta;
+			}
+		}
+		else
+		{
+			// inv-scaling
+			if( scaling < 0 )
+			{
+				*addr1_s(arr, 0, stride) *= 1/zeta;
+				*addr1_s(arr, 1, stride) *= zeta;
+				*addr1_s(arr, 2, stride) *= 1/zeta;
+				*addr1_s(arr, 3, stride) *= zeta;
+			}
+
+			// alpha
+			*addr1_s(arr, 0, stride) += alpha*(*addr1_s(arr, 1, stride) + 0.f);
+			*addr1_s(arr, 2, stride) += alpha*(*addr1_s(arr, 1, stride) + *addr1_s(arr, 3, stride));
+
+			// beta
+			*addr1_s(arr, 1, stride) += beta *(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+
+			// gamma
+			*addr1_s(arr, 0, stride) += gamma*(*addr1_s(arr, 1, stride) + 0.f);
+
+			// delta
+			// none
+
+			// scaling
+			// none
+		}
+	}
+}
+
+// zero
+static
+void accel_lift_op4s_prolog_stride_zero_s(
+	float *arr,
+	int off,
+	int N,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	int scaling,
+	int stride
+)
+{
+	assert( N-off >= 4 );
+
+#ifdef NDEBUG
+	UNUSED(N);
+#endif
+
+	assert( 1 == dwt_util_get_num_workers() );
+	{
+		if( off )
+		{
+			// initially zeros
+			float neg1 = 0.f;
+			float neg2 = 0.f;
+
+			// inv-scaling
+			if( scaling < 0 )
+			{
+				// TODO
+			}
+
+			// alpha
+			neg1                     += alpha*(0.f/*[-2]*/              + *addr1_s(arr, 0, stride));
+			*addr1_s(arr, 1, stride) += alpha*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+			*addr1_s(arr, 3, stride) += alpha*(*addr1_s(arr, 2, stride) + *addr1_s(arr, 4, stride));
+
+			// beta
+			neg2                     += beta *(0.f/*[-3]*/              + neg1/*[-1]*/);
+			*addr1_s(arr, 0, stride) += beta *(neg1/*[-1]*/             + *addr1_s(arr, 1, stride));
+			*addr1_s(arr, 2, stride) += beta *(*addr1_s(arr, 1, stride) + *addr1_s(arr, 3, stride));
+
+			// gamma
+			neg1                     += gamma*(neg2/*[-2]*/             + *addr1_s(arr, 0, stride));
+			*addr1_s(arr, 1, stride) += gamma*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+
+			// delta
+			*addr1_s(arr, 0, stride) += delta*(neg1/*[-1]*/             + *addr1_s(arr, 1, stride));
+
+			// scaling
+			if( scaling > 0)
+			{
+				*addr1_s(arr, 0, stride) *= zeta;
+			}
+		}
+		else
+		{
+			// initially zeros
+			float neg1 = 0.f;
+
+			// inv-scaling
+			if( scaling < 0 )
+			{
+				*addr1_s(arr, 0, stride) *= 1/zeta;
+				*addr1_s(arr, 1, stride) *= zeta;
+				*addr1_s(arr, 2, stride) *= 1/zeta;
+				*addr1_s(arr, 3, stride) *= zeta;
+			}
+
+			// alpha
+			*addr1_s(arr, 0, stride) += alpha*(0.f/*[-1]*/              + *addr1_s(arr, 1, stride));
+			*addr1_s(arr, 2, stride) += alpha*(*addr1_s(arr, 1, stride) + *addr1_s(arr, 3, stride));
+
+			// beta
+			neg1                     += beta *(0.f/*[-2]*/              + *addr1_s(arr, 0, stride));
+			*addr1_s(arr, 1, stride) += beta *(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
+
+			// gamma
+			*addr1_s(arr, 0, stride) += gamma*(*addr1_s(arr, 1, stride) + neg1/*[-1]*/);
+
+			// delta
+			// none
+
+			// scaling
+			// none
+		}
+	}
+}
+
 static
 void accel_lift_op4s_epilog_s(
 	float *arr,
@@ -9693,6 +9915,188 @@ void accel_lift_op4s_epilog_stride_s(
 
 			// gamma
 			*addr1_s(arr, N-1, stride) += 2*gamma*(*addr1_s(arr, N-2, stride));
+			*addr1_s(arr, N-3, stride) += gamma*(*addr1_s(arr, N-2, stride) + *addr1_s(arr, N-4, stride));
+
+			// delta
+			*addr1_s(arr, N-2, stride) += delta*(*addr1_s(arr, N-1, stride) + *addr1_s(arr, N-3, stride));
+			*addr1_s(arr, N-4, stride) += delta*(*addr1_s(arr, N-5, stride) + *addr1_s(arr, N-3, stride));
+
+			// scaling
+			if( scaling > 0 )
+			{
+				// FIXME: this is dependend on "off"
+				*addr1_s(arr, N-5, stride) *= 1/zeta;
+				*addr1_s(arr, N-4, stride) *= zeta;
+				*addr1_s(arr, N-3, stride) *= 1/zeta;
+				*addr1_s(arr, N-2, stride) *= zeta;
+				*addr1_s(arr, N-1, stride) *= 1/zeta;
+			}
+		}
+	}
+}
+
+// hole
+static
+void accel_lift_op4s_epilog_stride_hole_s(
+	float *arr,
+	int off,
+	int N,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	int scaling,
+	int stride
+)
+{
+	assert( N-off >= 4 );
+
+	assert( 1 == dwt_util_get_num_workers() );
+	{
+		if( is_even(N - off) )
+		{
+			// inv-scaling
+			if( scaling < 0 )
+			{
+				// TODO
+			}
+
+			// alpha
+			// none
+
+			// beta
+			*addr1_s(arr, N-1, stride) += beta *(*addr1_s(arr, N-2, stride) + 0.f);
+
+			// gamma
+			*addr1_s(arr, N-2, stride) += gamma*(*addr1_s(arr, N-1, stride) + *addr1_s(arr, N-3, stride));
+
+			// delta
+			*addr1_s(arr, N-1, stride) += delta*(*addr1_s(arr, N-2, stride) + 0.f);
+			*addr1_s(arr, N-3, stride) += delta*(*addr1_s(arr, N-4, stride) + *addr1_s(arr, N-2, stride));
+
+			// scaling
+			if( scaling > 0 )
+			{
+				// FIXME: this is dependend on "off"
+				*addr1_s(arr, N-4, stride) *= 1/zeta;
+				*addr1_s(arr, N-3, stride) *= zeta;
+				*addr1_s(arr, N-2, stride) *= 1/zeta;
+				*addr1_s(arr, N-1, stride) *= zeta;
+			}
+		}
+		else /* is_odd(N-off) */
+		{
+			// inv-scaling
+			if( scaling < 0 )
+			{
+				*addr1_s(arr, N-1, stride) *= 1/zeta;
+			}
+
+			// alpha
+			*addr1_s(arr, N-1, stride) += alpha*(*addr1_s(arr, N-2, stride) + 0.f);
+
+			// beta
+			*addr1_s(arr, N-2, stride) += beta *(*addr1_s(arr, N-1, stride) + *addr1_s(arr, N-3, stride));
+
+			// gamma
+			*addr1_s(arr, N-1, stride) += gamma*(*addr1_s(arr, N-2, stride) + 0.f);
+			*addr1_s(arr, N-3, stride) += gamma*(*addr1_s(arr, N-2, stride) + *addr1_s(arr, N-4, stride));
+
+			// delta
+			*addr1_s(arr, N-2, stride) += delta*(*addr1_s(arr, N-1, stride) + *addr1_s(arr, N-3, stride));
+			*addr1_s(arr, N-4, stride) += delta*(*addr1_s(arr, N-5, stride) + *addr1_s(arr, N-3, stride));
+
+			// scaling
+			if( scaling > 0 )
+			{
+				// FIXME: this is dependend on "off"
+				*addr1_s(arr, N-5, stride) *= 1/zeta;
+				*addr1_s(arr, N-4, stride) *= zeta;
+				*addr1_s(arr, N-3, stride) *= 1/zeta;
+				*addr1_s(arr, N-2, stride) *= zeta;
+				*addr1_s(arr, N-1, stride) *= 1/zeta;
+			}
+		}
+	}
+}
+
+// zero
+static
+void accel_lift_op4s_epilog_stride_zero_s(
+	float *arr,
+	int off,
+	int N,
+	float alpha,
+	float beta,
+	float gamma,
+	float delta,
+	float zeta,
+	int scaling,
+	int stride
+)
+{
+	assert( N-off >= 4 );
+
+	assert( 1 == dwt_util_get_num_workers() );
+	{
+		if( is_even(N - off) )
+		{
+			// inititally zeros
+			float n0 = 0.f;
+			float n1 = 0.f;
+
+			// inv-scaling
+			if( scaling < 0 )
+			{
+				// TODO
+			}
+
+			// alpha
+			n0                         += alpha*(*addr1_s(arr, N-1, stride) + 0.f/*[N+1]*/);;
+
+			// beta
+			n1                         += beta *(n0/*[N-0]*/                + 0.f/*[N+2]*/);
+			*addr1_s(arr, N-1, stride) += beta *(*addr1_s(arr, N-2, stride) + n0/*[N-0]*/);
+
+			// gamma
+			n0                         += gamma*(*addr1_s(arr, N-1, stride) + n1/*[N+1]*/);
+			*addr1_s(arr, N-2, stride) += gamma*(*addr1_s(arr, N-1, stride) + *addr1_s(arr, N-3, stride));
+
+			// delta
+			*addr1_s(arr, N-1, stride) += delta*(*addr1_s(arr, N-2, stride) + n0/*[N-0]*/);
+			*addr1_s(arr, N-3, stride) += delta*(*addr1_s(arr, N-4, stride) + *addr1_s(arr, N-2, stride));
+
+			// scaling
+			if( scaling > 0 )
+			{
+				// FIXME: this is dependend on "off"
+				*addr1_s(arr, N-4, stride) *= 1/zeta;
+				*addr1_s(arr, N-3, stride) *= zeta;
+				*addr1_s(arr, N-2, stride) *= 1/zeta;
+				*addr1_s(arr, N-1, stride) *= zeta;
+			}
+		}
+		else /* is_odd(N-off) */
+		{
+			// inititally zero
+			float n0 = 0.f;
+
+			// inv-scaling
+			if( scaling < 0 )
+			{
+				*addr1_s(arr, N-1, stride) *= 1/zeta;
+			}
+
+			// alpha
+			*addr1_s(arr, N-1, stride) += alpha*(*addr1_s(arr, N-2, stride) + 0.f/*[N+0]*/);
+
+			// beta
+			n0                         += beta *(*addr1_s(arr, N-1, stride) + 0.f/*[N+1]*/);
+			*addr1_s(arr, N-2, stride) += beta *(*addr1_s(arr, N-1, stride) + *addr1_s(arr, N-3, stride));
+
+			// gamma
+			*addr1_s(arr, N-1, stride) += gamma*(*addr1_s(arr, N-2, stride) + n0/*[N+0]*/);
 			*addr1_s(arr, N-3, stride) += gamma*(*addr1_s(arr, N-2, stride) + *addr1_s(arr, N-4, stride));
 
 			// delta
@@ -11125,6 +11529,32 @@ void dwt_cdf97_i_ex_stride_inplace_part_prolog_s(
 	accel_lift_op4s_prolog_stride_s(ptr, offset, N, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
 }
 
+// hole
+static
+void dwt_cdf97_i_ex_stride_inplace_part_prolog_hole_s(
+	float *ptr,
+	int N,
+	int stride
+)
+{
+	const int offset = 0;
+
+	accel_lift_op4s_prolog_stride_hole_s(ptr, offset, N, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
+}
+
+// zero
+static
+void dwt_cdf97_i_ex_stride_inplace_part_prolog_zero_s(
+	float *ptr,
+	int N,
+	int stride
+)
+{
+	const int offset = 0;
+
+	accel_lift_op4s_prolog_stride_zero_s(ptr, offset, N, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
+}
+
 static
 void dwt_cdf97_i_ex_stride_inplace_part_core_s(
 	float *ptr,
@@ -11163,6 +11593,32 @@ void dwt_cdf97_i_ex_stride_inplace_part_epilog_s(
 	const int offset = 0;
 
 	accel_lift_op4s_epilog_stride_s(ptr, offset, N, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
+}
+
+// hole
+static
+void dwt_cdf97_i_ex_stride_inplace_part_epilog_hole_s(
+	float *ptr,
+	int N,
+	int stride
+)
+{
+	const int offset = 0;
+
+	accel_lift_op4s_epilog_stride_hole_s(ptr, offset, N, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
+}
+
+// zero
+static
+void dwt_cdf97_i_ex_stride_inplace_part_epilog_zero_s(
+	float *ptr,
+	int N,
+	int stride
+)
+{
+	const int offset = 0;
+
+	accel_lift_op4s_epilog_stride_zero_s(ptr, offset, N, -dwt_cdf97_u2_s, dwt_cdf97_p2_s, -dwt_cdf97_u1_s, dwt_cdf97_p1_s, dwt_cdf97_s1_s, -1, stride);
 }
 
 void dwt_cdf97_i_ex_stride_i(
@@ -16798,6 +17254,268 @@ void dwt_cdf97_2i_inplace_s(
 	FUNC_END;
 }
 
+// hole
+void dwt_cdf97_2i_inplace_hole_s(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	int decompose_one,
+	int zero_padding)
+{
+	FUNC_BEGIN;
+
+	assert( 1 == dwt_util_get_num_workers() );
+
+	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
+	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
+
+	int j = ceil_log2( decompose_one ? size_o_big_max : size_o_big_min );
+
+	if( j_max >= 0 && j_max < j )
+		j = j_max;
+
+	for(;;)
+	{
+		if(0 == j)
+			break;
+
+		const int size_i_dst_x = ceil_div_pow2(size_i_big_x, j-1);
+		const int size_i_dst_y = ceil_div_pow2(size_i_big_y, j-1);
+
+		const int lines_y = size_i_dst_y;
+		const int lines_x = size_i_dst_x;
+
+		const int stride_y_j = stride_y * (1 << (j-1));
+		const int stride_x_j = stride_x * (1 << (j-1));
+
+		if( lines_x > 1 && lines_x < 4 )
+		{
+			for(int y = 0; y < lines_y; y++)
+			{
+				// FIXME: _hole
+				dwt_cdf97_i_ex_stride_inplace_part_exceptions_s(
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					lines_x, // N
+					stride_y_j);
+			}
+		}
+		if( lines_y > 1 && lines_y < 4 )
+		{
+			for(int x = 0; x < size_i_dst_x; x++)
+			{
+				// FIXME: _hole
+				dwt_cdf97_i_ex_stride_inplace_part_exceptions_s(
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					lines_y, // N
+					stride_x_j);
+			}
+		}
+
+		if( lines_x > 1 && lines_x >= 4 )
+		{
+			for(int y = 0; y < lines_y; y++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_prolog_hole_s(
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					lines_x,
+					stride_y_j);
+			}
+		}
+		if( lines_y > 1 && lines_y >= 4 )
+		{
+			for(int x = 0; x < lines_x; x++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_prolog_hole_s(
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					lines_y,
+					stride_x_j);
+			}
+		}
+
+		if( lines_x > 1 && lines_x >= 4 )
+		{
+			for(int y = 0; y < lines_y; y++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_core_s(
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					lines_x,
+					stride_y_j);
+			}
+		}
+		if( lines_y > 1 && lines_y >= 4 )
+		{
+			for(int x = 0; x < lines_x; x++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_core_s(
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					lines_y,
+					stride_x_j);
+			}
+		}
+
+		if( lines_x > 1 && lines_x >= 4 )
+		{
+			for(int y = 0; y < lines_y; y++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_epilog_hole_s(
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					lines_x,
+					stride_y_j);
+			}
+		}
+		if( lines_y > 1 && lines_y >= 4 )
+		{
+			for(int x = 0; x < lines_x; x++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_epilog_hole_s(
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					lines_y,
+					stride_x_j);
+			}
+		}
+
+		j--;
+	}
+
+	FUNC_END;
+}
+
+// zero
+void dwt_cdf97_2i_inplace_zero_s(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	int decompose_one,
+	int zero_padding)
+{
+	FUNC_BEGIN;
+
+	assert( 1 == dwt_util_get_num_workers() );
+
+	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
+	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
+
+	int j = ceil_log2( decompose_one ? size_o_big_max : size_o_big_min );
+
+	if( j_max >= 0 && j_max < j )
+		j = j_max;
+
+	for(;;)
+	{
+		if(0 == j)
+			break;
+
+		const int size_i_dst_x = ceil_div_pow2(size_i_big_x, j-1);
+		const int size_i_dst_y = ceil_div_pow2(size_i_big_y, j-1);
+
+		const int lines_y = size_i_dst_y;
+		const int lines_x = size_i_dst_x;
+
+		const int stride_y_j = stride_y * (1 << (j-1));
+		const int stride_x_j = stride_x * (1 << (j-1));
+
+		if( lines_x > 1 && lines_x < 4 )
+		{
+			for(int y = 0; y < lines_y; y++)
+			{
+				// FIXME: _zero
+				dwt_cdf97_i_ex_stride_inplace_part_exceptions_s(
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					lines_x, // N
+					stride_y_j);
+			}
+		}
+		if( lines_y > 1 && lines_y < 4 )
+		{
+			for(int x = 0; x < size_i_dst_x; x++)
+			{
+				// FIXME: _zero
+				dwt_cdf97_i_ex_stride_inplace_part_exceptions_s(
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					lines_y, // N
+					stride_x_j);
+			}
+		}
+
+		if( lines_x > 1 && lines_x >= 4 )
+		{
+			for(int y = 0; y < lines_y; y++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_prolog_zero_s(
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					lines_x,
+					stride_y_j);
+			}
+		}
+		if( lines_y > 1 && lines_y >= 4 )
+		{
+			for(int x = 0; x < lines_x; x++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_prolog_zero_s(
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					lines_y,
+					stride_x_j);
+			}
+		}
+
+		if( lines_x > 1 && lines_x >= 4 )
+		{
+			for(int y = 0; y < lines_y; y++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_core_s(
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					lines_x,
+					stride_y_j);
+			}
+		}
+		if( lines_y > 1 && lines_y >= 4 )
+		{
+			for(int x = 0; x < lines_x; x++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_core_s(
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					lines_y,
+					stride_x_j);
+			}
+		}
+
+		if( lines_x > 1 && lines_x >= 4 )
+		{
+			for(int y = 0; y < lines_y; y++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_epilog_zero_s(
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					lines_x,
+					stride_y_j);
+			}
+		}
+		if( lines_y > 1 && lines_y >= 4 )
+		{
+			for(int x = 0; x < lines_x; x++)
+			{
+				dwt_cdf97_i_ex_stride_inplace_part_epilog_zero_s(
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					lines_y,
+					stride_x_j);
+			}
+		}
+
+		j--;
+	}
+
+	FUNC_END;
+}
+
 void dwt_cdf53_2i_inplace_s(
 	void *ptr,
 	int stride_x,
@@ -18504,6 +19222,14 @@ int dwt_util_save_to_pgm_s(
 					dwt_util_log(LOG_WARN, "%s: Maximum pixel intensity exceeded (%f > %f) at (y=%i, x=%i). Such an incident will be reported only once.\n", __FUNCTION__, px, max_value, y, x);
 			}
 
+			// isnan
+			if( px != px )
+			{
+				if( !err++ )
+					dwt_util_log(LOG_WARN, "%s: NaN value (%f) at (y=%i, x=%i). Such an incident will be reported only once.\n", __FUNCTION__, px, y, x);
+				val = 0;
+			}
+
 			if( px > max_value )
 			{
 				val = target_max_value;
@@ -18517,6 +19243,14 @@ int dwt_util_save_to_pgm_s(
 
 			if( px < 0.0f )
 			{
+				val = 0;
+			}
+
+			// minimum integer value
+			if( abs((int)px) < 0 )
+			{
+				if( !err++ )
+					dwt_util_log(LOG_WARN, "%s: Wrong value (%f) at (y=%i, x=%i). Such an incident will be reported only once.\n", __FUNCTION__, px, y, x);
 				val = 0;
 			}
 
@@ -18891,10 +19625,113 @@ int dwt_util_printf(const char *format, ...)
 	return ret;
 }
 
+enum dwt_color {
+	DWT_COLOR_DEFAULT = 0,
+	// styles
+	DWT_COLOR_BOLD,
+// 	DWT_COLOR_DIM,
+// 	DWT_COLOR_UNDERLINED,
+// 	DWT_COLOR_BLINK,
+// 	DWT_COLOR_REVERSE,
+// 	DWT_COLOR_HIDDEN,
+	// colors
+	DWT_COLOR_BLACK,
+	DWT_COLOR_RED,
+	DWT_COLOR_GREEN,
+	DWT_COLOR_YELLOW,
+	DWT_COLOR_BLUE,
+	DWT_COLOR_MAGENTA,
+	DWT_COLOR_CYAN,
+	DWT_COLOR_LIGHTGRAY,
+// 	DWT_COLOR_DARKGRAY,
+// 	DWT_COLOR_LIGHTRED,
+// 	DWT_COLOR_LIGHTGREEN,
+// 	DWT_COLOR_LIGHTYELLOW,
+// 	DWT_COLOR_LIGHTBLUE,
+// 	DWT_COLOR_LIGHTMAGENTA,
+// 	DWT_COLOR_LIGHTCYAN,
+// 	DWT_COLOR_WHITE,
+};
+
+// TODO: http://misc.flogisoft.com/bash/tip_colors_and_formatting
+// TODO: http://www.termsys.demon.co.uk/vtansi.htm
+int dwt_util_color(FILE *stream, int style, int foreground, int background)
+{
+	int ret = 0;
+
+	ret += dwt_util_fprintf(stream, "\e[0m");
+
+	switch(style)
+	{
+		case DWT_COLOR_BOLD:
+			ret += dwt_util_fprintf(stream, "\e[1m");
+			break;
+	}
+
+	switch(foreground)
+	{
+		case DWT_COLOR_BLACK:
+			ret += dwt_util_fprintf(stream, "\e[30m");
+			break;
+		case DWT_COLOR_RED:
+			ret += dwt_util_fprintf(stream, "\e[31m");
+			break;
+		case DWT_COLOR_GREEN:
+			ret += dwt_util_fprintf(stream, "\e[32m");
+			break;
+		case DWT_COLOR_YELLOW:
+			ret += dwt_util_fprintf(stream, "\e[33m");
+			break;
+		case DWT_COLOR_BLUE:
+			ret += dwt_util_fprintf(stream, "\e[34m");
+			break;
+		case DWT_COLOR_MAGENTA:
+			ret += dwt_util_fprintf(stream, "\e[35m");
+			break;
+		case DWT_COLOR_CYAN:
+			ret += dwt_util_fprintf(stream, "\e[36m");
+			break;
+		case DWT_COLOR_LIGHTGRAY:
+			ret += dwt_util_fprintf(stream, "\e[37m");
+			break;
+	}
+
+	switch(background)
+	{
+		case DWT_COLOR_BLACK:
+			ret += dwt_util_fprintf(stream, "\e[40m");
+			break;
+		case DWT_COLOR_RED:
+			ret += dwt_util_fprintf(stream, "\e[41m");
+			break;
+		case DWT_COLOR_GREEN:
+			ret += dwt_util_fprintf(stream, "\e[42m");
+			break;
+		case DWT_COLOR_YELLOW:
+			ret += dwt_util_fprintf(stream, "\e[43m");
+			break;
+		case DWT_COLOR_BLUE:
+			ret += dwt_util_fprintf(stream, "\e[44m");
+			break;
+		case DWT_COLOR_MAGENTA:
+			ret += dwt_util_fprintf(stream, "\e[45m");
+			break;
+		case DWT_COLOR_CYAN:
+			ret += dwt_util_fprintf(stream, "\e[46m");
+			break;
+		case DWT_COLOR_LIGHTGRAY:
+			ret += dwt_util_fprintf(stream, "\e[47m");
+			break;
+	}
+
+	return ret;
+}
+
 int dwt_util_log(
 	enum dwt_util_loglevel level,
 	const char *format,
-	...)
+	...
+)
 {
 	int ret = 0;
 	FILE *stream = stderr;
@@ -18908,9 +19745,20 @@ int dwt_util_log(
 		[LOG_TEST] = "TEST: ",
 	};
 
+	const int color[] = {
+		[LOG_NONE] = DWT_COLOR_DEFAULT,
+		[LOG_DBG]  = DWT_COLOR_DEFAULT,
+		[LOG_INFO] = DWT_COLOR_BLUE,
+		[LOG_WARN] = DWT_COLOR_YELLOW,
+		[LOG_ERR]  = DWT_COLOR_RED,
+		[LOG_TEST] = DWT_COLOR_MAGENTA,
+	};
+
 	flockfile(stream);
 
+	ret += dwt_util_color(stream, DWT_COLOR_BOLD, color[level], DWT_COLOR_DEFAULT);
 	ret += dwt_util_fprintf(stream, prefix[level]);
+	ret += dwt_util_color(stream, DWT_COLOR_DEFAULT, DWT_COLOR_DEFAULT, DWT_COLOR_DEFAULT);
 
 	va_list ap;
 
@@ -20893,8 +21741,8 @@ void dwt_util_get_sizes_d(
 }
 
 // 1.618, 1.333, 1.28, 1.13, 1.06, 1.02
-const float g_growth_factor_s = 1.13f;
-const float g_growth_factor_d = 1.13;
+const float g_growth_factor_s = 1.28f;
+const float g_growth_factor_d = 1.28;
 
 void dwt_util_measure_perf_cdf97_1_s(
 	enum dwt_array array_type,

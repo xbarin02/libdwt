@@ -1745,6 +1745,186 @@ void fdwt2_cdf97_vertical_s(
 	}
 }
 
+void fdwt2h1_cdf97_vertical_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	int *j_max_ptr,
+	int decompose_one
+)
+{
+	const int offset = 1;
+
+#ifdef _OPENMP
+	const int threads = dwt_util_get_num_threads();
+#endif
+
+	const int size_min = min(size_x, size_y);
+	const int size_max = max(size_x, size_y);
+
+	int j = 0;
+
+	const int j_limit = ceil_log2( decompose_one ? size_max : size_min );
+
+	if( *j_max_ptr < 0 || *j_max_ptr > j_limit )
+		*j_max_ptr = j_limit;
+
+	for(;;)
+	{
+		if( *j_max_ptr == j )
+			break;
+
+		const int size_x_j = ceil_div_pow2(size_x, j);
+		const int size_y_j = ceil_div_pow2(size_y, j);
+
+		const int stride_y_j = stride_y * (1 << j);
+		const int stride_x_j = stride_x * (1 << j);
+
+#ifdef _OPENMP
+		const int threads_segment_y = ceil_div(size_y_j, threads);
+#endif
+
+		if( size_x_j > 1 && size_x_j < 5 )
+		{
+			for(int y = 0; y < size_y_j; y++)
+			{
+				fdwt_cdf97_short_s(
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					size_x_j,
+					stride_y_j);
+			}
+		}
+
+		if( size_x_j > 1 && size_x_j >= 5 )
+		{
+			for(int y = 0; y < size_y_j; y++)
+			{
+				fdwt_cdf97_prolog_s(
+					addr2_s(ptr, y, 0, stride_x_j, stride_y_j),
+					size_x_j,
+					stride_y_j);
+			}
+		}
+
+		if( size_x_j > 1 && size_x_j >= 5 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_y)
+			for(int y = 0; y < size_y_j; y++)
+			{
+				fdwt_cdf97_vertical_s(
+					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
+					size_x_j-offset,
+					stride_y_j);
+			}
+		}
+
+		if( size_x_j > 1 && size_x_j >= 5 )
+		{
+			for(int y = 0; y < size_y_j; y++)
+			{
+				fdwt_cdf97_epilog_s(
+					addr2_s(ptr, y, 0+offset, stride_x_j, stride_y_j),
+					size_x_j-offset,
+					stride_y_j);
+			}
+		}
+
+		j++;
+	}
+}
+
+void fdwt2v1_cdf97_vertical_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	int *j_max_ptr,
+	int decompose_one
+)
+{
+	const int offset = 1;
+
+#ifdef _OPENMP
+	const int threads = dwt_util_get_num_threads();
+#endif
+
+	const int size_min = min(size_x, size_y);
+	const int size_max = max(size_x, size_y);
+
+	int j = 0;
+
+	const int j_limit = ceil_log2( decompose_one ? size_max : size_min );
+
+	if( *j_max_ptr < 0 || *j_max_ptr > j_limit )
+		*j_max_ptr = j_limit;
+
+	for(;;)
+	{
+		if( *j_max_ptr == j )
+			break;
+
+		const int size_x_j = ceil_div_pow2(size_x, j);
+		const int size_y_j = ceil_div_pow2(size_y, j);
+
+		const int stride_y_j = stride_y * (1 << j);
+		const int stride_x_j = stride_x * (1 << j);
+
+#ifdef _OPENMP
+		const int threads_segment_x = ceil_div(size_x_j, threads);
+#endif
+
+		if( size_y_j > 1 && size_y_j < 5 )
+		{
+			for(int x = 0; x < size_x_j; x++)
+			{
+				fdwt_cdf97_short_s(
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					size_y_j,
+					stride_x_j);
+			}
+		}
+
+		if( size_y_j > 1 && size_y_j >= 5 )
+		{
+			for(int x = 0; x < size_x_j; x++)
+			{
+				fdwt_cdf97_prolog_s(
+					addr2_s(ptr, 0, x, stride_x_j, stride_y_j),
+					size_y_j,
+					stride_x_j);
+			}
+		}
+
+		if( size_y_j > 1 && size_y_j >= 5 )
+		{
+			#pragma omp parallel for schedule(static, threads_segment_x)
+			for(int x = 0; x < size_x_j; x++)
+			{
+				fdwt_cdf97_vertical_s(
+					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
+					size_y_j-offset,
+					stride_x_j);
+			}
+		}
+
+		if( size_y_j > 1 && size_y_j >= 5 )
+		{
+			for(int x = 0; x < size_x_j; x++)
+			{
+				fdwt_cdf97_epilog_s(
+					addr2_s(ptr, 0+offset, x, stride_x_j, stride_y_j),
+					size_y_j-offset,
+					stride_x_j);
+			}
+		}
+
+		j++;
+	}
+}
+
 void fdwt2_cdf53_vertical_s(
 	void *ptr,
 	int size_x,

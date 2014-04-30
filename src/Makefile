@@ -37,10 +37,15 @@ dwt-simple.o: dwt-simple.c dwt-simple.h
 
 eaw-experimental.o: eaw-experimental.c eaw-experimental.h
 
+dwt-core.o: dwt-core.c dwt-core.h
+
+dwt-core.S: dwt-core.c dwt-core.h
+	$(CC) $(CFLAGS) -c -Wa,-ahl=dwt-core.S -g -fverbose-asm $< -o /dev/null
+
 $(LIBNAME).S: $(LIBNAME).c $(LIBNAME).h
 	$(CC) $(CFLAGS) -S -Wa,-adhln -g -fverbose-asm $< -o $@
 
-$(LIBNAME).a: $(LIBNAME).o util.o signal.o image.o swt.o dwt.o dwt-simple.o eaw-experimental.o
+$(LIBNAME).a: $(LIBNAME).o util.o signal.o image.o swt.o dwt.o dwt-simple.o eaw-experimental.o dwt-core.o
 	$(AR) -rsc $@ $^
 
 # $(LIBNAME).so: $(LIBNAME).o

@@ -899,6 +899,32 @@ void dwt_cdf97_2i_inplace_s(
 	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
 );
 
+void dwt_cdf97_2i_inplace_hole_s(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< pointer to the number of achieved decomposition levels (scales)
+	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+);
+
+void dwt_cdf97_2i_inplace_zero_s(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< pointer to the number of achieved decomposition levels (scales)
+	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+);
+
 /**
  * @brief Inverse image fast wavelet transform using CDF 5/3 wavelet and lifting scheme, in-place version.
  *
@@ -3484,10 +3510,23 @@ void dwt_util_flush_cache(
 	size_t size	///< length of memory in bytes
 );
 
+/**
+ * @brief Round up (ceil) to an even integer.
+ */
 int dwt_util_up_to_even(
 	int x
 );
 
+/**
+ * @brief Round up to a multiply of 4.
+ */
+int dwt_util_up_to_mul4(
+	int x
+);
+
+/**
+ * @brief Round down (floor) to an even integer.
+ */
 int dwt_util_to_even(
 	int x
 );

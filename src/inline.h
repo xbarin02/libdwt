@@ -12,6 +12,8 @@
 
 #define UNUSED(expr) do { (void)(expr); } while (0)
 
+#define ALIGNED(align) __attribute((aligned(align)))
+
 /**
  * @brief Helper function returning address of given element.
  *
@@ -382,6 +384,30 @@ int to_even(
 )
 {
 	return x & ~1;
+}
+
+/**
+ * @brief returns closest integer what is multiple of 4 and is not larger than x; works also for negative numbers
+ */
+UNUSED_FUNC
+static
+int to_even4(
+	int x
+)
+{
+	return x & ~3;
+}
+
+/**
+ * @brief returns closest integer what is multiple of 8 and is not larger than x; works also for negative numbers
+ */
+UNUSED_FUNC
+static
+int to_even8(
+	int x
+)
+{
+	return x & ~(8-1);
 }
 
 /**

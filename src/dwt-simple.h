@@ -98,6 +98,28 @@ void fdwt2_cdf97_vertical_s(
 	int decompose_one
 );
 
+// TODO: horizontal transforms only
+void fdwt2h1_cdf97_vertical_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	int *j_max_ptr,
+	int decompose_one
+);
+
+// TODO: vertical transforms only
+void fdwt2v1_cdf97_vertical_s(
+	void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	int *j_max_ptr,
+	int decompose_one
+);
+
 /**
  * @brief Wavelet transform.
  *
