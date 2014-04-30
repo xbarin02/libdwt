@@ -10,10 +10,12 @@ endif
 CROSS_COMPILE ?= 
 CC = $(CROSS_COMPILE)gcc
 CXX = $(CROSS_COMPILE)g++
-CFLAGS = -std=c99 -pedantic -Wall -Wextra -O2
-CXXFLAGS = -std=c++98 -pedantic -Wall -Wextra -O2
+# FLAGS = -fprofile-generate
+# FLAGS = -fprofile-use
+CFLAGS = -std=c99 -pedantic -Wall -Wextra -O3 $(FLAGS)
+CXXFLAGS = -std=c++98 -pedantic -Wall -Wextra -O2 $(FLAGS)
 LDLIBS = -lm
-LDFLAGS = 
+LDFLAGS = $(FLAGS)
 
 # ASVP platform
 ifeq ($(ARCH),asvp)
