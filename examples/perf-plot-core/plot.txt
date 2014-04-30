@@ -1,0 +1,198 @@
+# sprintf(format, dir, threads, accel, stride, j, arr, workers, type, inplace)
+format = "data/dir=%s.opt-stride=%i.j=%i.core=%s.order=%i.stripX=%i.stripY=%i.txt"
+
+set terminal pdfcairo enhanced dashed linewidth 2 size 14cm,10cm
+set xlabel "pixels"
+set ylabel "seconds / pixel"
+set format x "%.1s%c"
+set format y "%.1s%c"
+set logscale x
+set logscale y
+
+dir = "f"
+stride = 1
+j = 1
+
+set output "both-full-horiz.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'D', 0,    0,    0) with lines lc rgb "#0000ff" lw 2 lt 1 title "D:H", \
+	sprintf(format, dir, stride, j, 'V', 0,    0,    0) with lines lc rgb "#00ff00" lw 2 lt 1 title "V:H"
+
+set output "both-full-vert.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'D', 1,    0,    0) with lines lc rgb "#0000ff" lw 2 lt 1 title "D:V", \
+	sprintf(format, dir, stride, j, 'V', 1,    0,    0) with lines lc rgb "#00ff00" lw 2 lt 1 title "V:V"
+
+set output "diag-full-horiz-vert.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'D', 0,    0,    0) with lines lc rgb "#0000ff" lw 2 lt 1 title "D:H", \
+	sprintf(format, dir, stride, j, 'D', 1,    0,    0) with lines lc rgb "#00ff00" lw 2 lt 2 title "D:V"
+
+set output "vert-full-horiz-vert.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'V', 0,    0,    0) with lines lc rgb "#0000ff" lw 2 lt 1 title "V:H", \
+	sprintf(format, dir, stride, j, 'V', 1,    0,    0) with lines lc rgb "#00ff00" lw 2 lt 2 title "V:V"
+
+set output "diag-strips-horiz.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'D', 2,    2,    2) with lines lc rgb "#0000ff" lw 2 lt 1 title "D:H/S 2^1", \
+	sprintf(format, dir, stride, j, 'D', 2,    4,    4) with lines lc rgb "#00ffff" lw 2 lt 2 title "D:H/S 2^2", \
+	sprintf(format, dir, stride, j, 'D', 2,    8,    8) with lines lc rgb "#7f00ff" lw 2 lt 3 title "D:H/S 2^3", \
+	sprintf(format, dir, stride, j, 'D', 2,   16,   16) with lines lc rgb "#7fffff" lw 2 lt 4 title "D:H/S 2^4", \
+	sprintf(format, dir, stride, j, 'D', 2,   32,   32) with lines lc rgb "#007f7f" lw 2 lt 5 title "D:H/S 2^5", \
+	sprintf(format, dir, stride, j, 'D', 2,   64,   64) with lines lc rgb "#ff7f7f" lw 2 lt 6 title "D:H/S 2^6", \
+	sprintf(format, dir, stride, j, 'D', 2,  128,  128) with lines lc rgb "#00007f" lw 2 lt 7 title "D:H/S 2^7", \
+	sprintf(format, dir, stride, j, 'D', 2,  256,  256) with lines lc rgb "#ff007f" lw 2 lt 8 title "D:H/S 2^8", \
+	sprintf(format, dir, stride, j, 'D', 2,  512,  512) with lines lc rgb "#ffff00" lw 2 lt 9 title "D:H/S 2^9"
+
+set output "vert-strips-horiz.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'V', 2,    2,    2) with lines lc rgb "#0000ff" lw 2 lt 1 title "V:H/S 2^1", \
+	sprintf(format, dir, stride, j, 'V', 2,    4,    4) with lines lc rgb "#00ffff" lw 2 lt 2 title "V:H/S 2^2", \
+	sprintf(format, dir, stride, j, 'V', 2,    8,    8) with lines lc rgb "#7f00ff" lw 2 lt 3 title "V:H/S 2^3", \
+	sprintf(format, dir, stride, j, 'V', 2,   16,   16) with lines lc rgb "#7fffff" lw 2 lt 4 title "V:H/S 2^4", \
+	sprintf(format, dir, stride, j, 'V', 2,   32,   32) with lines lc rgb "#007f7f" lw 2 lt 5 title "V:H/S 2^5", \
+	sprintf(format, dir, stride, j, 'V', 2,   64,   64) with lines lc rgb "#ff7f7f" lw 2 lt 6 title "V:H/S 2^6", \
+	sprintf(format, dir, stride, j, 'V', 2,  128,  128) with lines lc rgb "#00007f" lw 2 lt 7 title "V:H/S 2^7", \
+	sprintf(format, dir, stride, j, 'V', 2,  256,  256) with lines lc rgb "#ff007f" lw 2 lt 8 title "V:H/S 2^8", \
+	sprintf(format, dir, stride, j, 'V', 2,  512,  512) with lines lc rgb "#ffff00" lw 2 lt 9 title "V:H/S 2^9"
+
+set output "diag-strips-vert.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'D', 3,    2,    2) with lines lc rgb "#0000ff" lw 2 lt 1 title "D:V/S 2^1", \
+	sprintf(format, dir, stride, j, 'D', 3,    4,    4) with lines lc rgb "#00ffff" lw 2 lt 2 title "D:V/S 2^2", \
+	sprintf(format, dir, stride, j, 'D', 3,    8,    8) with lines lc rgb "#7f00ff" lw 2 lt 3 title "D:V/S 2^3", \
+	sprintf(format, dir, stride, j, 'D', 3,   16,   16) with lines lc rgb "#7fffff" lw 2 lt 4 title "D:V/S 2^4", \
+	sprintf(format, dir, stride, j, 'D', 3,   32,   32) with lines lc rgb "#007f7f" lw 2 lt 5 title "D:V/S 2^5", \
+	sprintf(format, dir, stride, j, 'D', 3,   64,   64) with lines lc rgb "#ff7f7f" lw 2 lt 6 title "D:V/S 2^6", \
+	sprintf(format, dir, stride, j, 'D', 3,  128,  128) with lines lc rgb "#00007f" lw 2 lt 7 title "D:V/S 2^7", \
+	sprintf(format, dir, stride, j, 'D', 3,  256,  256) with lines lc rgb "#ff007f" lw 2 lt 8 title "D:V/S 2^8", \
+	sprintf(format, dir, stride, j, 'D', 3,  512,  512) with lines lc rgb "#ffff00" lw 2 lt 9 title "D:V/S 2^9"
+
+set output "vert-strips-vert.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'V', 3,    2,    2) with lines lc rgb "#0000ff" lw 2 lt 1 title "V:V/S 2^1", \
+	sprintf(format, dir, stride, j, 'V', 3,    4,    4) with lines lc rgb "#00ffff" lw 2 lt 2 title "V:V/S 2^2", \
+	sprintf(format, dir, stride, j, 'V', 3,    8,    8) with lines lc rgb "#7f00ff" lw 2 lt 3 title "V:V/S 2^3", \
+	sprintf(format, dir, stride, j, 'V', 3,   16,   16) with lines lc rgb "#7fffff" lw 2 lt 4 title "V:V/S 2^4", \
+	sprintf(format, dir, stride, j, 'V', 3,   32,   32) with lines lc rgb "#007f7f" lw 2 lt 5 title "V:V/S 2^5", \
+	sprintf(format, dir, stride, j, 'V', 3,   64,   64) with lines lc rgb "#ff7f7f" lw 2 lt 6 title "V:V/S 2^6", \
+	sprintf(format, dir, stride, j, 'V', 3,  128,  128) with lines lc rgb "#00007f" lw 2 lt 7 title "V:V/S 2^7", \
+	sprintf(format, dir, stride, j, 'V', 3,  256,  256) with lines lc rgb "#ff007f" lw 2 lt 8 title "V:V/S 2^8", \
+	sprintf(format, dir, stride, j, 'V', 3,  512,  512) with lines lc rgb "#ffff00" lw 2 lt 9 title "V:V/S 2^9"
+
+set output "diag-blocks-horiz.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'D', 4,    2,    2) with lines lc rgb "#0000ff" lw 2 lt 1 title "D:H/B 2^1", \
+	sprintf(format, dir, stride, j, 'D', 4,    4,    4) with lines lc rgb "#00ffff" lw 2 lt 2 title "D:H/B 2^2", \
+	sprintf(format, dir, stride, j, 'D', 4,    8,    8) with lines lc rgb "#7f00ff" lw 2 lt 3 title "D:H/B 2^3", \
+	sprintf(format, dir, stride, j, 'D', 4,   16,   16) with lines lc rgb "#7fffff" lw 2 lt 4 title "D:H/B 2^4", \
+	sprintf(format, dir, stride, j, 'D', 4,   32,   32) with lines lc rgb "#007f7f" lw 2 lt 5 title "D:H/B 2^5", \
+	sprintf(format, dir, stride, j, 'D', 4,   64,   64) with lines lc rgb "#ff7f7f" lw 2 lt 6 title "D:H/B 2^6", \
+	sprintf(format, dir, stride, j, 'D', 4,  128,  128) with lines lc rgb "#00007f" lw 2 lt 7 title "D:H/B 2^7", \
+	sprintf(format, dir, stride, j, 'D', 4,  256,  256) with lines lc rgb "#ff007f" lw 2 lt 8 title "D:H/B 2^8", \
+	sprintf(format, dir, stride, j, 'D', 4,  512,  512) with lines lc rgb "#ffff00" lw 2 lt 9 title "D:H/B 2^9"
+
+set output "vert-blocks-horiz.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'V', 4,    2,    2) with lines lc rgb "#0000ff" lw 2 lt 1 title "V:H/B 2^1", \
+	sprintf(format, dir, stride, j, 'V', 4,    4,    4) with lines lc rgb "#00ffff" lw 2 lt 2 title "V:H/B 2^2", \
+	sprintf(format, dir, stride, j, 'V', 4,    8,    8) with lines lc rgb "#7f00ff" lw 2 lt 3 title "V:H/B 2^3", \
+	sprintf(format, dir, stride, j, 'V', 4,   16,   16) with lines lc rgb "#7fffff" lw 2 lt 4 title "V:H/B 2^4", \
+	sprintf(format, dir, stride, j, 'V', 4,   32,   32) with lines lc rgb "#007f7f" lw 2 lt 5 title "V:H/B 2^5", \
+	sprintf(format, dir, stride, j, 'V', 4,   64,   64) with lines lc rgb "#ff7f7f" lw 2 lt 6 title "V:H/B 2^6", \
+	sprintf(format, dir, stride, j, 'V', 4,  128,  128) with lines lc rgb "#00007f" lw 2 lt 7 title "V:H/B 2^7", \
+	sprintf(format, dir, stride, j, 'V', 4,  256,  256) with lines lc rgb "#ff007f" lw 2 lt 8 title "V:H/B 2^8", \
+	sprintf(format, dir, stride, j, 'V', 4,  512,  512) with lines lc rgb "#ffff00" lw 2 lt 9 title "V:H/B 2^9"
+
+set output "diag-blocks-vert.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'D', 5,    2,    2) with lines lc rgb "#0000ff" lw 2 lt 1 title "D:V/B 2^1", \
+	sprintf(format, dir, stride, j, 'D', 5,    4,    4) with lines lc rgb "#00ffff" lw 2 lt 2 title "D:V/B 2^2", \
+	sprintf(format, dir, stride, j, 'D', 5,    8,    8) with lines lc rgb "#7f00ff" lw 2 lt 3 title "D:V/B 2^3", \
+	sprintf(format, dir, stride, j, 'D', 5,   16,   16) with lines lc rgb "#7fffff" lw 2 lt 4 title "D:V/B 2^4", \
+	sprintf(format, dir, stride, j, 'D', 5,   32,   32) with lines lc rgb "#007f7f" lw 2 lt 5 title "D:V/B 2^5", \
+	sprintf(format, dir, stride, j, 'D', 5,   64,   64) with lines lc rgb "#ff7f7f" lw 2 lt 6 title "D:V/B 2^6", \
+	sprintf(format, dir, stride, j, 'D', 5,  128,  128) with lines lc rgb "#00007f" lw 2 lt 7 title "D:V/B 2^7", \
+	sprintf(format, dir, stride, j, 'D', 5,  256,  256) with lines lc rgb "#ff007f" lw 2 lt 8 title "D:V/B 2^8", \
+	sprintf(format, dir, stride, j, 'D', 5,  512,  512) with lines lc rgb "#ffff00" lw 2 lt 9 title "D:V/B 2^9"
+
+set output "vert-blocks-vert.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'V', 5,    2,    2) with lines lc rgb "#0000ff" lw 2 lt 1 title "V:V/B 2^1", \
+	sprintf(format, dir, stride, j, 'V', 5,    4,    4) with lines lc rgb "#00ffff" lw 2 lt 2 title "V:V/B 2^2", \
+	sprintf(format, dir, stride, j, 'V', 5,    8,    8) with lines lc rgb "#7f00ff" lw 2 lt 3 title "V:V/B 2^3", \
+	sprintf(format, dir, stride, j, 'V', 5,   16,   16) with lines lc rgb "#7fffff" lw 2 lt 4 title "V:V/B 2^4", \
+	sprintf(format, dir, stride, j, 'V', 5,   32,   32) with lines lc rgb "#007f7f" lw 2 lt 5 title "V:V/B 2^5", \
+	sprintf(format, dir, stride, j, 'V', 5,   64,   64) with lines lc rgb "#ff7f7f" lw 2 lt 6 title "V:V/B 2^6", \
+	sprintf(format, dir, stride, j, 'V', 5,  128,  128) with lines lc rgb "#00007f" lw 2 lt 7 title "V:V/B 2^7", \
+	sprintf(format, dir, stride, j, 'V', 5,  256,  256) with lines lc rgb "#ff007f" lw 2 lt 8 title "V:V/B 2^8", \
+	sprintf(format, dir, stride, j, 'V', 5,  512,  512) with lines lc rgb "#ffff00" lw 2 lt 9 title "V:V/B 2^9"
+
+set output "diag-all.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'D', 0,    0,    0) with lines lc rgb "#0000ff" lw 2 lt 1 title "D:H", \
+	sprintf(format, dir, stride, j, 'D', 1,    0,    0) with lines lc rgb "#00ff00" lw 2 lt 2 title "D:V", \
+	sprintf(format, dir, stride, j, 'D', 2,  512,  512) with lines lc rgb "#ff0000" lw 2 lt 3 title "D:H/S 2^9", \
+	sprintf(format, dir, stride, j, 'D', 3,    2,    2) with lines lc rgb "#00ffff" lw 2 lt 4 title "D:V/S 2^1", \
+	sprintf(format, dir, stride, j, 'D', 4,  128,  128) with lines lc rgb "#7f7f00" lw 2 lt 5 title "D:H/B 2^7", \
+	sprintf(format, dir, stride, j, 'D', 4,  512,  512) with lines lc rgb "#ffff00" lw 2 lt 5 title "D:H/B 2^9", \
+	sprintf(format, dir, stride, j, 'D', 5,   32,   32) with lines lc rgb "#ff00ff" lw 2 lt 6 title "D:V/B 2^5"
+
+set output "vert-all.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'V', 0,    0,    0) with lines lc rgb "#0000ff" lw 2 lt 1 title "V:H", \
+	sprintf(format, dir, stride, j, 'V', 1,    0,    0) with lines lc rgb "#00ff00" lw 2 lt 2 title "V:V", \
+	sprintf(format, dir, stride, j, 'V', 2,  512,  512) with lines lc rgb "#ff0000" lw 2 lt 3 title "V:H/S 2^9", \
+	sprintf(format, dir, stride, j, 'V', 3,    2,    2) with lines lc rgb "#00ffff" lw 2 lt 4 title "V:V/S 2^1", \
+	sprintf(format, dir, stride, j, 'V', 4,  128,  128) with lines lc rgb "#7f7f00" lw 2 lt 5 title "V:H/B 2^7", \
+	sprintf(format, dir, stride, j, 'V', 4,  512,  512) with lines lc rgb "#ffff00" lw 2 lt 5 title "V:H/B 2^9", \
+	sprintf(format, dir, stride, j, 'V', 5,   32,   32) with lines lc rgb "#ff00ff" lw 2 lt 6 title "V:V/B 2^5"
+
+set output "diag-blocks-horiz-rect.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'D', 4,   32,   32) with lines lc rgb "#7fffff" lw 2 lt 1 title "D:H/B 2^5 2^5", \
+	sprintf(format, dir, stride, j, 'D', 4,   32,  128) with lines lc rgb "#007f7f" lw 2 lt 2 title "D:H/B 2^5 2^7", \
+	sprintf(format, dir, stride, j, 'D', 4,  128,   32) with lines lc rgb "#ff7f7f" lw 2 lt 3 title "D:H/B 2^7 2^5", \
+	sprintf(format, dir, stride, j, 'D', 4,  128,  128) with lines lc rgb "#00007f" lw 2 lt 7 title "D:H/B 2^7 2^7"
+
+set output "vert-blocks-horiz-rect.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'V', 4,   32,   32) with lines lc rgb "#7fffff" lw 2 lt 1 title "V:H/B 2^5 2^5", \
+	sprintf(format, dir, stride, j, 'V', 4,   32,  128) with lines lc rgb "#007f7f" lw 2 lt 2 title "V:H/B 2^5 2^7", \
+	sprintf(format, dir, stride, j, 'V', 4,  128,   32) with lines lc rgb "#ff7f7f" lw 2 lt 3 title "V:H/B 2^7 2^5", \
+	sprintf(format, dir, stride, j, 'V', 4,  128,  128) with lines lc rgb "#00007f" lw 2 lt 7 title "V:H/B 2^7 2^7"
+
+set output "diag-blocks-vert-rect.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'D', 5,   32,   32) with lines lc rgb "#7fffff" lw 2 lt 1 title "D:V/B 2^5 2^5", \
+	sprintf(format, dir, stride, j, 'D', 5,   32,  128) with lines lc rgb "#007f7f" lw 2 lt 2 title "D:V/B 2^5 2^7", \
+	sprintf(format, dir, stride, j, 'D', 5,  128,   32) with lines lc rgb "#ff7f7f" lw 2 lt 3 title "D:V/B 2^7 2^5", \
+	sprintf(format, dir, stride, j, 'D', 5,  128,  128) with lines lc rgb "#00007f" lw 2 lt 7 title "D:V/B 2^7 2^7"
+
+set output "vert-blocks-vert-rect.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'V', 5,   32,   32) with lines lc rgb "#7fffff" lw 2 lt 1 title "V:V/B 2^5 2^5", \
+	sprintf(format, dir, stride, j, 'V', 5,   32,  128) with lines lc rgb "#007f7f" lw 2 lt 2 title "V:V/B 2^5 2^7", \
+	sprintf(format, dir, stride, j, 'V', 5,  128,   32) with lines lc rgb "#ff7f7f" lw 2 lt 3 title "V:V/B 2^7 2^5", \
+	sprintf(format, dir, stride, j, 'V', 5,  128,  128) with lines lc rgb "#00007f" lw 2 lt 7 title "V:V/B 2^7 2^7"
+
+set key maxrows 4
+
+set output "orders-vert.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'V', 2,  128,  128) with linespoints lc rgb "#ff0000" lw 2 lt 3 title "horiz. strips 2^7", \
+	sprintf(format, dir, stride, j, 'V', 4,  128,  128) with linespoints lc rgb "#7f7f00" lw 2 lt 5 title "horiz. blocks 2^7", \
+	sprintf(format, dir, stride, j, 'V', 0,    0,    0) with linespoints lc rgb "#0000ff" lw 2 lt 1 title "horizontal", \
+	sprintf(format, dir, stride, j, 'V', 3,  128,  128) with linespoints lc rgb "#00ffff" lw 2 lt 4 title "vert. strips 2^7", \
+	sprintf(format, dir, stride, j, 'V', 5,  128,  128) with linespoints lc rgb "#ff00ff" lw 2 lt 6 title "vert. blocks 2^7", \
+	sprintf(format, dir, stride, j, 'V', 1,    0,    0) with linespoints lc rgb "#00ff00" lw 2 lt 2 title "vertical"
+
+set output "orders-diag.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'D', 2,  128,  128) with linespoints lc rgb "#ff0000" lw 2 lt 3 title "horiz. strips 2^7", \
+	sprintf(format, dir, stride, j, 'D', 4,  128,  128) with linespoints lc rgb "#7f7f00" lw 2 lt 5 title "horiz. blocks 2^7", \
+	sprintf(format, dir, stride, j, 'D', 0,    0,    0) with linespoints lc rgb "#0000ff" lw 2 lt 1 title "horizontal", \
+	sprintf(format, dir, stride, j, 'D', 3,  128,  128) with linespoints lc rgb "#00ffff" lw 2 lt 4 title "vert. strips 2^7", \
+	sprintf(format, dir, stride, j, 'D', 5,  128,  128) with linespoints lc rgb "#ff00ff" lw 2 lt 6 title "vert. blocks 2^7", \
+	sprintf(format, dir, stride, j, 'D', 1,    0,    0) with linespoints lc rgb "#00ff00" lw 2 lt 2 title "vertical"

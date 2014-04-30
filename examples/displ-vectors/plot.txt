@@ -1,4 +1,4 @@
-set terminal svg enhanced size 640 420 dashed
+set terminal svg enhanced size 480 320 dashed
 set output "error.svg"
 set xlabel "coefficients"
 set ylabel "error"
@@ -6,6 +6,8 @@ set ylabel "error"
 plot "plot.dat" with lines lw 2 title 'L2 error'
 
 ###
+set logscale y
+set yrange [ 0.1 : 1000 ]
 set output "error-wavelets.svg"
 plot \
 	"plot-0.dat" with lines ls 1 lw 2 title 'CDF 9/7', \

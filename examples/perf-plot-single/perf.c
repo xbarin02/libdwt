@@ -7,6 +7,10 @@
 #include "libdwt.h"
 #include "dwt.h"
 
+// mkdir
+#include <sys/stat.h>
+#include <sys/types.h>
+
 // PATH_MAX
 #include <limits.h>
 #ifndef microblaze
@@ -18,6 +22,8 @@
 
 FILE *fopen_data(int dir, int threads, int accel, int opt_stride, int j, int arr, int workers, int inplace)
 {
+	mkdir("data", S_IRWXU);
+
 	const char *arr_name[] =
 	{
 		[DWT_ARR_SIMPLE] = "simple",
@@ -127,6 +133,12 @@ void do_test(int threads, int accel, int opt_stride, int j, int arr, int workers
 			case 10: // SL/CORE DL ??? THREADS
 				alg = DWT_ALG_SL_CORE_DL_SC_SSE_OFF1;
 				break;
+			case 11:
+				alg = DWT_ALG_SL_CORE_DL_SC_SSE_OFF1_4X4;
+				break;
+			case 12:
+				alg = DWT_ALG_SL_CORE_SDL_SC_SSE_OFF1_6X2;
+				break;
 			default:
 				dwt_util_abort();
 		}
@@ -157,6 +169,10 @@ int main()
 	const int min_size = 1<<5;
 	const int max_size = 1<<13; // FIXME: 13, 12, 11, 10, 9, 8
 
+	const int max_threads = 4; // 2, 4, 8
+
+	dwt_util_log(LOG_INFO, "Testing %i..%i kpel using up to %i threads...\n", (min_size*min_size)>>10, (max_size*max_size)>>10, max_threads);
+
 	// iterate over all these parameters
 	int j, arr, opt_stride, threads, accel, workers;
 
@@ -167,7 +183,7 @@ int main()
 	accel = 0;
 	workers = 1;
 
-	for(threads = 1; threads <= 8; threads++)
+	for(threads = 1; threads <= max_threads; threads++)
 	{
 #if 0
 		// accel_type
@@ -186,6 +202,9 @@ int main()
 		// threads
 		do_test(threads, accel, opt_stride, j, arr, workers, min_size, max_size, 9);
 		do_test(threads, accel, opt_stride, j, arr, workers, min_size, max_size, 10);
+		// threads + super-cores
+		do_test(threads, accel, opt_stride, j, arr, workers, min_size, max_size, 11);
+		do_test(threads, accel, opt_stride, j, arr, workers, min_size, max_size, 12);
 	}
 
 	dwt_util_finish();

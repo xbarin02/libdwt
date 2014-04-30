@@ -350,7 +350,7 @@ int main(int argc, char **argv)
 	const int range = 10;
 	findBestOffset(img0, img1, dx, dy, range);
 
-	std::cout.precision(3);
+	std::cout.precision(4);
 	cout << std::fixed;
 	cout << "global=" << sqrt(dx*dx+dy*dy) << endl;
 

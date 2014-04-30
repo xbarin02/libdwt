@@ -16,7 +16,7 @@ clean:
 	-$(RM) *.o $(BIN)
 
 # link application
-$(BIN): $(BIN).o $(LIBPATH)/$(LIBNAME).a $(LIBPATH)/$(LIBNAME_CV).o
+$(BIN): $(BIN).o $(LIBPATH)/$(LIBNAME_CV).o $(LIBPATH)/$(LIBNAME).a
 
 # compile application
 $(BIN).o: $(BIN).cpp $(LIBPATH)/$(LIBNAME).h $(LIBPATH)/$(LIBNAME_CV).h

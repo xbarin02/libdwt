@@ -8,6 +8,43 @@
 #include <math.h> // sqrtf
 #include "util.h" // dwt_util_convolve1_s
 
+// gnuplot 1-D
+int dwt_util_save1_to_gp_s(
+	const char *path,	///< target file name, e.g. "output.dat"
+	const void *data,	///< pointer to beginning of signal data
+	int size_x,		///< width of nested/inner signal (in elements)
+	int stride_y		///< difference between columns (in bytes)
+)
+{
+	// FIXME: assert
+
+	FILE *file = fopen(path, "w");
+
+	if( NULL == file )
+		return 1;
+
+	int symb_delim[] = { ',', ';', '\t', ' ' };
+	int symb_newline[] = { '\n', '\r' };
+
+	for(int x = 0; x < size_x; x++)
+	{
+		const float val_x = (float)x;
+		const float val_y = *dwt_util_addr_coeff_const_s(
+			data,
+			0,
+			x,
+			0,
+			stride_y
+		);
+
+		fprintf(file, "%f%c%f%c", val_x, symb_delim[2], val_y, symb_newline[0]);
+	}
+
+	fclose(file);
+
+	return 0;
+}
+
 int main()
 {
 	dwt_util_init();
@@ -32,8 +69,8 @@ int main()
 	float interp2_rec_phi[7] = { +0.07071068, +0.00000000, +0.28284273, +0.70710677, +0.28284273, +0.00000000, +0.07071068 };
 	float interp2_rec_psi[1] = { +1.41421354 };
 
-#define FILTER_PHI cdf53_dec_phi
-#define FILTER_PSI cdf53_dec_psi
+#define FILTER_PHI cdf97_dec_phi
+#define FILTER_PSI cdf97_dec_psi
 
 	// scale coefficients
 	dwt_util_scale_s(FILTER_PHI, sizeof_arr(FILTER_PHI), 1, 0, sizeof(float), sqrtf(2.f));
@@ -121,6 +158,13 @@ int main()
 		size,
 		1,
 		0,
+		sizeof(float)
+	);
+
+	dwt_util_save1_to_gp_s(
+		"func.dat",
+		a[passes-1],
+		size,
 		sizeof(float)
 	);
 

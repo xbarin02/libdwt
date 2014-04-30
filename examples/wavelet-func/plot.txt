@@ -1,0 +1,9 @@
+reset
+
+set terminal pdf transparent size 8.00in, 3.00in linewidth 8
+set output "wavelet.pdf"
+set xrange [1728-384:1728+384]
+unset border
+unset xtics
+unset ytics
+plot "func.dat" with lines lc rgb "black" notitle

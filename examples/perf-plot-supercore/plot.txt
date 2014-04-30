@@ -1,0 +1,28 @@
+# sprintf(format, dir, threads, accel, stride, j, arr, workers, type, inplace)
+format = "data/dir=%s.opt-stride=%i.j=%i.core=%s.order=%i.stripX=%i.stripY=%i.txt"
+
+set terminal pdfcairo enhanced dashed font 'DejaVu Serif' linewidth 2 size 10cm,7cm
+set xlabel "pixels"
+set ylabel "time / pixel"
+set format x "%.1s%c"
+set format y "%.1s%cs"
+set logscale x
+set logscale y
+
+set encoding utf8
+set key maxrows 4
+set pointsize 0.7
+
+dir = "f"
+stride = 1
+j = 1
+
+set output "all.pdf"
+plot \
+	sprintf(format, dir, stride, j, 'V',  0,    0,    0) with linespoints lc rgb "#ff0000" lw 2 lt 1 title "vert. 2{/Times-Italic x}2", \
+	sprintf(format, dir, stride, j, 'V',  6,    0,    0) with linespoints lc rgb "#ff0000" lw 2 lt 2 title "vert. 4{/Times-Italic x}4", \
+	sprintf(format, dir, stride, j, 'V',  7,    0,    0) with linespoints lc rgb "#ff0000" lw 2 lt 3 title "vert. 8{/Times-Italic x}2", \
+	sprintf(format, dir, stride, j, 'V',  8,    0,    0) with linespoints lc rgb "#ff0000" lw 2 lt 4 title "vert. 2{/Times-Italic x}8", \
+	sprintf(format, dir, stride, j, 'D',  0,    0,    0) with linespoints lc rgb "#0000ff" lw 2 lt 6 title "diag. 2{/Times-Italic x}2", \
+	sprintf(format, dir, stride, j, 'D', 10,    0,    0) with linespoints lc rgb "#0000ff" lw 2 lt 7 title "diag. 6{/Times-Italic x}2", \
+	sprintf(format, dir, stride, j, 'D', 11,    0,    0) with linespoints lc rgb "#0000ff" lw 2 lt 8 title "diag. 2{/Times-Italic x}6"

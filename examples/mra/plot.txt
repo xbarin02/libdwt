@@ -1,0 +1,14 @@
+reset
+
+set terminal pdf transparent size 8.00in, 3.00in linewidth 8
+set output "signal.pdf"
+set xrange [256:768]
+unset border
+unset xtics
+unset ytics
+plot "signal.dat" with lines lc rgb "black" notitle
+
+set output "levels.pdf"
+plot\
+	"level7.dat" with lines lc rgb "red" notitle,\
+	"level5.dat" with lines lc rgb "blue" notitle

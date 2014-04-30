@@ -4,9 +4,9 @@ format = "data/dir=%s.threads=%d.accel=%i.opt-stride=%i.j=%i.arr=%s.workers=%i.t
 set terminal pdfcairo enhanced dashed linewidth 2 size 14cm,10cm
 set output "inplace.pdf"
 set xlabel "pixels"
-set ylabel "seconds / pixel"
+set ylabel "time / pixel"
 set format x "%.1s%c"
-set format y "%.1s%c"
+set format y "%.1s%cs"
 set logscale x
 set logscale y
 
@@ -24,9 +24,24 @@ plot \
 	sprintf(format, dir, threads, accel, stride, j, arr, workers, type,  2) with lines lc rgb "#00007f" lw 2 title "single diagonal (2)", \
 	sprintf(format, dir, threads, accel, stride, j, arr, workers, type,  3) with lines lc rgb "#00ffff" lw 2 title "naive vertical (3)", \
 	sprintf(format, dir, threads, accel, stride, j, arr, workers, type,  4) with lines lc rgb "#00ff7f" lw 2 title "naive diagonal (4)", \
-	sprintf(format, dir, threads, accel, stride, j, arr, workers, type,  5) with lines lc rgb "#ff007f" lw 2 title "core diagonal (5)", \
 	sprintf(format, dir, threads, accel, stride, j, arr, workers, type,  6) with lines lc rgb "#ff7f7f" lw 2 title "core diagonal scaling (6)", \
-	sprintf(format, dir, threads, accel, stride, j, arr, workers, type,  7) with lines lc rgb "#7f007f" lw 2 title "core vertical (7)", \
 	sprintf(format, dir, threads, accel, stride, j, arr, workers, type,  8) with lines lc rgb "#7f7f7f" lw 2 title "core vertical scaling (8)", \
-	sprintf(format, dir, threads, accel, stride, j, arr, workers, type,  9) with lines lc rgb "#ff00ff" lw 2 title "core diagonal scaling threads (9)", \
-	sprintf(format, dir, threads, accel, stride, j, arr, workers, type, 10) with lines lc rgb "#ffff00" lw 2 title "core vertical scaling threads (10)"
+	sprintf(format, dir, threads, accel, stride, j, arr, workers, type, 11) with lines lc rgb "#ff7f7f" lw 2 title "super-core vertical 4x4 (11)", \
+	sprintf(format, dir, threads, accel, stride, j, arr, workers, type, 12) with lines lc rgb "#7f7f7f" lw 2 title "super-core vertical 6x2 (12)"
+
+set output "naive-and-super-core-sc-threads.pdf"
+
+unset arrow
+set pointsize 0.7
+set key maxrows 4
+set key inside left top
+
+plot \
+	sprintf(format, dir, 1, accel, stride, j, arr, workers, type,  3) with linespoints lt 1 pt 12 lc rgbcolor "red"     lw 2 title "naive vert. 1", \
+	sprintf(format, dir, 1, accel, stride, j, arr, workers, type,  4) with linespoints lt 1 pt 6  lc rgbcolor "blue"    lw 2 title "naive diag. 1", \
+	sprintf(format, dir, 1, accel, stride, j, arr, workers, type, 11) with linespoints lt 3 pt 12 lc rgbcolor "red"     lw 2 title " core vert. 1", \
+	sprintf(format, dir, 1, accel, stride, j, arr, workers, type, 12) with linespoints lt 3 pt 6  lc rgbcolor "blue"    lw 2 title " core diag. 1", \
+	sprintf(format, dir, 4, accel, stride, j, arr, workers, type,  3) with linespoints lt 1 pt 13 lc rgbcolor "#7f0000" lw 2 title "naive vert. 4", \
+	sprintf(format, dir, 4, accel, stride, j, arr, workers, type,  4) with linespoints lt 1 pt 7  lc rgbcolor "#00007f" lw 2 title "naive diag. 4", \
+	sprintf(format, dir, 4, accel, stride, j, arr, workers, type, 11) with linespoints lt 3 pt 13 lc rgbcolor "#7f0000" lw 2 title " core vert. 4", \
+	sprintf(format, dir, 4, accel, stride, j, arr, workers, type, 12) with linespoints lt 3 pt 7  lc rgbcolor "#00007f" lw 2 title " core diag. 4"
