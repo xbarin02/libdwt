@@ -1650,6 +1650,21 @@ int dwt_util_save_to_pgm_s(
 );
 
 /**
+ * @brief Save a logarithm of spectrum magnutudes into an ASCII-type PGM file.
+ *
+ * See <a href="http://netpbm.sourceforge.net/">the home page for Netpbm</a>.
+ * This function works with single precision floating point numbers (i.e. float data type).
+ */
+int dwt_util_save_log_to_pgm_s(
+	const char *path,	///< target file name, e.g. "output.pgm"
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of nested image (in elements)
+	int size_y		///< height of nested image (in elements)
+);
+
+/**
  * @brief Save grayscale image into ASCII-type MAT file.
  *
  * @warning experimental

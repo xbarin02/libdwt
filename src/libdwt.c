@@ -19187,6 +19187,73 @@ int dwt_util_load_from_pgm_i(
 	return 0;
 }
 
+int dwt_util_save_log_to_pgm_s(
+	const char *path,
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_x,
+	int size_y
+)
+{
+	// alloc temp
+	void *temp;
+	dwt_util_alloc_image(&temp, stride_x, stride_y, size_x, size_y);
+
+	// temp = log(abs(input))
+	dwt_util_conv_show_s(ptr, temp, stride_x, stride_y, size_x, size_y);
+
+	// find min, max
+	float minv, maxv;
+	dwt_util_find_min_max_s(
+		temp,
+		size_x,
+		size_y,
+		stride_x,
+		stride_y,
+		&minv,
+		&maxv
+	);
+
+#if 0
+	// scale + save
+	dwt_util_shift_s(
+		temp,
+		size_x,
+		size_y,
+		stride_x,
+		stride_y,
+		-minv
+	);
+
+	dwt_util_save_to_pgm_s(
+		path,
+		(-minv + maxv),
+		temp,
+		stride_x,
+		stride_y,
+		size_x,
+		size_y
+	);
+#else
+	// scale + save
+	dwt_util_save_to_pgm_s(
+		path,
+		maxv,
+		temp,
+		stride_x,
+		stride_y,
+		size_x,
+		size_y
+	);
+#endif
+
+	// free
+	dwt_util_free_image(&temp);
+
+	return 0;
+}
+
 int dwt_util_save_to_pgm_s(
 	const char *filename,
 	float max_value,

@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <complex.h>
 
 #ifdef __GNUC__
 	#define UNUSED_FUNC __attribute__ ((unused))
@@ -44,6 +45,38 @@ const float *addr1_const_s(
 )
 {
 	return (const float *)((const char *)ptr+i*stride);
+}
+
+/**
+ * @brief Helper function returning address of given element.
+ *
+ * Evaluate address of (i) image element, returns (const float complex *).
+ */
+UNUSED_FUNC
+static
+const float complex *addr1_const_cs(
+	const void *ptr,
+	int i,
+	int stride
+)
+{
+	return (const float complex *)((const char *)ptr+i*stride);
+}
+
+/**
+ * @brief Helper function returning address of given element.
+ *
+ * Evaluate address of (i) image element, returns (float complex *).
+ */
+UNUSED_FUNC
+static
+float complex *addr1_cs(
+	void *ptr,
+	int i,
+	int stride
+)
+{
+	return (float complex *)((char *)ptr+i*stride);
 }
 
 /**
