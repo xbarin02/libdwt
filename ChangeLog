@@ -1,3 +1,7 @@
+2014-??-?? David Barina <ibarina@fit.vutbr.cz>
+* Added vectorized super-cores of CDF 9/7 DWT.
+* Added Gabor transform related functions (STFT, CWT).
+
 2014-02-19 David Barina <ibarina@fit.vutbr.cz>
 * Added new "dwt-simple" API with forward DWT for CDF 9/7, CDF 5/3 and WCDF 5/3
 wavelets using 2-D separable transform with horizontal, vertical and diagonal
