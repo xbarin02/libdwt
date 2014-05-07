@@ -53,9 +53,24 @@ float complex dwt_util_cdot1_s(
 );
 
 /**
- * @brief Calculate one line of a time-frequency plane.
+ * @brief Calculate one line of a time-frequency plane (the magnitude).
  */
 void timefreq_line(
+	float *dst,			///< the line in TF plane
+	int dst_stride,			///< stride of the TF-plane
+	const float *src,		///< the analysed signal
+	int src_stride,			///< stride of the signal
+	int size,			///< size of both -- the signal and the TF-plane line
+	const float complex *kern,	///< complex kernel
+	int kern_stride,		///< stride of the kernel
+	int kern_size,			///< size of the kernel
+	int kern_center			///< center of the kernel
+);
+
+/**
+ * @brief Calculate one line of a time-frequency plane (the complex angle).
+ */
+void timefreq_arg_line(
 	float *dst,			///< the line in TF plane
 	int dst_stride,			///< stride of the TF-plane
 	const float *src,		///< the analysed signal
@@ -100,7 +115,7 @@ void test_signal(
 );
 
 /**
- * @brief Short-time Fourier transform using the Gaussian windows.
+ * @brief Short-time Fourier transform using the Gaussian window (the complex magnitude).
  */
 void gabor_ft_s(
 	// input
@@ -117,9 +132,60 @@ void gabor_ft_s(
 );
 
 /**
- * @brief Continuous wavelet transform using the complex Morlet wavelet.
+ * @brief Continuous wavelet transform using the complex Morlet wavelet (the complex magnitude).
  */
 void gabor_wt_s(
+	// input
+	const float *sig,	///< the analysed signal
+	int sig_stride,		///< the stride of the signal
+	int sig_size,		///< the length of the signal, the width of the plane
+	// output
+	void *plane,		///< put the plane here
+	int stride_x,		///< stride of rows of the plane
+	int stride_y,		///< stride of columns of the plane
+	int bins,		///< the height of the plane
+	// params
+	float sigma,		///< std. deviation of the baseline kernel (implies the window size)
+	float freq,		///< frequency of the baseline kernel
+	float scale_factor	///< growing factor of the scale
+);
+
+/**
+ * @brief S transform (the complex magnitude).
+ */
+void gabor_st_s(
+	// input
+	const float *sig,	///< the analysed signal
+	int sig_stride,		///< the stride of the signal
+	int sig_size,		///< the length of the signal, the width of the plane
+	// output
+	void *plane,		///< put the plane here
+	int stride_x,		///< stride of rows of the plane
+	int stride_y,		///< stride of columns of the plane
+	int bins		///< the height of the plane
+	// no params
+);
+
+/**
+ * @brief S transform (the complex argument).
+ */
+void gabor_st_arg_s(
+	// input
+	const float *sig,	///< the analysed signal
+	int sig_stride,		///< the stride of the signal
+	int sig_size,		///< the length of the signal, the width of the plane
+	// output
+	void *plane,		///< put the plane here
+	int stride_x,		///< stride of rows of the plane
+	int stride_y,		///< stride of columns of the plane
+	int bins		///< the height of the plane
+	// no params
+);
+
+/**
+ * @brief Angle (the complex argument) of continuous wavelet transform using the complex Morlet (Gabor) wavelet.
+ */
+void gabor_wt_arg_s(
 	// input
 	const float *sig,	///< the analysed signal
 	int sig_stride,		///< the stride of the signal

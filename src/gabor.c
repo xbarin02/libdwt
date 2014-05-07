@@ -35,6 +35,11 @@ float complex gabor_wavelet(
 	return 1.f/sqrtf(fabsf(a)) * sqrtf(alpha/(float)M_PI) * expf(-alpha*t*t) * cexpf(-I*f*t);
 }
 
+float gabor_freq(float f, float a)
+{
+	return f/a;
+}
+
 // 3*sigma rule
 float gaussian_limit(
 	float sigma,
@@ -133,7 +138,28 @@ void timefreq_line(
 {
 	for(int i = 0; i < size; i++)
 	{
-		*addr1_s(dst, i, dst_stride) = cabs(
+		*addr1_s(dst, i, dst_stride) = cabsf(
+			cdot1_s(
+				src, size, src_stride, i,
+				kern, kern_size, kern_stride, kern_center));
+	}
+}
+
+void timefreq_arg_line(
+	float *dst,
+	int dst_stride,
+	const float *src,
+	int src_stride,
+	int size,
+	const float complex *kern,
+	int kern_stride,
+	int kern_size,
+	int kern_center
+)
+{
+	for(int i = 0; i < size; i++)
+	{
+		*addr1_s(dst, i, dst_stride) = cargf(
 			cdot1_s(
 				src, size, src_stride, i,
 				kern, kern_size, kern_stride, kern_center));
@@ -154,6 +180,7 @@ void dwt_util_vec_creal_cs(
 	}
 }
 
+// Gabor transform
 void gabor_gen_kernel(
 	float complex **ckern,
 	int stride,
@@ -170,6 +197,50 @@ void gabor_gen_kernel(
 	for(int i = 0; i < size; i++)
 	{
 		*addr1_cs(*ckern, i, stride) = gabor_wavelet(i-center, sigma, freq, a);
+	}
+}
+
+// sigma of Gaussian for S transform
+float s_sigma(float f)
+{
+	assert( f != 0.f );
+	const float alpha = f * f;
+	const float sigma = sqrtf(1.f/2.f/alpha);
+	return sigma;
+}
+
+// kernel of S transform
+void s_gen_kernel(
+	float complex **ckern,
+	int stride,
+	float f		///< 0..1
+)
+{
+	// FIXME: zero frequency implies an infinitely long window
+	assert( f != 0.f );
+
+	// Gaussian function: g(t) = C1 * e^(-alpha * t^2)
+	const float alpha = f * f;
+
+	// Gaussian function: g(t) = C2 * e^(-1/2/sigma/sigma * t^2)
+	const float sigma = sqrtf(1.f/2.f/alpha);
+
+	const float omega = 2.f * (float)M_PI * f;
+
+	// scale
+	const float a = 1.f;
+
+	const int size = gaussian_size(sigma, a);
+	const int center = gaussian_center(sigma, a);
+
+	*ckern = realloc(*ckern, stride * size);
+
+	for(int i = 0; i < size; i++)
+	{
+		const int t = i-center;
+
+		*addr1_cs(*ckern, i, stride) =
+			conjf( fabsf(f) * expf(-alpha*t*t) * cexpf(-I*omega*t) );
 	}
 }
 
@@ -382,6 +453,171 @@ void gabor_wt_s(
 {
 	assert( plane );
 
+// 	dwt_util_log(LOG_DBG, "analytic wavelet: (sigma^2)*(eta^2) >> 1 = %f\n", sigma*sigma*freq*freq);
+
+	dwt_util_log(LOG_DBG, "min: kernel_size=%i scale=%f\n", gaussian_size(sigma, expf(0.0f)), expf(0.0f));
+	dwt_util_log(LOG_DBG, "max: kernel_size=%i scale=%f\n", gaussian_size(sigma, expf(scale_factor)), expf(scale_factor));
+
+	float complex *ckern = 0;
+	int ckern_stride = sizeof(float complex);
+
+	int size_y = bins;
+
+	for(int y = 0; y < size_y; y++)
+	{
+		float norm_y = y/(float)size_y;
+
+		// TF-plane
+		float *row = dwt_util_addr_coeff_s(
+			plane,
+			size_y-y-1,
+			0,
+			stride_x,
+			stride_y
+		);
+
+		// gen. kernel
+		float a = expf(norm_y*scale_factor);
+
+// 		dwt_util_log(LOG_DBG, "y=%i, freq(a=%f) = %f, freq*a = %f\n", size_y-y-1, a, gabor_freq(freq, a), gabor_freq(freq, a)*a);
+
+		gabor_gen_kernel(&ckern, ckern_stride, sigma, freq, a);
+
+		int kern_size = gaussian_size(sigma, a);
+		int kern_center = gaussian_center(sigma, a);
+
+		// response
+		timefreq_line(row, stride_y, sig, sig_stride, sig_size, ckern, ckern_stride, kern_size, kern_center);
+	}
+
+	free(ckern);
+}
+
+// S transform
+void gabor_st_s(
+	// input
+	const float *sig,	///< the analysed signal
+	int sig_stride,		///< the stride of the signal
+	int sig_size,		///< the length of the signal, the width of the plane
+	// output
+	void *plane,		///< put the plane here
+	int stride_x,		///< stride of rows of the plane
+	int stride_y,		///< stride of columns of the plane
+	int bins		///< the height of the plane
+	// no params
+)
+{
+	assert( plane );
+
+	float complex *ckern = 0;
+	int ckern_stride = sizeof(float complex);
+
+	int size_y = bins;
+
+	for(int y = 0; y < size_y; y++)
+	{
+		//float norm0_y = (y+0.f)/(float)size_y;
+		float norm1_y = (y+1.f)/(float)size_y;;
+
+		// TF-plane
+		float *row = dwt_util_addr_coeff_s(
+			plane,
+			//size_y-y-1,
+			y,
+			0,
+			stride_x,
+			stride_y
+		);
+
+		// frequency (0; 1]
+		float f = norm1_y;
+		float a = 1.f;
+		float sigma = s_sigma(f);
+
+// 		dwt_util_log(LOG_DBG, "S transform: y=%i, freq = %f\n", y, f);
+
+		s_gen_kernel(&ckern, ckern_stride, f);
+
+		int kern_size = gaussian_size(sigma, a);
+		int kern_center = gaussian_center(sigma, a);
+
+		// response
+		timefreq_line(row, stride_y, sig, sig_stride, sig_size, ckern, ckern_stride, kern_size, kern_center);
+	}
+
+	free(ckern);
+}
+
+void gabor_st_arg_s(
+	// input
+	const float *sig,	///< the analysed signal
+	int sig_stride,		///< the stride of the signal
+	int sig_size,		///< the length of the signal, the width of the plane
+	// output
+	void *plane,		///< put the plane here
+	int stride_x,		///< stride of rows of the plane
+	int stride_y,		///< stride of columns of the plane
+	int bins		///< the height of the plane
+	// no params
+)
+{
+	assert( plane );
+
+	float complex *ckern = 0;
+	int ckern_stride = sizeof(float complex);
+
+	int size_y = bins;
+
+	for(int y = 0; y < size_y; y++)
+	{
+		//float norm0_y = (y+0.f)/(float)size_y;
+		float norm1_y = (y+1.f)/(float)size_y;;
+
+		// TF-plane
+		float *row = dwt_util_addr_coeff_s(
+			plane,
+			//size_y-y-1,
+			y,
+			0,
+			stride_x,
+			stride_y
+		);
+
+		// frequency (0; 1]
+		float f = norm1_y;
+		float a = 1.f;
+		float sigma = s_sigma(f);
+
+		s_gen_kernel(&ckern, ckern_stride, f);
+
+		int kern_size = gaussian_size(sigma, a);
+		int kern_center = gaussian_center(sigma, a);
+
+		// response
+		timefreq_arg_line(row, stride_y, sig, sig_stride, sig_size, ckern, ckern_stride, kern_size, kern_center);
+	}
+
+	free(ckern);
+}
+
+void gabor_wt_arg_s(
+	// input
+	const float *sig,	///< the analysed signal
+	int sig_stride,		///< the stride of the signal
+	int sig_size,		///< the length of the signal, the width of the plane
+	// output
+	void *plane,		///< put the plane here
+	int stride_x,		///< stride of rows of the plane
+	int stride_y,		///< stride of columns of the plane
+	int bins,		///< the height of the plane
+	// params
+	float sigma,		///< std. deviation of the baseline kernel (implies the window size)
+	float freq,		///< frequency of the baseline kernel
+	float scale_factor	///< growing factor of the scale
+)
+{
+	assert( plane );
+
 	dwt_util_log(LOG_DBG, "min: kernel_size=%i scale=%f\n", gaussian_size(sigma, expf(0.0f)), expf(0.0f));
 	dwt_util_log(LOG_DBG, "max: kernel_size=%i scale=%f\n", gaussian_size(sigma, expf(scale_factor)), expf(scale_factor));
 
@@ -412,7 +648,7 @@ void gabor_wt_s(
 		int kern_center = gaussian_center(sigma, a);
 
 		// response
-		timefreq_line(row, stride_y, sig, sig_stride, sig_size, ckern, ckern_stride, kern_size, kern_center);
+		timefreq_arg_line(row, stride_y, sig, sig_stride, sig_size, ckern, ckern_stride, kern_size, kern_center);
 	}
 
 	free(ckern);
