@@ -201,4 +201,17 @@ void gabor_wt_arg_s(
 	float scale_factor	///< growing factor of the scale
 );
 
+/**
+ * @brief Derivative of the phase.
+ */
+void phase_derivative(
+	const void *angle,	///< the complex argument
+	void *derivative,	///< store the derivative here
+	int stride_x,		///< stride
+	int stride_y,		///< stride
+	int size_x,		///< size
+	int size_y,		///< size
+	float limit		///< maximum. jump (in radians) in the derivative; default @f$ \pi @f$
+);
+
 #endif

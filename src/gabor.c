@@ -653,3 +653,40 @@ void gabor_wt_arg_s(
 
 	free(ckern);
 }
+
+void phase_derivative(
+	const void *angle,
+	void *derivative,
+	int stride_x,
+	int stride_y,
+	int size_x,
+	int size_y,
+	float limit
+)
+{
+	assert( limit > 0.f );
+
+	for(int y = 0; y < size_y; y++)
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			float *out = addr2_s(derivative, y, x, stride_x, stride_y);
+
+			if( 0 == x )
+			{
+				*out = 0.f;
+			}
+			else
+			{
+				*out =
+					- *addr2_const_s(angle, y, x-1, stride_x, stride_y)
+					+ *addr2_const_s(angle, y, x,   stride_x, stride_y);
+
+				while( *out > +limit )
+					*out -= 2.f*(float)M_PI;
+				while( *out < -limit )
+					*out += 2.f*(float)M_PI;
+			}
+		}
+	}
+}

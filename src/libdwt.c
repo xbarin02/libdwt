@@ -1569,6 +1569,26 @@ void dwt_util_alloc_image(
 	FUNC_END;
 }
 
+void *dwt_util_alloc_image2(
+	int stride_x,
+	int stride_y,
+	int size_x,
+	int size_y
+)
+{
+	void *ptr;
+
+	dwt_util_alloc_image(
+		&ptr,
+		stride_x,
+		stride_y,
+		size_x,
+		size_y
+	);
+
+	return ptr;
+}
+
 void dwt_util_free_image(
 	void **pptr
 )

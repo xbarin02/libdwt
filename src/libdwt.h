@@ -1325,6 +1325,18 @@ void dwt_util_alloc_image(
 );
 
 /**
+ * @brief Allocate image.
+ *
+ * Allocates memory for image of given sizes.
+ */
+void *dwt_util_alloc_image2(
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_x,		///< width of outer image frame (in elements)
+	int size_y		///< height of outer image frame (in elements)
+);
+
+/**
  * @brief Free image.
  *
  * Frees memory allocated by @ref dwt_util_alloc_image.
