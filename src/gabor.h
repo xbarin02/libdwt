@@ -214,4 +214,21 @@ void phase_derivative(
 	float limit		///< maximum. jump (in radians) in the derivative; default @f$ \pi @f$
 );
 
+/**
+ * @brief Detect the ridges of a time-frequency analysis.
+ *
+ * Ridges are identified as local maxima of magnitudes.
+ * This function calculates partial derivative of the magnitude with respect to time.
+ * Local maxima are found as the points where the signs of the derivative changes.
+ */
+void detect_ridges(
+	const void *magnitude,	///< magnitude of the transform
+	void *ridges,		///< store the result here
+	int stride_x,		///< stride
+	int stride_y,		///< stride
+	int size_x,		///< size
+	int size_y,		///< size
+	float threshold		///< threshold, e.g. 0.f for all points
+);
+
 #endif

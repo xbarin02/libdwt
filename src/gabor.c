@@ -690,3 +690,47 @@ void phase_derivative(
 		}
 	}
 }
+
+void detect_ridges(
+	const void *magnitude,
+	void *ridges,
+	int stride_x,
+	int stride_y,
+	int size_x,
+	int size_y,
+	float threshold
+)
+{
+	for(int y = 0; y < size_y; y++)
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			float *out = addr2_s(ridges, y, x, stride_x, stride_y);
+
+			*out = 0.f;
+
+			if( x > 0 && x < size_x-1 )
+			{
+				float mag_val = *addr2_const_s(magnitude, y, x, stride_x, stride_y);
+
+				float mag_line[3] = {
+					*addr2_const_s(magnitude, y, x-1, stride_x, stride_y),
+					*addr2_const_s(magnitude, y, x,   stride_x, stride_y),
+					*addr2_const_s(magnitude, y, x+1, stride_x, stride_y),
+				};
+
+				float mag_factor = -1.f * (mag_line[0] - mag_line[1]) * (mag_line[1] - mag_line[2]);
+
+				if( mag_factor > 0.f && mag_val > threshold )
+				{
+// 					dwt_util_log(LOG_DBG, "ridge point: y=%i x=%i mag=%f\n", y, x, mag_val);
+#if 1
+					*out = 1.0f;
+#else
+					*out = mag_val/(float)M_PI/(float)M_PI;
+#endif
+				}
+			}
+		}
+	}
+}
