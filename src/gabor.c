@@ -435,6 +435,56 @@ void gabor_ft_s(
 	free(ckern);
 }
 
+void gabor_ft_arg_s(
+	// input
+	const float *sig,	///< the analysed signal
+	int sig_stride,		///< the stride of the signal
+	int sig_size,		///< the length of the signal, the width of the plane
+	// output
+	void *plane,		///< put the plane here
+	int stride_x,		///< stride of rows of the plane
+	int stride_y,		///< stride of columns of the plane
+	int bins,		///< the height of the plane
+	// params
+	float sigma		///< std. deviation of the baseline kernel (implies the window size)
+)
+{
+	assert( plane );
+
+	float complex *ckern = 0;
+	int ckern_stride = sizeof(float complex);
+
+	int size_y = bins;
+
+	for(int y = 0; y < size_y; y++)
+	{
+		float norm_y = y/(float)size_y;
+
+		// TF-plane
+		float *row = dwt_util_addr_coeff_s(
+			plane,
+			size_y-y-1,
+			0,
+			stride_x,
+			stride_y
+		);
+
+		// gen. kernel
+		float freq = norm_y * 1.0f * (float)M_PI;
+		float a = 1.0f;
+
+		gabor_gen_kernel(&ckern, ckern_stride, sigma, freq, a);
+
+		int kern_size = gaussian_size(sigma, a);
+		int kern_center = gaussian_center(sigma, a);
+
+		// response
+		timefreq_arg_line(row, stride_y, sig, sig_stride, sig_size, ckern, ckern_stride, kern_size, kern_center);
+	}
+
+	free(ckern);
+}
+
 void gabor_wt_s(
 	// input
 	const float *sig,	///< the analysed signal
@@ -725,9 +775,45 @@ void detect_ridges(
 				{
 // 					dwt_util_log(LOG_DBG, "ridge point: y=%i x=%i mag=%f\n", y, x, mag_val);
 #if 1
-					*out = 1.0f;
+					*out = 1.f;
 #else
-					*out = mag_val/(float)M_PI/(float)M_PI;
+					*out = mag_val/2.f/(float)M_PI;
+#endif
+				}
+			}
+		}
+	}
+}
+
+void detect_ridges2(
+	const void *inst_freq,
+	void *ridges,
+	int stride_x,
+	int stride_y,
+	int size_x,
+	int size_y,
+	float threshold
+)
+{
+	for(int y = 0; y < size_y; y++)
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			float *out = addr2_s(ridges, y, x, stride_x, stride_y);
+
+			*out = 0.f;
+
+			if( x > 0 && x < size_x-1 )
+			{
+				float arg_val = *addr2_const_s(inst_freq, y, x, stride_x, stride_y);
+
+				if( arg_val > 0.f && arg_val > threshold )
+				{
+// 					dwt_util_log(LOG_DBG, "ridge point: y=%i x=%i arg=%f\n", y, x, arg_val);
+#if 1
+					*out = 1.f;
+#else
+					*out = arg_val/2.f/(float)M_PI;
 #endif
 				}
 			}

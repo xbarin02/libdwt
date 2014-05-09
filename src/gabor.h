@@ -167,6 +167,23 @@ void gabor_st_s(
 );
 
 /**
+ * @brief Short-time Fourier transform using the Gaussian window (the complex argument).
+ */
+void gabor_ft_arg_s(
+	// input
+	const float *sig,	///< the analysed signal
+	int sig_stride,		///< the stride of the signal
+	int sig_size,		///< the length of the signal, the width of the plane
+	// output
+	void *plane,		///< put the plane here
+	int stride_x,		///< stride of rows of the plane
+	int stride_y,		///< stride of columns of the plane
+	int bins,		///< the height of the plane
+	// params
+	float sigma		///< std. deviation of the baseline kernel (implies the window size)
+);
+
+/**
  * @brief S transform (the complex argument).
  */
 void gabor_st_arg_s(
@@ -223,6 +240,21 @@ void phase_derivative(
  */
 void detect_ridges(
 	const void *magnitude,	///< magnitude of the transform
+	void *ridges,		///< store the result here
+	int stride_x,		///< stride
+	int stride_y,		///< stride
+	int size_x,		///< size
+	int size_y,		///< size
+	float threshold		///< threshold, e.g. 0.f for all points
+);
+
+/**
+ * @brief Detect the ridges of a time-frequency analysis.
+ *
+ * Ridges are found as a positive derivative of the phase.
+ */
+void detect_ridges2(
+	const void *inst_freq,	///< derivative of the phase (the complex argument) of the transform
 	void *ridges,		///< store the result here
 	int stride_x,		///< stride
 	int stride_y,		///< stride
