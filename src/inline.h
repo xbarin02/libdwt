@@ -200,6 +200,19 @@ const float *addr2_const_s(
 	return (const float *)((const char *)ptr+y*stride_x+x*stride_y);
 }
 
+UNUSED_FUNC
+static
+const float complex *addr2_const_cs(
+	const void *ptr,
+	int y,
+	int x,
+	int stride_x,
+	int stride_y
+)
+{
+	return (const float complex *)((const char *)ptr + y*stride_x + x*stride_y);
+}
+
 /**
  * @brief Helper function returning address of given pixel.
  *

@@ -32,12 +32,24 @@ float complex gabor_wavelet(
 
 	t /= a;
 
-	return 1.f/sqrtf(fabsf(a)) * sqrtf(alpha/(float)M_PI) * expf(-alpha*t*t) * cexpf(-I*f*t);
+	return 1.f/ /*sqrtf*/(fabsf(a)) * sqrtf(alpha/(float)M_PI) * expf(-alpha*t*t) * cexpf(-I*f*t);
 }
 
 float gabor_freq(float f, float a)
 {
-	return f/a;
+	assert( a != 0.f );
+
+	return f / a;
+}
+
+// f_c .. frequency of the mother wavelet
+// f   .. (0; +pi]
+// returns the scale "a"
+float gabor_scale(float f_c, float f)
+{
+	assert( f != 0.f );
+
+	return f_c / f;
 }
 
 // 3*sigma rule
@@ -180,6 +192,33 @@ void dwt_util_vec_creal_cs(
 	}
 }
 
+float dwt_util_band_lpnorm_cs(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_x,
+	int size_y,
+	float p
+)
+{
+	float sum = 0.0f;
+
+	if( +INFINITY == p )
+		dwt_util_error("unimplemented\n");
+
+	for(int y = 0; y < size_y; y++)
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			const float complex c = *addr2_const_cs(ptr, y, x, stride_x, stride_y);
+
+			sum += powf(cabsf(c), p);
+		}
+	}
+
+	return powf(sum, 1.f/p);
+}
+
 // Gabor transform
 void gabor_gen_kernel(
 	float complex **ckern,
@@ -198,6 +237,27 @@ void gabor_gen_kernel(
 	{
 		*addr1_cs(*ckern, i, stride) = gabor_wavelet(i-center, sigma, freq, a);
 	}
+
+#if 0
+	dwt_util_log(LOG_DBG, "gabor_gen_kernel: 1-norm=%f 2-norm=%f\n",
+		dwt_util_band_lpnorm_cs(
+			*ckern,
+			0,
+			sizeof(const float complex),
+			size,
+			1,
+			1.f // p
+		),
+		dwt_util_band_lpnorm_cs(
+			*ckern,
+			0,
+			sizeof(const float complex),
+			size,
+			1,
+			2.f // p
+		)
+	);
+#endif
 }
 
 // sigma of Gaussian for S transform
@@ -240,8 +300,29 @@ void s_gen_kernel(
 		const int t = i-center;
 
 		*addr1_cs(*ckern, i, stride) =
-			conjf( fabsf(f) * expf(-alpha*t*t) * cexpf(-I*omega*t) );
+			conjf( 1.f/sqrtf((float)M_PI) * fabsf(f) * expf(-alpha*t*t) * cexpf(-I*omega*t) );
 	}
+
+#if 0
+	dwt_util_log(LOG_DBG, "s_gen_kernel: 1-norm=%f 2-norm=%f\n",
+		dwt_util_band_lpnorm_cs(
+			*ckern,
+			0,
+			sizeof(const float complex),
+			size,
+			1,
+			1.f // p
+		),
+		dwt_util_band_lpnorm_cs(
+			*ckern,
+			0,
+			sizeof(const float complex),
+			size,
+			1,
+			2.f // p
+		)
+	);
+#endif
 }
 
 void test_signal(
@@ -485,6 +566,7 @@ void gabor_ft_arg_s(
 	free(ckern);
 }
 
+// wavelet transform
 void gabor_wt_s(
 	// input
 	const float *sig,	///< the analysed signal
@@ -497,16 +579,25 @@ void gabor_wt_s(
 	int bins,		///< the height of the plane
 	// params
 	float sigma,		///< std. deviation of the baseline kernel (implies the window size)
-	float freq,		///< frequency of the baseline kernel
-	float scale_factor	///< growing factor of the scale
+	float freq		///< frequency of the baseline kernel, in radians
 )
 {
 	assert( plane );
 
 // 	dwt_util_log(LOG_DBG, "analytic wavelet: (sigma^2)*(eta^2) >> 1 = %f\n", sigma*sigma*freq*freq);
 
-	dwt_util_log(LOG_DBG, "min: kernel_size=%i scale=%f\n", gaussian_size(sigma, expf(0.0f)), expf(0.0f));
-	dwt_util_log(LOG_DBG, "max: kernel_size=%i scale=%f\n", gaussian_size(sigma, expf(scale_factor)), expf(scale_factor));
+	{
+		const float f = 1.f/(float)bins * 0.5f * 2.f * (float)M_PI;
+		const float a = gabor_scale(freq, f);
+		dwt_util_log(LOG_DBG, "min: kernel_size=%i scale=%f freq=%f\n",
+			gaussian_size(sigma, a), a, f);
+	}
+	{
+		const float f = 1.f * 0.5f * 2.f * (float)M_PI;
+		const float a = gabor_scale(freq, f);
+		dwt_util_log(LOG_DBG, "max: kernel_size=%i scale=%f freq=%f\n",
+			gaussian_size(sigma, a), a, f);
+	}
 
 	float complex *ckern = 0;
 	int ckern_stride = sizeof(float complex);
@@ -515,7 +606,8 @@ void gabor_wt_s(
 
 	for(int y = 0; y < size_y; y++)
 	{
-		float norm_y = y/(float)size_y;
+		//float norm0_y = (y+0.f)/(float)size_y; // [0; 1)
+		float norm1_y = (y+1.f)/(float)size_y; // (0; 1]
 
 		// TF-plane
 		float *row = dwt_util_addr_coeff_s(
@@ -527,7 +619,8 @@ void gabor_wt_s(
 		);
 
 		// gen. kernel
-		float a = expf(norm_y*scale_factor);
+		float f = norm1_y * 0.5f * 2.f*(float)M_PI; // (0; +pi]
+		float a = gabor_scale(freq, f);
 
 // 		dwt_util_log(LOG_DBG, "y=%i, freq(a=%f) = %f, freq*a = %f\n", size_y-y-1, a, gabor_freq(freq, a), gabor_freq(freq, a)*a);
 
@@ -572,15 +665,22 @@ void gabor_st_s(
 		// TF-plane
 		float *row = dwt_util_addr_coeff_s(
 			plane,
-			//size_y-y-1,
+#if 1
+			size_y-y-1,
+#else
 			y,
+#endif
 			0,
 			stride_x,
 			stride_y
 		);
 
-		// frequency (0; 1]
+		// frequencies (0; 0.5] => (0; pi]
+#if 1
+		float f = norm1_y * 0.5f;
+#else
 		float f = norm1_y;
+#endif
 		float a = 1.f;
 		float sigma = s_sigma(f);
 
@@ -626,15 +726,22 @@ void gabor_st_arg_s(
 		// TF-plane
 		float *row = dwt_util_addr_coeff_s(
 			plane,
-			//size_y-y-1,
+#if 1
+			size_y-y-1,
+#else
 			y,
+#endif
 			0,
 			stride_x,
 			stride_y
 		);
 
-		// frequency (0; 1]
+		// frequencies (0; 0.5] => (0; pi]
+#if 1
+		float f = norm1_y * 0.5f;
+#else
 		float f = norm1_y;
+#endif
 		float a = 1.f;
 		float sigma = s_sigma(f);
 
@@ -662,14 +769,10 @@ void gabor_wt_arg_s(
 	int bins,		///< the height of the plane
 	// params
 	float sigma,		///< std. deviation of the baseline kernel (implies the window size)
-	float freq,		///< frequency of the baseline kernel
-	float scale_factor	///< growing factor of the scale
+	float freq		///< frequency of the baseline kernel, in radians
 )
 {
 	assert( plane );
-
-	dwt_util_log(LOG_DBG, "min: kernel_size=%i scale=%f\n", gaussian_size(sigma, expf(0.0f)), expf(0.0f));
-	dwt_util_log(LOG_DBG, "max: kernel_size=%i scale=%f\n", gaussian_size(sigma, expf(scale_factor)), expf(scale_factor));
 
 	float complex *ckern = 0;
 	int ckern_stride = sizeof(float complex);
@@ -678,7 +781,8 @@ void gabor_wt_arg_s(
 
 	for(int y = 0; y < size_y; y++)
 	{
-		float norm_y = y/(float)size_y;
+		//float norm0_y = (y+0.f)/(float)size_y; // [0; 1)
+		float norm1_y = (y+1.f)/(float)size_y; // (0; 1]
 
 		// TF-plane
 		float *row = dwt_util_addr_coeff_s(
@@ -690,7 +794,8 @@ void gabor_wt_arg_s(
 		);
 
 		// gen. kernel
-		float a = expf(norm_y*scale_factor);
+		float f = norm1_y * 0.5f * 2.f*(float)M_PI; // (0; +pi]
+		float a = gabor_scale(freq, f);
 
 		gabor_gen_kernel(&ckern, ckern_stride, sigma, freq, a);
 

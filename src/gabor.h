@@ -146,8 +146,7 @@ void gabor_wt_s(
 	int bins,		///< the height of the plane
 	// params
 	float sigma,		///< std. deviation of the baseline kernel (implies the window size)
-	float freq,		///< frequency of the baseline kernel
-	float scale_factor	///< growing factor of the scale
+	float freq		///< frequency of the baseline kernel, in radians
 );
 
 /**
@@ -214,8 +213,7 @@ void gabor_wt_arg_s(
 	int bins,		///< the height of the plane
 	// params
 	float sigma,		///< std. deviation of the baseline kernel (implies the window size)
-	float freq,		///< frequency of the baseline kernel
-	float scale_factor	///< growing factor of the scale
+	float freq		///< frequency of the baseline kernel, in radians
 );
 
 /**
