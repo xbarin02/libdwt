@@ -93,11 +93,10 @@ int main()
 	const int size_y = bins;
 	const int stride_y = sizeof(float);
 	const int stride_x = dwt_util_get_opt_stride(stride_y * size_x);
-	void *data;
-	dwt_util_alloc_image(&data, stride_x, stride_y, size_x, size_y);
+	void *data = dwt_util_alloc_image2(stride_x, stride_y, size_x, size_y);
 
 	// STFT
-	dwt_util_log(LOG_INFO, "STFT...\n");
+	dwt_util_log(LOG_INFO, "FT...\n");
 
 	gabor_ft_s(
 		// input
@@ -123,7 +122,7 @@ int main()
 	);
 
 	// CWT
-	dwt_util_log(LOG_INFO, "CWT...\n");
+	dwt_util_log(LOG_INFO, "WT...\n");
 
 	gabor_wt_s(
 		// input
@@ -137,11 +136,36 @@ int main()
 		bins,
 		// params
 		/* sigma = */        10.0f, // 10; 2
-		/* freq = */         0.5f*(float)M_PI // pi; pi; pi/2
+		/* freq = */         0.75f*(float)M_PI // pi; pi; pi/2
 	);
 
 	dwt_util_save_log_to_pgm_s(
 		"plane-wt.pgm",
+		data,
+		stride_x,
+		stride_y,
+		size_x,
+		size_y
+	);
+
+	// S transform
+	dwt_util_log(LOG_INFO, "ST...\n");
+
+	gabor_st_s(
+		// input
+		test_ptr,
+		test_stride,
+		test_size,
+		// output
+		data,
+		stride_x,
+		stride_y,
+		bins
+		// params
+	);
+
+	dwt_util_save_log_to_pgm_s(
+		"plane-st.pgm",
 		data,
 		stride_x,
 		stride_y,
