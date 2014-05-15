@@ -704,7 +704,7 @@ void gabor_wt_arg_s(
 	free(ckern);
 }
 
-void phase_derivative(
+void phase_derivative_s(
 	const void *angle,
 	void *derivative,
 	int stride_x,
@@ -741,7 +741,7 @@ void phase_derivative(
 	}
 }
 
-void detect_ridges(
+void detect_ridges1_s(
 	const void *magnitude,
 	void *ridges,
 	int stride_x,
@@ -785,7 +785,7 @@ void detect_ridges(
 	}
 }
 
-void detect_ridges2(
+void detect_ridges2_s(
 	const void *inst_freq,
 	void *ridges,
 	int stride_x,
@@ -814,6 +814,170 @@ void detect_ridges2(
 					*out = 1.f;
 #else
 					*out = arg_val/2.f/(float)M_PI;
+#endif
+				}
+			}
+		}
+	}
+}
+
+// difference of two samples
+float coeff_diff_s(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int pos0_x,
+	int pos0_y,
+	int pos1_x,
+	int pos1_y
+)
+{
+	float a = *dwt_util_addr_coeff_const_s(
+		ptr,
+		pos1_y,
+		pos1_x,
+		stride_x,
+		stride_y
+	);
+	float b = *dwt_util_addr_coeff_const_s(
+		ptr,
+		pos0_y,
+		pos0_x,
+		stride_x,
+		stride_y
+	);
+
+	return a - b;
+}
+
+// angle (-pi; +pi) of gradient at position (x,y)
+float grad_angle_s(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int pos_x,
+	int pos_y
+)
+{
+	float dx = coeff_diff_s(ptr, stride_x, stride_y, pos_x-1, pos_y, pos_x+1, pos_y) / 2.f;
+	float dy = coeff_diff_s(ptr, stride_x, stride_y, pos_x, pos_y-1, pos_x, pos_y+1) / 2.f;
+
+// 	dwt_util_log(LOG_DBG, "angle: d=(%f,%f)\n", dx, dy);
+
+	return atan2f(dy, dx);
+}
+
+// magnitude in the direction of gradient
+const float *addr_coeff_in_grad_dir_const_s(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int pos_x,
+	int pos_y
+)
+{
+	float angle = grad_angle_s(
+		ptr,
+		stride_x,
+		stride_y,
+		pos_x,
+		pos_y
+	);
+
+	const float ampl = 1.f;
+	const float half = ampl / 2.f;
+
+	float dir_x = ampl * cosf(angle);
+	float dir_y = ampl * sinf(angle);
+
+	// right-to-left associativity of ?:
+	int next_x =
+		( dir_x < -half ) ? -1 :
+		( dir_x > +half ) ? +1 :
+		0;
+	int next_y =
+		( dir_y < -half ) ? -1 :
+		( dir_y > +half ) ? +1 :
+		0;
+
+// 	dwt_util_log(LOG_DBG, "pos=(%i,%i) angle=%f grad=(%i,%i)\n", pos_x, pos_y, angle, next_x, next_y);
+
+// 	if( 0 == next_x && 0 == next_y )
+// 		dwt_util_log(LOG_DBG, "pos=(%i,%i) angle=%f grad=(%i,%i) => plane\n", pos_x, pos_y, angle, next_x, next_y);
+
+	return dwt_util_addr_coeff_const_s(
+		ptr,
+		pos_y+next_y,
+		pos_x+next_x,
+		stride_x,
+		stride_y
+	);
+}
+
+// is maximum in direction of gradient
+int grad_max_s(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int pos_x,
+	int pos_y
+)
+{
+	const float this = *dwt_util_addr_coeff_const_s(
+		ptr,
+		pos_y,
+		pos_x,
+		stride_x,
+		stride_y
+	);
+	const float next = *addr_coeff_in_grad_dir_const_s(
+		ptr,
+		stride_x,
+		stride_y,
+		pos_x,
+		pos_y
+	);
+
+	return this >= next;
+}
+
+void detect_ridges3_s(
+	const void *magnitude,
+	void *ridges,
+	int stride_x,
+	int stride_y,
+	int size_x,
+	int size_y,
+	float threshold
+)
+{
+	for(int y = 0; y < size_y; y++)
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			float *out = addr2_s(ridges, y, x, stride_x, stride_y);
+
+			*out = 0.f;
+
+			if( x > 0 && x < size_x-1 && y > 0 && y < size_y-1 )
+			{
+				float mag_val = *addr2_const_s(magnitude, y, x, stride_x, stride_y);
+
+				const int is_max = grad_max_s(
+					magnitude,
+					stride_x,
+					stride_y,
+					x,
+					y
+				);
+
+				if( is_max && mag_val > threshold )
+				{
+// 					dwt_util_log(LOG_DBG, "ridge point: y=%i x=%i arg=%f\n", y, x, arg_val);
+#if 1
+					*out = 1.f;
+#else
+					*out = mag_val/2.f/(float)M_PI;
 #endif
 				}
 			}

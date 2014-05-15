@@ -221,7 +221,7 @@ void gabor_wt_arg_s(
 /**
  * @brief Derivative of the phase.
  */
-void phase_derivative(
+void phase_derivative_s(
 	const void *angle,	///< the complex argument
 	void *derivative,	///< store the derivative here
 	int stride_x,		///< stride
@@ -238,7 +238,7 @@ void phase_derivative(
  * This function calculates partial derivative of the magnitude with respect to time.
  * Local maxima are found as the points where the signs of the derivative changes.
  */
-void detect_ridges(
+void detect_ridges1_s(
 	const void *magnitude,	///< magnitude of the transform
 	void *ridges,		///< store the result here
 	int stride_x,		///< stride
@@ -253,8 +253,23 @@ void detect_ridges(
  *
  * Ridges are found as a positive derivative of the phase.
  */
-void detect_ridges2(
+void detect_ridges2_s(
 	const void *inst_freq,	///< derivative of the phase (the complex argument) of the transform
+	void *ridges,		///< store the result here
+	int stride_x,		///< stride
+	int stride_y,		///< stride
+	int size_x,		///< size
+	int size_y,		///< size
+	float threshold		///< threshold, e.g. 0.f for all points
+);
+
+/**
+ * @brief Detect the ridges of a time-frequency analysis.
+ *
+ * Ridges are identified as local maxima of magnitudes in a direction of a gradient.
+ */
+void detect_ridges3_s(
+	const void *magnitude,	///< magnitude of the transform
 	void *ridges,		///< store the result here
 	int stride_x,		///< stride
 	int stride_y,		///< stride
