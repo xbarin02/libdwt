@@ -137,8 +137,7 @@ int main()
 		bins,
 		// params
 		/* sigma = */        10.0f, // 10; 2
-		/* freq = */         1.0f*(float)M_PI, // pi; pi
-		/* scale_factor = */ 2.0 // 2; 6
+		/* freq = */         0.5f*(float)M_PI // pi; pi; pi/2
 	);
 
 	dwt_util_save_log_to_pgm_s(
