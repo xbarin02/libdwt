@@ -1,5 +1,5 @@
-#ifndef GABOR
-#define GABOR
+#ifndef GABOR_H
+#define GABOR_H
 
 #include <complex.h>
 

@@ -25302,3 +25302,48 @@ const char *dwt_util_str_vec_s(
 
 	return cbuff_cstr(cbuff);
 }
+
+int dwt_util_save_sym_to_pgm_s(
+	const char *path,
+	float max_value,
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_x,
+	int size_y
+)
+{
+	assert( max_value > 0.f );
+
+	// alloc "clone"
+	void *clone = dwt_util_alloc_image2(stride_x, stride_y, size_x, size_y);
+
+	// copy "ptr" into "clone"
+	dwt_util_copy_s(ptr, clone, stride_x, stride_y, size_x, size_y);
+
+	// shift "clone"
+	dwt_util_shift_s(
+		clone,
+		size_x,
+		size_y,
+		stride_x,
+		stride_y,
+		+max_value
+	);
+
+	// save "clone"
+	dwt_util_save_to_pgm_s(
+		path,
+		2.f*max_value,
+		clone,
+		stride_x,
+		stride_y,
+		size_x,
+		size_y
+	);
+
+	// free "clone"
+	dwt_util_free_image(&clone);
+
+	return 0;
+}
