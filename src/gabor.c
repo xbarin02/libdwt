@@ -5,6 +5,21 @@
 #include "inline.h"
 #include "libdwt.h"
 
+float complex gabor_atom(
+	float t,	///< time around 0
+	float alpha,	///< Gaussian envelope parameter
+	float omega	///< frequency in radians
+)
+{
+	assert( alpha >= 0.f );
+
+#if 0
+	return sqrtf(alpha/(float)M_PI) * expf(-alpha*t*t) * cexpf(-I*omega*t);
+#else
+	return sqrtf(alpha/(float)M_PI) * expf(-alpha*t*t) * cexpf(+I*omega*t);
+#endif
+}
+
 float complex gabor_function(
 	float t,	///< time, centered at 0
 	float sigma,	///< standard deviation
@@ -15,7 +30,7 @@ float complex gabor_function(
 
 	float alpha = 1.f/2.f/sigma/sigma;
 
-	return sqrtf(alpha/(float)M_PI) * expf(-alpha*t*t) * cexpf(-I*f*t);
+	return gabor_atom(t, alpha, f);
 }
 
 float complex gabor_wavelet(
@@ -32,7 +47,7 @@ float complex gabor_wavelet(
 
 	t /= a;
 
-	return 1.f/ /*sqrtf*/(fabsf(a)) * sqrtf(alpha/(float)M_PI) * expf(-alpha*t*t) * cexpf(-I*f*t);
+	return 1.f/fabsf(a) * gabor_atom(t, alpha, f);
 }
 
 float gabor_freq(float f, float a)
@@ -58,7 +73,7 @@ float gaussian_limit(
 	float a
 )
 {
-	return (4.0f*sigma)*a;
+	return (4.f*sigma)*a;
 }
 
 int gaussian_size(
@@ -329,7 +344,7 @@ void s_gen_kernel(
 		const int t = i-center;
 
 		*addr1_cs(*ckern, i, stride) =
-			conjf( 1.f/sqrtf((float)M_PI) * fabsf(f) * expf(-alpha*t*t) * cexpf(-I*omega*t) );
+			gabor_atom(t, alpha, omega);
 	}
 
 #if 0
