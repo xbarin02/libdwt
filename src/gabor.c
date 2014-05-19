@@ -219,6 +219,31 @@ float dwt_util_band_lpnorm_cs(
 	return powf(sum, 1.f/p);
 }
 
+float complex dwt_util_band_mean_cs(
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_x,
+	int size_y
+)
+{
+	float complex sum = 0.0f;
+
+	for(int y = 0; y < size_y; y++)
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			float complex coeff = *addr2_const_cs(ptr, y, x, stride_x, stride_y);
+
+			sum += coeff;
+		}
+	}
+
+	sum /= size_x * size_y;
+
+	return sum;
+}
+
 // Gabor transform
 void gabor_gen_kernel(
 	float complex **ckern,
@@ -239,7 +264,9 @@ void gabor_gen_kernel(
 	}
 
 #if 0
-	dwt_util_log(LOG_DBG, "gabor_gen_kernel: 1-norm=%f 2-norm=%f\n",
+	float complex mean = dwt_util_band_mean_cs(*ckern, 0, sizeof(const float complex), size, 1);
+
+	dwt_util_log(LOG_DBG, "gabor_gen_kernel: 1-norm=%f 2-norm=%f mean/abs=%f size=%i\n",
 		dwt_util_band_lpnorm_cs(
 			*ckern,
 			0,
@@ -255,7 +282,9 @@ void gabor_gen_kernel(
 			size,
 			1,
 			2.f // p
-		)
+		),
+		cabsf(mean),
+		size
 	);
 #endif
 }
@@ -304,7 +333,9 @@ void s_gen_kernel(
 	}
 
 #if 0
-	dwt_util_log(LOG_DBG, "s_gen_kernel: 1-norm=%f 2-norm=%f\n",
+	float complex mean = dwt_util_band_mean_cs(*ckern, 0, sizeof(const float complex), size, 1);
+
+	dwt_util_log(LOG_DBG, "s_gen_kernel: 1-norm=%f 2-norm=%f mean/abs=%f size=%i\n",
 		dwt_util_band_lpnorm_cs(
 			*ckern,
 			0,
@@ -320,7 +351,9 @@ void s_gen_kernel(
 			size,
 			1,
 			2.f // p
-		)
+		),
+		cabsf(mean),
+		size
 	);
 #endif
 }
