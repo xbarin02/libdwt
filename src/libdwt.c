@@ -1711,7 +1711,7 @@ int dwt_util_compare2_s(
 
 	int ret = 0;
 
-	const float eps = 1e-3;
+	const float eps = 1.e-3f;
 
 	for(int y = 0; y < size_y; y++)
 	{
@@ -1723,7 +1723,7 @@ int dwt_util_compare2_s(
 			if( isnan(a) || isinf(a) || isnan(b) || isinf(b) )
 			{
 #ifdef COMPARE_DESTROY
-				*addr2_s(ptr1, y, x, stride1_x, stride1_y) = 1.0f;
+				*addr2_s(ptr1, y, x, stride1_x, stride1_y) = 1.f;
 #endif
 				ret = 1;
 			}
@@ -1731,15 +1731,60 @@ int dwt_util_compare2_s(
 			if( fabsf(a - b) > eps )
 			{
 #ifdef COMPARE_DESTROY
-				*addr2_s(ptr1, y, x, stride1_x, stride1_y) = 1.0f;
+				*addr2_s(ptr1, y, x, stride1_x, stride1_y) = 1.f;
 #endif
 				ret = 1;
 			}
 			else
 			{
 #ifdef COMPARE_DESTROY
-				*addr2_s(ptr1, y, x, stride1_x, stride1_y) = 0.0f;
+				*addr2_s(ptr1, y, x, stride1_x, stride1_y) = 0.f;
 #endif
+			}
+		}
+	}
+
+	return ret;
+}
+
+int dwt_util_compare2_destructive_s(
+	void *ptr1,
+	const void *ptr2,
+	int stride1_x,
+	int stride1_y,
+	int stride2_x,
+	int stride2_y,
+	int size_x,
+	int size_y
+)
+{
+	assert( ptr1 != NULL && ptr2 != NULL && size_x >= 0 && size_y >= 0 );
+
+	int ret = 0;
+
+	const float eps = 1.e-3f;
+
+	for(int y = 0; y < size_y; y++)
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			const float a = *addr2_s      (ptr1, y, x, stride1_x, stride1_y);
+			const float b = *addr2_const_s(ptr2, y, x, stride2_x, stride2_y);
+
+			float *dest = addr2_s(ptr1, y, x, stride1_x, stride1_y);
+
+			*dest = 0.f;
+
+			if( isnan(a) || isinf(a) || isnan(b) || isinf(b) )
+			{
+				*dest = 1.f;
+				ret = 1;
+			}
+
+			if( fabsf(a - b) > eps )
+			{
+				*dest = 1.f;
+				ret = 1;
 			}
 		}
 	}

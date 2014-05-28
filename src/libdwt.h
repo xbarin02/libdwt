@@ -1401,6 +1401,17 @@ int dwt_util_compare2_s(
 	int size_y
 );
 
+int dwt_util_compare2_destructive_s(
+	void *ptr1,
+	const void *ptr2,
+	int stride1_x,
+	int stride1_y,
+	int stride2_x,
+	int stride2_y,
+	int size_x,
+	int size_y
+);
+
 /**
  * @brief Difference of two images.
  */

@@ -1,3 +1,7 @@
+2014-XX-XX David Barina <ibarina@fit.vutbr.cz>
+* Added implementation of the single-loop core approach with the symmetric
+border extension.
+
 2014-05-19 David Barina <ibarina@fit.vutbr.cz>
 * Added vectorized super-cores of CDF 9/7 DWT.
 * Added Gabor transform related functions (STFT, CWT, S transform).
