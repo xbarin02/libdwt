@@ -672,7 +672,7 @@ void cdf97_2f_dl_4x4_s(
 	const int overlap_x_R = step_x + !!modulo_x_R * (step_x-modulo_x_R); // step_x + ((modulo_x_R) ? (step_x-modulo_x_R) : (0));
 	const int super_x = overlap_x_L + size_x + overlap_x_R;
 	const int limit0_x = overlap_x_L + offset + shift;
-	const int limit1_x = overlap_x_L + size_x - modulo_x_R;
+	const int limit1_x = overlap_x_L + size_x - modulo_x_R - step_x*!modulo_x_R; // HACK: last term should not be here
 
 // 	dwt_util_log(LOG_DBG, "mod_L=%i ovl_L=%i mod_R=%i ovl_R=%i => %i+%i+%i | limits: %i %i \n",
 // 		modulo_x_L, overlap_x_L, modulo_x_R, overlap_x_R,
@@ -686,7 +686,7 @@ void cdf97_2f_dl_4x4_s(
 	const int overlap_y_R = step_y + !!modulo_y_R * (step_y-modulo_y_R); // step_x + ((modulo_x_R) ? (step_x-modulo_x_R) : (0));
 	const int super_y = overlap_y_L + size_y + overlap_y_R;
 	const int limit0_y = overlap_y_L + offset + shift;
-	const int limit1_y = overlap_y_L + size_y - modulo_y_R;
+	const int limit1_y = overlap_y_L + size_y - modulo_y_R - step_y*!modulo_y_R; // HACK: last term should not be here
 
 	// alloc buffers
 	float buffer_x[buff_elem_size*super_x] ALIGNED(16);
@@ -939,9 +939,9 @@ void dwt_util_perf_cdf97_2f_dl_4x4_s(
 		// compare
 		for(int m = 0; m < M; m++)
 		{
-			int err = dwt_util_compare2_s(
-				template,
+			int err = dwt_util_compare2_destructive_s(
 				ptr[m],
+				template,
 				stride_x,
 				stride_y,
 				stride_x,
@@ -952,7 +952,9 @@ void dwt_util_perf_cdf97_2f_dl_4x4_s(
 			if( err )
 			{
 				dwt_util_log(LOG_ERR, "perf: [%i] compare failed :(\n", m);
+#if 1
 				dwt_util_save_to_pgm_s("debug.pgm", 1.0, ptr[m], stride_x, stride_y, size_x, size_y);
+#endif
 			}
 		}
 	}
