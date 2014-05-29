@@ -1,6 +1,9 @@
 #include "dwt-sym.h"
 #include "libdwt.h"
+#define MEASURE_FACTOR 1
+#define MEASURE_PER_PIXEL
 #include "inline.h"
+#include <math.h>
 
 #ifdef __SSE__
 	#include <xmmintrin.h>
@@ -560,7 +563,7 @@ void loop_unified_4x4_V(
 	}
 }
 
-// like loop_unified_4x4 but buffered and process only 2x2 blocks
+// like loop_unified_4x4 but buffered
 static
 void loop_unified_4x4_B(
 	int base_x, int base_y,
@@ -583,8 +586,8 @@ void loop_unified_4x4_B(
 
 	const int shift = 4;
 
-	const int blocks_x = 2;
-	const int blocks_y = 2;
+	const int blocks_x = (stop_x-base_x)/step_x;
+	const int blocks_y = (stop_y-base_y)/step_y;
 
 	const int tmp_size_x = step_x*blocks_x;
 	const int tmp_size_y = step_y*blocks_y;
@@ -636,6 +639,7 @@ void loop_unified_4x4_B(
 	}
 }
 
+// BUG: fails for 41x41, 53x53, 113x113, 145x145
 void cdf97_2f_dl_4x4_s(
 	int size_x,
 	int size_y,
@@ -808,4 +812,221 @@ void cdf97_2f_dl_4x4_s(
 		buffer_y
 	);
 #endif /* one big loop */
+}
+
+void dwt_util_perf_cdf97_2f_dl_4x4_s(
+	int size_x,
+	int size_y,
+	int opt_stride,
+	int M,
+	int N,
+	int clock_type,
+	float *fwd_secs,
+	float *inv_secs,
+	int flush,
+	int type
+)
+{
+	//FUNC_BEGIN;
+
+	assert( M > 0 && N > 0 && fwd_secs && inv_secs );
+
+// 	dwt_util_log(LOG_DBG, "perf. test (%i,%i) N=%i M=%i\n", size_x, size_y, N, M);
+
+	int stride_y = sizeof(float);
+	int stride_x = dwt_util_get_stride(stride_y * size_x, opt_stride);
+
+	// pointer to M pointers to image data
+	void *ptr[M];
+
+	// template
+	void *template;
+
+	// allocate
+	template = dwt_util_alloc_image2(
+		stride_x,
+		stride_y,
+		size_x,
+		size_y
+	);
+
+	// fill with test pattern
+	dwt_util_test_image_fill2_s(
+		template,
+		stride_x,
+		stride_y,
+		size_x,
+		size_y,
+		0,
+		type
+	);
+
+	// allocate M images
+	for(int m = 0; m < M; m++)
+	{
+		ptr[m] = dwt_util_alloc_image2(stride_x, stride_y, size_x, size_y);
+	}
+
+	*fwd_secs = +INFINITY;
+	*inv_secs = +INFINITY;
+
+	// perform N test loops, select minimum
+	for(int n = 0; n < N; n++)
+	{
+		// copy template to ptr[m]
+		for(int m = 0; m < M; m++)
+		{
+			dwt_util_copy_s(template, ptr[m], stride_x, stride_y, size_x, size_y);
+		}
+	
+		// flush memory
+		if(flush)
+		{
+			for(int m = 0; m < M; m++)
+			{
+				dwt_util_flush_cache(ptr[m], dwt_util_image_size(stride_x, stride_y, size_x, size_y));
+			}
+		}
+
+		// start timer
+		const dwt_clock_t time_fwd_start = dwt_util_get_clock(clock_type);
+		// perform M fwd transforms
+		for(int m = 0; m < M; m++)
+		{
+			cdf97_2f_dl_4x4_s(
+				size_x,
+				size_y,
+				ptr[m],
+				stride_x,
+				stride_y,
+				ptr[m],
+				stride_x,
+				stride_y
+			);
+		}
+		// stop timer
+		const dwt_clock_t time_fwd_stop = dwt_util_get_clock(clock_type);
+		// calc avg
+		const float time_fwd_secs = (float)(time_fwd_stop - time_fwd_start) / M * MEASURE_FACTOR / dwt_util_get_frequency(clock_type);
+		// select min
+		if( time_fwd_secs < *fwd_secs )
+			*fwd_secs = time_fwd_secs;
+
+		// flush memory
+		if(flush)
+		{
+			for(int m = 0; m < M; m++)
+			{
+				dwt_util_flush_cache(ptr[m], dwt_util_image_size(stride_x, stride_y, size_x, size_y));
+			}
+		}
+
+		// start timer
+		const dwt_clock_t time_inv_start = dwt_util_get_clock(clock_type);
+		// perform M inv transforms
+		for(int m = 0; m < M; m++)
+		{
+			dwt_cdf97_2i_inplace_s(ptr[m], stride_x, stride_y, size_x, size_y, size_x, size_y, 1, 0, 0);
+		}
+		// stop timer
+		const dwt_clock_t time_inv_stop = dwt_util_get_clock(clock_type);
+		// calc avg
+		const float time_inv_secs = (float)(time_inv_stop - time_inv_start) / M * MEASURE_FACTOR / dwt_util_get_frequency(clock_type);
+		// select min
+		if( time_inv_secs < *inv_secs )
+			*inv_secs = time_inv_secs;
+
+		// compare
+		for(int m = 0; m < M; m++)
+		{
+			int err = dwt_util_compare2_s(
+				template,
+				ptr[m],
+				stride_x,
+				stride_y,
+				stride_x,
+				stride_y,
+				size_x,
+				size_y
+			);
+			if( err )
+			{
+				dwt_util_log(LOG_ERR, "perf: [%i] compare failed :(\n", m);
+				dwt_util_save_to_pgm_s("debug.pgm", 1.0, ptr[m], stride_x, stride_y, size_x, size_y);
+			}
+		}
+	}
+
+	// free M images
+	for(int m = 0; m < M; m++)
+	{
+		dwt_util_free_image(&ptr[m]);
+	}
+	dwt_util_free_image(&template);
+
+	//FUNC_END;
+}
+
+extern const float g_growth_factor_s;
+
+void dwt_util_measure_perf_cdf97_2f_dl_4x4_s(
+	int min_x,
+	int max_x,
+	int opt_stride,
+	int M,
+	int N,
+	int clock_type,
+	FILE *fwd_plot_data,
+	FILE *inv_plot_data
+)
+{
+	//FUNC_BEGIN;
+
+	assert( min_x > 0 && min_x < max_x );
+	assert( M > 0 && N > 0 );
+	assert( fwd_plot_data && inv_plot_data );
+
+	const float growth_factor = g_growth_factor_s;
+
+	// for x = min_x to max_x
+	for(int x = min_x; x <= max_x; x = ceilf(x * growth_factor))
+	{
+		// y is equal to x
+		const int y = x;
+
+		int size_x = x;
+		int size_y = y;
+
+		dwt_util_log(LOG_DBG, "performance test for [%ix%i]...\n", size_x, size_y);
+
+		float fwd_secs;
+		float inv_secs;
+
+		// call perf()
+		dwt_util_perf_cdf97_2f_dl_4x4_s(
+			size_x,
+			size_y,
+			opt_stride,
+			M,
+			N,
+			clock_type,
+			&fwd_secs,
+			&inv_secs,
+			1, // flush
+			0 // type
+		);
+
+#ifdef MEASURE_PER_PIXEL
+		const int denominator = x*y;
+#else
+		const int denominator = 1;
+#endif
+
+		// printf into file
+		fprintf(fwd_plot_data, "%i\t%.10f\n", x*y, fwd_secs/denominator);
+		fprintf(inv_plot_data, "%i\t%.10f\n", x*y, inv_secs/denominator);
+
+	}
+
+	//FUNC_END;
 }

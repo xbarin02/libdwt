@@ -1,0 +1,31 @@
+reset
+
+set terminal pdfcairo enhanced dashed linewidth 2 size 14cm,10cm
+
+set output "test.pdf"
+test
+
+# sprintf(format, dir, threads, accel, stride, j, arr, workers, type, inplace)
+format = "data/dir=%s.threads=%d.accel=%i.opt-stride=%i.j=%i.arr=%s.workers=%i.type=%s.inplace=%i.txt"
+
+set xlabel "pixels"
+set ylabel "time / pixel"
+set format x "%.1s%c"
+set format y "%.1s%cs"
+set logscale x
+set logscale y
+
+dir = "fwd"
+threads = 1
+accel = 0
+stride = 1
+j = 1
+arr = "packed"
+workers = 1
+type = "float"
+
+set output "plot.pdf"
+plot \
+	sprintf(format, dir, threads, accel, stride, j, arr, workers, type,  3) with linespoints lt 1 pt 1  lc rgbcolor "red"     lw 2 title "naive", \
+	sprintf(format, dir, threads, accel, stride, j, arr, workers, type, 11) with linespoints lt 3 pt 2  lc rgbcolor "#007f00" lw 2 title "zero core", \
+	sprintf(format, dir, threads, accel, stride, j, arr, workers, type, -1) with linespoints lt 3 pt 6  lc rgbcolor "blue"    lw 2 title "symmetric core"

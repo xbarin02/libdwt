@@ -109,5 +109,20 @@ int main()
 	dwt_util_free_image(&src);
 	dwt_util_free_image(&dst);
 
+	float fwd_secs, inv_secs;
+	dwt_util_perf_cdf97_2f_dl_4x4_s(
+		size_x,
+		size_y,
+		1, // opt_stride
+		1, // M
+		10, // N
+		clock_type,
+		&fwd_secs,
+		&inv_secs,
+		1, // flush
+		0 // template type
+	);
+	dwt_util_log(LOG_INFO, "perf: %f secs\n", fwd_secs);
+
 	return 0;
 }
