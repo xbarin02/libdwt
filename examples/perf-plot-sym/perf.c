@@ -174,7 +174,6 @@ void do_test(int threads, int accel, int opt_stride, int j, int arr, int workers
 	fclose(file_inv);
 }
 
-// FIXME: for some sizes, the symmetric transform fails!
 int main()
 {
 	dwt_util_init();

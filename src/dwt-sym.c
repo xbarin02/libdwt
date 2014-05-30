@@ -639,7 +639,6 @@ void loop_unified_4x4_B(
 	}
 }
 
-// BUG: fails for 41x41, 53x53, 113x113, 145x145
 void cdf97_2f_dl_4x4_s(
 	int size_x,
 	int size_y,
@@ -1031,4 +1030,68 @@ void dwt_util_measure_perf_cdf97_2f_dl_4x4_s(
 	}
 
 	//FUNC_END;
+}
+
+void dwt_cdf97_2f_dl_4x4_s(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int *j_max_ptr,		///< pointer to the number of intended decomposition levels (scales), the number of achieved decomposition levels will be stored also here
+	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+)
+{
+	UNUSED(zero_padding);
+
+	const int size_o_big_min = min(size_o_big_x,size_o_big_y);
+	const int size_o_big_max = max(size_o_big_x,size_o_big_y);
+
+	int j = 0;
+
+	const int j_limit = ceil_log2( decompose_one ? size_o_big_max : size_o_big_min );
+
+	if( *j_max_ptr < 0 || *j_max_ptr > j_limit )
+		*j_max_ptr = j_limit;
+
+	for(;;)
+	{
+		if( *j_max_ptr == j )
+			break;
+
+		const int size_i_src_x = ceil_div_pow2(size_i_big_x, j  );
+		const int size_i_src_y = ceil_div_pow2(size_i_big_y, j  );
+
+		const int stride_y_j = stride_y * (1 << (j));
+		const int stride_x_j = stride_x * (1 << (j));
+
+		const int size_x = size_i_src_x;
+		const int size_y = size_i_src_y;
+
+		if( size_x < 8 || size_y < 8 )
+		{
+			// FIXME
+			dwt_util_error("unimplemented\n");
+		}
+		else
+		{
+// 			dwt_util_log(LOG_DBG, "j=%i: size=(%i,%i) stride=(%i,%i)\n", j, size_x, size_y, stride_x_j, stride_y_j);
+
+			cdf97_2f_dl_4x4_s(
+				size_x,
+				size_y,
+				ptr,
+				stride_x_j,
+				stride_y_j,
+				ptr,
+				stride_x_j,
+				stride_y_j
+			);
+		}
+
+		j++;
+	}
 }
