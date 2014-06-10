@@ -468,4 +468,14 @@ int is_even(
 	return 1 & ~x;
 }
 
+/**
+ * @returns (i * 2^j) = (i * (1<<j)) = (i << j)
+ */
+UNUSED_FUNC
+static
+int mul_pow2(int i, int j)
+{
+	return i << j;
+}
+
 #endif
