@@ -354,6 +354,12 @@ int virt2real(int pos, int offset, int overlap, int size)
 	if( real > size-1 )
 		real = 2*(size-1) - real;
 
+#if 0
+	if( real < 0 || real > size-1 )
+	{
+		dwt_util_error("out of range\n");
+	}
+#endif
 	return real;
 }
 
@@ -1038,8 +1044,8 @@ void dwt_cdf97_2f_dl_4x4_s(
 	int stride_y,		///< difference between columns (in bytes)
 	int size_o_big_x,	///< width of outer image frame (in elements)
 	int size_o_big_y,	///< height of outer image frame (in elements)
-	int size_i_big_x,	///< width of nested image (in elements)
-	int size_i_big_y,	///< height of nested image (in elements)
+	int size_x,		///< width of nested image (in elements)
+	int size_y,		///< height of nested image (in elements)
 	int *j_max_ptr,		///< pointer to the number of intended decomposition levels (scales), the number of achieved decomposition levels will be stored also here
 	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
 	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
@@ -1062,27 +1068,24 @@ void dwt_cdf97_2f_dl_4x4_s(
 		if( *j_max_ptr == j )
 			break;
 
-		const int size_i_src_x = ceil_div_pow2(size_i_big_x, j  );
-		const int size_i_src_y = ceil_div_pow2(size_i_big_y, j  );
+		const int stride_y_j = mul_pow2(stride_y, j);
+		const int stride_x_j = mul_pow2(stride_x, j);
 
-		const int stride_y_j = stride_y * (1 << (j));
-		const int stride_x_j = stride_x * (1 << (j));
+		const int size_x_j = ceil_div_pow2(size_x, j);
+		const int size_y_j = ceil_div_pow2(size_y, j);
 
-		const int size_x = size_i_src_x;
-		const int size_y = size_i_src_y;
-
-		if( size_x < 8 || size_y < 8 )
+		if( size_x_j < 8 || size_y_j < 8 )
 		{
 			// FIXME
 			dwt_util_error("unimplemented\n");
 		}
 		else
 		{
-// 			dwt_util_log(LOG_DBG, "j=%i: size=(%i,%i) stride=(%i,%i)\n", j, size_x, size_y, stride_x_j, stride_y_j);
+// 			dwt_util_log(LOG_DBG, "j=%i: size=(%i,%i) stride=(%i,%i)\n", j, size_x_j, size_y_j, stride_x_j, stride_y_j);
 
 			cdf97_2f_dl_4x4_s(
-				size_x,
-				size_y,
+				size_x_j,
+				size_y_j,
 				ptr,
 				stride_x_j,
 				stride_y_j,

@@ -71,8 +71,8 @@ void dwt_cdf97_2f_dl_4x4_s(
 	int stride_y,		///< difference between columns (in bytes)
 	int size_o_big_x,	///< width of outer image frame (in elements)
 	int size_o_big_y,	///< height of outer image frame (in elements)
-	int size_i_big_x,	///< width of nested image (in elements)
-	int size_i_big_y,	///< height of nested image (in elements)
+	int size_x,		///< width of nested image (in elements)
+	int size_y,		///< height of nested image (in elements)
 	int *j_max_ptr,		///< pointer to the number of intended decomposition levels (scales), the number of achieved decomposition levels will be stored also here
 	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
 	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
