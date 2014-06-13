@@ -41,6 +41,8 @@ dwt-core.o: dwt-core.c dwt-core.h
 
 dwt-sym.o: dwt-sym.c dwt-sym.h
 
+dwt-sym-ms.o: dwt-sym-ms.c dwt-sym-ms.h
+
 gabor.o: gabor.c gabor.h
 
 dwt-core.S: dwt-core.c dwt-core.h
@@ -49,7 +51,7 @@ dwt-core.S: dwt-core.c dwt-core.h
 $(LIBNAME).S: $(LIBNAME).c $(LIBNAME).h
 	$(CC) $(CFLAGS) -S -Wa,-adhln -g -fverbose-asm $< -o $@
 
-$(LIBNAME).a: $(LIBNAME).o util.o signal.o image.o swt.o dwt.o dwt-simple.o eaw-experimental.o dwt-core.o gabor.o dwt-sym.o
+$(LIBNAME).a: $(LIBNAME).o util.o signal.o image.o swt.o dwt.o dwt-simple.o eaw-experimental.o dwt-core.o gabor.o dwt-sym.o dwt-sym-ms.o
 	$(AR) -rsc $@ $^
 
 # $(LIBNAME).so: $(LIBNAME).o

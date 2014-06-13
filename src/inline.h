@@ -421,7 +421,20 @@ int ceil_div_pow2(
 }
 
 /**
- * @brief returns closest even integer not larger than x; works also for negative numbers
+ * @returns (int)floor(i/(double)(1<<j))
+ */
+UNUSED_FUNC
+static
+int floor_div_pow2(
+	int i,
+	int j
+)
+{
+	return i >> j;
+}
+
+/**
+ * @brief returns closest even (2^1) integer not larger than x; works also for negative numbers
  */
 UNUSED_FUNC
 static
@@ -433,7 +446,7 @@ int to_even(
 }
 
 /**
- * @brief returns closest integer what is multiple of 4 and is not larger than x; works also for negative numbers
+ * @brief returns closest integer what is multiple of 4 (2^2) and is not larger than x; works also for negative numbers
  */
 UNUSED_FUNC
 static
@@ -445,7 +458,7 @@ int to_even4(
 }
 
 /**
- * @brief returns closest integer what is multiple of 8 and is not larger than x; works also for negative numbers
+ * @brief returns closest integer what is multiple of 8 (2^3) and is not larger than x; works also for negative numbers
  */
 UNUSED_FUNC
 static
@@ -454,6 +467,19 @@ int to_even8(
 )
 {
 	return x & ~(8-1);
+}
+
+/**
+ * @brief Round up to the closest power of two.
+ */
+UNUSED_FUNC
+static
+int up_to_pow2(
+	int x,
+	int j
+)
+{
+	return (x+((1<<j)-1)) & ~((1<<j)-1);
 }
 
 /**
