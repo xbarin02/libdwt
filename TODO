@@ -17,7 +17,6 @@
 * MS Windows support
 * code cleanup
 * non-dyadic decompositions
-* Gabor transform
-* add simple functions like minimum, maximum, average, median, threshold
+* Gabor transform using IIR filters
 * functions for type (float, double, int) conversion
 * in separable 2-D transforms, remove scaling from horizontal pass and merge it with scaling of vertical pass

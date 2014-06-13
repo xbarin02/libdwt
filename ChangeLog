@@ -1,6 +1,7 @@
 2014-XX-XX David Barina <ibarina@fit.vutbr.cz>
 * Added implementation of the single-loop core approach with the symmetric
 border extension.
+* Added an experimental multi-scale single-loop implementation.
 
 2014-05-19 David Barina <ibarina@fit.vutbr.cz>
 * Added vectorized super-cores of CDF 9/7 DWT.
