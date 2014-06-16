@@ -135,12 +135,11 @@ int virt2real_error(int pos, int offset, int overlap, int size)
 	return real;
 }
 
-// FIXME: remove overlap
 static
 void unified_4x4(
 	int x, int y,
-	int overlap_x_L, int size_x,
-	int overlap_y_L, int size_y,
+	int size_x,
+	int size_y,
 	const void *src_ptr,
 	int src_stride_x,
 	int src_stride_y,
@@ -151,37 +150,39 @@ void unified_4x4(
 	void *buffer_y
 )
 {
+	// core size
 	const int step_y = 4;
 	const int step_x = 4;
 
-	const int shift = 4; // vertical vectorization
+	// vertical vectorization
+	const int shift = 4;
 
 	__m128 t[4];
 
-	// CORE -- LOAD
+	// LOAD
 	for(int xx = 0; xx < step_x; xx++)
 	{
 		for(int yy = 0; yy < step_y; yy++)
 		{
 			// virtual => real coordinates
-			const int pos_x = virt2real(x, xx, overlap_x_L, size_x);
-			const int pos_y = virt2real(y, yy, overlap_y_L, size_y);
+			const int pos_x = virt2real(x, xx, 0, size_x);
+			const int pos_y = virt2real(y, yy, 0, size_y);
 
 			t[xx][yy] = *addr2_const_s(src_ptr, pos_y, pos_x, src_stride_x, src_stride_y);
 		}
 	}
 
-	// CORE -- CALC
+	// CALC
 	CORE_4X4_CALC(t[0], t[1], t[2], t[3], buffer_y, buffer_x);
 
-	// CORE -- STORE
+	// STORE
 	for(int yy = 0; yy < step_y; yy++)
 	{
 		for(int xx = 0; xx < step_x; xx++)
 		{
 			// virtual => real coordinates
-			const int pos_x = virt2real_error(x-shift, xx, overlap_x_L, size_x);
-			const int pos_y = virt2real_error(y-shift, yy, overlap_y_L, size_y);
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
 			if( pos_x < 0 || pos_y < 0 )
 				continue;
 
@@ -195,7 +196,6 @@ static
 void ms_loop_unified_4x4(
 	int base_x, int base_y,
 	int stop_x, int stop_y,
-	int step_x, int step_y,
 	int size_x, int size_y,
 	void *ptr,
 	int stride_x,
@@ -210,6 +210,10 @@ void ms_loop_unified_4x4(
 {
 	const int words = 1; // vertical
 	const int buff_elem_size = words*4;
+
+	// core size
+	const int step_y = 4;
+	const int step_x = 4;
 
 	const int buffer_x_elems = buff_elem_size*super_x;
 	const int buffer_y_elems = buff_elem_size*super_y;
@@ -237,8 +241,10 @@ void ms_loop_unified_4x4(
 #endif
 				{
 					// FIXME: what distance between read and write head is really needed?
-					const int lag = 18; // 18
+					// 18 (ok), 4 (minimum), 8 (fixed left/top)
+					const int lag = 8;
 
+					// TODO: try to hardcode -(step_x-1) - lag as constant
 					const int x_j = ceil_div_pow2(x,j) -(step_x-1) - lag;
 					const int y_j = ceil_div_pow2(y,j) -(step_y-1) - lag;
 
@@ -249,10 +255,10 @@ void ms_loop_unified_4x4(
 
 					unified_4x4(
 						x_j, y_j,
-						0, size_x_j,
-						0, size_y_j,
+						size_x_j, size_y_j,
 						ptr, stride_x_j, stride_y_j,
 						ptr, stride_x_j, stride_y_j,
+						// TODO: try to use incremental pointers
 						buffer_x + j*buffer_x_elems + (buffer_offset+x_j)*buff_elem_size,
 						buffer_y + j*buffer_y_elems + (buffer_offset+y_j)*buff_elem_size
 					);
@@ -277,23 +283,27 @@ void ms_cdf97_2f_dl_4x4_s(
 	// offset_x, offset_y
 // 	const int offset = 1;
 
-	// step_x, step_y
-	const int step_y = 4;
-	const int step_x = 4;
+	// core size
+// 	const int step_y = 4;
+// 	const int step_x = 4;
 
-	// shift_x, shift_y
-// 	const int shift = 4; // 4 = vertical vectorization
+	// vertical vectorization
+// 	const int shift = 4;
 
 	const int words = 1; // vertical
 	const int buff_elem_size = words*4;
 
-	const int buff_guard = 32; // 32
+	const int buff_guard = 32; // 32: maximal coordinate in negative value (currently -(step_x-1) - lag = -3 -8 = -11)
 	const int overlap_L = 4; // 4
-	const int overlap_R = 13<<J; // 13<<J FIXME: whar overlap is really needed?
+	// FIXME: what overlap is really needed?
+	// 13<<J ... with lag = 18
+	//  7<<J ... with lag =  8 (artifacts)
+	const int overlap_R = 7<<J;
 
 	const int super_x = buff_guard + overlap_L + size_x + overlap_R;
 	const int super_y = buff_guard + overlap_L + size_y + overlap_R;
 
+	// FIXME: try to use prime stride (this is number of elements, not the stride in bytes)
 	const int buffer_x_elems = buff_elem_size*super_x;
 	const int buffer_y_elems = buff_elem_size*super_y;
 
@@ -308,14 +318,12 @@ void ms_cdf97_2f_dl_4x4_s(
 		ms_loop_unified_4x4(
 			/* base */ -overlap_L, -overlap_L, // x, y
 			/* stop */ size_x+overlap_R, size_y+overlap_R, // x, y
-			/* step */ step_x, step_y, // x, y
-			size_x, size_y,
-			ptr, stride_x, stride_y,
-			buffer_x,
-			buffer_y,
+			/* size */ size_x, size_y,
+			ptr,
+			stride_x, stride_y,
+			buffer_x, buffer_y,
 			J,
-			super_x,
-			super_y,
+			super_x, super_y,
 			buffer_offset
 		);
 	}
