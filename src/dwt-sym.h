@@ -78,4 +78,42 @@ void dwt_cdf97_2f_dl_4x4_s(
 	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
 );
 
+void dwt_util_perf_dwt_cdf97_2f_dl_4x4_s(
+	int size_x,
+	int size_y,
+	int opt_stride,
+	int M,
+	int N,
+	int clock_type,
+	float *fwd_secs,
+	float *inv_secs,
+	int flush,
+	int type,
+	int J
+);
+
+void dwt_util_measure_perf_dwt_cdf97_2f_dl_4x4_s(
+	int min_x,
+	int max_x,
+	int opt_stride,
+	int M,
+	int N,
+	int clock_type,
+	FILE *fwd_plot_data,
+	FILE *inv_plot_data,
+	int J
+);
+
+void dwt_util_measure_perf_wrapper_cdf97_2_inplace_sep_s(
+	int min_x,
+	int max_x,
+	int opt_stride,
+	int M,
+	int N,
+	int clock_type,
+	FILE *fwd_plot_data,
+	FILE *inv_plot_data,
+	int J
+);
+
 #endif
