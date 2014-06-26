@@ -137,7 +137,6 @@ int virt2real_error(int pos, int offset, int overlap, int size)
 	return real;
 }
 
-// TODO: store LL and HL/LH/HH separately
 static
 void unified_4x4(
 	int x, int y,
@@ -190,6 +189,74 @@ void unified_4x4(
 				continue;
 
 			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+}
+
+// store LL and HL/LH/HH separately
+static
+void unified_4x4_separately(
+	int x,
+	int y,
+	int size_x,
+	int size_y,
+	// input
+	const void *src_ptr,
+	int src_stride_x,
+	int src_stride_y,
+	// output LL
+	void *low_ptr,
+	int low_stride_x,
+	int low_stride_y,
+	// output HL/LH/HH
+	void *dst_ptr,
+	int dst_stride_x,
+	int dst_stride_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y
+)
+{
+	// core size
+	const int step_y = 4;
+	const int step_x = 4;
+
+	// vertical vectorization
+	const int shift = 4;
+
+	__m128 t[4];
+
+	// LOAD
+	for(int xx = 0; xx < step_x; xx++)
+	{
+		for(int yy = 0; yy < step_y; yy++)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real(x, xx, 0, size_x);
+			const int pos_y = virt2real(y, yy, 0, size_y);
+
+			t[xx][yy] = *addr2_const_s(src_ptr, pos_y, pos_x, src_stride_x, src_stride_y);
+		}
+	}
+
+	// CALC
+	CORE_4X4_CALC(t[0], t[1], t[2], t[3], buffer_y, buffer_x);
+
+	// STORE
+	for(int yy = 0; yy < step_y; yy++)
+	{
+		for(int xx = 0; xx < step_x; xx++)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			if( (xx&1) && (yy&1) )
+				*addr2_s(low_ptr, pos_y, pos_x, low_stride_x, low_stride_y) = t[yy][xx];
+			else
+				*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
 		}
 	}
 }
@@ -334,11 +401,19 @@ void ms_loop_unified_4x4_buffers(
 					const int stride_x_j = mul_pow2(stride_x,j);
 					const int stride_y_j = mul_pow2(stride_y,j);
 
-					unified_4x4(
+					unified_4x4_separately(
 						x_j, y_j,
 						size_x_j, size_y_j,
-						ib[j+0], stride_x_j, stride_y_j,
-						ib[j+1], stride_x_j, stride_y_j,
+#if 0
+						// use several aux. buffers
+						ib[j+0], stride_x_j, stride_y_j, // input
+						ib[j+1], stride_x_j, stride_y_j, // output LL
+#else
+						// use single aux. buffer
+						ib[0], stride_x_j, stride_y_j, // input
+						ib[0], stride_x_j, stride_y_j, // output LL
+#endif
+						ptr, stride_x_j, stride_y_j, // output HL/LH/HH
 						// TODO: try to use incremental pointers
 						buffer_x + j*buffer_x_elems + (buffer_offset+x_j)*buff_elem_size,
 						buffer_y + j*buffer_y_elems + (buffer_offset+y_j)*buff_elem_size
@@ -480,6 +555,7 @@ void ms_cdf97_2f_dl_4x4_buffers_s(
 	}
 
 #if 1
+#if 0
 	// copy ib[J] => ptr
 	// NOTE: coefficiens for different "j" are spread over ib[...]
 	for(int j = 1; j <= J; j++)
@@ -505,6 +581,7 @@ void ms_cdf97_2f_dl_4x4_buffers_s(
 		dwt_util_copy3_s(src_01, dst_01, stride_x_j, stride_y_j, stride_x_j, stride_y_j, size_x_j, size_y_j);
 		dwt_util_copy3_s(src_11, dst_11, stride_x_j, stride_y_j, stride_x_j, stride_y_j, size_x_j, size_y_j);
 	}
+#endif
 	// NOTE: for "J" copy whole LL: (0,0)*stride
 	{
 		int j = J;
@@ -514,7 +591,11 @@ void ms_cdf97_2f_dl_4x4_buffers_s(
 		const int stride_x_j = mul_pow2(stride_x,j+0);
 		const int stride_y_j = mul_pow2(stride_y,j+0);
 
+#if 0
 		dwt_util_copy3_s(ib[j], ptr, stride_x_j, stride_y_j, stride_x_j, stride_y_j, size_x_j, size_y_j);
+#else
+		dwt_util_copy3_s(ib[0], ptr, stride_x_j, stride_y_j, stride_x_j, stride_y_j, size_x_j, size_y_j);
+#endif
 	}
 #endif
 	// free image buffers
@@ -605,8 +686,11 @@ void dwt_util_perf_ms_cdf97_2f_dl_4x4_s(
 		// perform M fwd transforms
 		for(int m = 0; m < M; m++)
 		{
+#if 0
 			ms_cdf97_2f_dl_4x4_s(
-			//ms_cdf97_2f_dl_4x4_buffers_s(
+#else
+			ms_cdf97_2f_dl_4x4_buffers_s(
+#endif
 				size_x,
 				size_y,
 				ptr[m],
