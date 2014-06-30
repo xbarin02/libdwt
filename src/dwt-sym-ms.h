@@ -17,7 +17,11 @@ void ms_cdf97_2f_dl_4x4_s(
 	int J
 );
 
-void ms_cdf97_2f_dl_4x4_buffers_s(
+/**
+ * @brief Multi-scale transform. Several levels of the transform are fused in a single loop.
+ * @warning experimental
+ */
+void ms_cdf97_2f_dl_4x4_fused_s(
 	int size_x,
 	int size_y,
 	void *ptr,
