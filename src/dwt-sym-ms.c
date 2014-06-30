@@ -391,6 +391,65 @@ float *get_buffer_ptr(
 }
 
 static
+void multiscale_4x4(
+	// scale
+	int j,
+	// position
+	int x,
+	int y,
+	// size
+	int size_x,
+	int size_y,
+	// data
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y,
+	// others
+	int super_x,
+	int super_y,
+	int buffer_offset
+)
+{
+	const int words = 1; // vertical
+	const int buff_elem_size = words*4;
+
+	const int buffer_x_elems = buff_elem_size*super_x;
+	const int buffer_y_elems = buff_elem_size*super_y;
+
+	const int step_y = 4;
+	const int step_x = 4;
+
+	const int lag = 0;
+
+	const int lag_x = (step_x-1) + lag;
+	const int lag_y = (step_y-1) + lag;
+	
+	const int x_j = ceil_div_pow2(x, j) - lag_x;
+	const int y_j = ceil_div_pow2(y, j) - lag_y;
+
+	const int size_x_j = ceil_div_pow2(size_x, j);
+	const int size_y_j = ceil_div_pow2(size_y, j);
+	const int stride_x_j = mul_pow2(stride_x, j);
+	const int stride_y_j = mul_pow2(stride_y, j);
+
+	unified_4x4_separately(
+		x_j, y_j,
+		size_x_j, size_y_j,
+		// use a single aux. buffer
+		ptr, stride_x_j, stride_y_j, // input
+		ptr, stride_x_j, stride_y_j, // output LL
+		// output to a single destination
+		ptr, stride_x_j, stride_y_j, // output HL/LH/HH
+		// buffers
+		get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+		get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size)
+	);
+}
+
+static
 void ms_loop_unified_4x4_fused(
 	int base_x, int base_y,
 	int stop_x, int stop_y,
@@ -406,21 +465,21 @@ void ms_loop_unified_4x4_fused(
 	int buffer_offset
 )
 {
-	const int words = 1; // vertical
-	const int buff_elem_size = words*4;
+// 	const int words = 1; // vertical
+// 	const int buff_elem_size = words*4;
 
 	// core size
 	const int step_y = 4;
 	const int step_x = 4;
 
-	const int buffer_x_elems = buff_elem_size*super_x;
-	const int buffer_y_elems = buff_elem_size*super_y;
+// 	const int buffer_x_elems = buff_elem_size*super_x;
+// 	const int buffer_y_elems = buff_elem_size*super_y;
 
 	// FIXME: what distance between read and write head is really needed?
-	const int lag = 0;
+// 	const int lag = 0;
 
-	const int lag_x = (step_x-1) + lag;
-	const int lag_y = (step_y-1) + lag;
+// 	const int lag_x = (step_x-1) + lag;
+// 	const int lag_y = (step_y-1) + lag;
 
 	const int step_x_max = mul_pow2(step_x, J-1);
 	const int step_y_max = mul_pow2(step_y, J-1);
@@ -446,25 +505,26 @@ void ms_loop_unified_4x4_fused(
 				for(int yy = y; yy < y+step_y_max; yy += step_y_j)
 				for(int xx = x; xx < x+step_x_max; xx += step_x_j)
 				{
-					const int x_j = ceil_div_pow2(xx, j) - lag_x;
-					const int y_j = ceil_div_pow2(yy, j) - lag_y;
-
-					const int size_x_j = ceil_div_pow2(size_x, j);
-					const int size_y_j = ceil_div_pow2(size_y, j);
-					const int stride_x_j = mul_pow2(stride_x, j);
-					const int stride_y_j = mul_pow2(stride_y, j);
-
-					unified_4x4_separately(
-						x_j, y_j,
-						size_x_j, size_y_j,
-						// use a single aux. buffer
-						ptr, stride_x_j, stride_y_j, // input
-						ptr, stride_x_j, stride_y_j, // output LL
-						// output to a single destination
-						ptr, stride_x_j, stride_y_j, // output HL/LH/HH
+					multiscale_4x4(
+						// scale
+						j,
+						// position
+						xx,
+						yy,
+						// size
+						size_x,
+						size_y,
+						// data
+						ptr,
+						stride_x,
+						stride_y,
 						// buffers
-						get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
-						get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size)
+						buffer_x,
+						buffer_y,
+						// others
+						super_x,
+						super_y,
+						buffer_offset
 					);
 				}
 			}
