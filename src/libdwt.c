@@ -825,24 +825,6 @@ int dwt_util_floor_div(
 	return floor_div(x, y);
 }
 
-/** @returns (int)floor(x/(double)2) */
-static
-int floor_div2(
-	int x
-)
-{
-	return x >> 1;
-}
-
-/** @returns (int)ceil(x/(double)2) */
-static
-int ceil_div2(
-	int x
-)
-{
-	return (x + 1) >> 1;
-}
-
 /**
  * @brief returns 1 if x is odd, 0 otherwise; works also for negative numbers
  */

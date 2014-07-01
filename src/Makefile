@@ -45,6 +45,8 @@ dwt-sym-ms.o: dwt-sym-ms.c dwt-sym-ms.h
 
 gabor.o: gabor.c gabor.h
 
+denoise.o: denoise.c denoise.h
+
 dwt-core.S: dwt-core.c dwt-core.h
 	$(CC) $(CFLAGS) -c -Wa,-ahl=dwt-core.S -g -fverbose-asm $< -o /dev/null
 

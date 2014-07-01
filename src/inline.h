@@ -512,4 +512,28 @@ int mul_pow2(int i, int j)
 	#define unlikely(x) (x)
 #endif
 
+/**
+ * @returns (int)floor(x/(double)2)
+ */
+UNUSED_FUNC
+static
+int floor_div2(
+	int x
+)
+{
+	return x >> 1;
+}
+
+/**
+ * @returns (int)ceil(x/(double)2)
+ */
+UNUSED_FUNC
+static
+int ceil_div2(
+	int x
+)
+{
+	return (x + 1) >> 1;
+}
+
 #endif
