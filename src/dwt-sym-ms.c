@@ -391,6 +391,89 @@ float *get_buffer_ptr(
 }
 
 static
+void multiscale_j(
+	int j,
+	// position
+	int x,
+	int y,
+	// size
+	int size_x,
+	int size_y,
+	// src
+	void *src,
+	int src_stride_x,
+	int src_stride_y,
+	// dst
+	void *dst,
+	int dst_stride_x,
+	int dst_stride_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y,
+	// others
+	int super_x,
+	int super_y,
+	int buffer_offset
+)
+{
+	const int step_y = 4;
+	const int step_x = 4;
+
+	// process j-1: four multiscale_j(j-1)
+
+	if( j > 0 )
+	{
+		const int step_y_j1 = mul_pow2(step_y, j-1);
+		const int step_x_j1 = mul_pow2(step_x, j-1);
+
+		// left-top
+		multiscale_j(j-1, x+0,         y+0,         size_x, size_y, src, src_stride_x, src_stride_y, dst, dst_stride_x, dst_stride_y, buffer_x, buffer_y, super_x, super_y, buffer_offset);
+		// right-top
+		multiscale_j(j-1, x+step_x_j1, y+0,         size_x, size_y, src, src_stride_x, src_stride_y, dst, dst_stride_x, dst_stride_y, buffer_x, buffer_y, super_x, super_y, buffer_offset);
+		// left-bottom
+		multiscale_j(j-1, x+0,         y+step_y_j1, size_x, size_y, src, src_stride_x, src_stride_y, dst, dst_stride_x, dst_stride_y, buffer_x, buffer_y, super_x, super_y, buffer_offset);
+		// right-bottom
+		multiscale_j(j-1, x+step_x_j1, y+step_y_j1, size_x, size_y, src, src_stride_x, src_stride_y, dst, dst_stride_x, dst_stride_y, buffer_x, buffer_y, super_x, super_y, buffer_offset);
+	}
+
+	// process j: unified_4x4_separately(j)
+
+	const int words = 1; // vertical
+	const int buff_elem_size = words*4;
+
+	const int buffer_x_elems = buff_elem_size*super_x;
+	const int buffer_y_elems = buff_elem_size*super_y;
+
+	const int lag = 0;
+
+	const int lag_x = (step_x-1) + lag;
+	const int lag_y = (step_y-1) + lag;
+	
+	const int x_j = ceil_div_pow2(x, j) - lag_x;
+	const int y_j = ceil_div_pow2(y, j) - lag_y;
+
+	const int size_x_j = ceil_div_pow2(size_x, j);
+	const int size_y_j = ceil_div_pow2(size_y, j);
+	const int src_stride_x_j = mul_pow2(src_stride_x, j);
+	const int src_stride_y_j = mul_pow2(src_stride_y, j);
+	const int dst_stride_x_j = mul_pow2(dst_stride_x, j);
+	const int dst_stride_y_j = mul_pow2(dst_stride_y, j);
+
+	unified_4x4_separately(
+		x_j, y_j,
+		size_x_j, size_y_j,
+		// use a single aux. buffer
+		src, src_stride_x_j, src_stride_y_j, // input
+		src, src_stride_x_j, src_stride_y_j, // output LL
+		// output to a single destination
+		dst, dst_stride_x_j, dst_stride_y_j, // output HL/LH/HH
+		// buffers
+		get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+		get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size)
+	);
+}
+
+static
 void multiscale_4x4(
 	// scale
 	int j,
@@ -484,19 +567,39 @@ void ms_loop_unified_4x4_fused(
 	const int step_x_max = mul_pow2(step_x, J-1);
 	const int step_y_max = mul_pow2(step_y, J-1);
 
-#if 1
+// 	dwt_util_log(LOG_DBG, "step_max=(%i,%i) J=%i\n", step_y_max, step_x_max, J);
+
 	// order=horizontal
 	for(int y = base_y; y < stop_y; y += step_y_max)
 	{
 		for(int x = base_x; x < stop_x; x += step_x_max)
 		{
+#if 0
+			multiscale_j(
+				J-1,
+				// position
+				x,
+				y,
+				// size
+				size_x,
+				size_y,
+				// src
+				ptr,
+				stride_x,
+				stride_y,
+				// dst
+				ptr,
+				stride_x,
+				stride_y,
+				// buffers
+				buffer_x,
+				buffer_y,
+				// others
+				super_x,
+				super_y,
+				buffer_offset
+			);
 #else
-	// order=vertical
-	for(int x = base_x; x < stop_x; x += step_x_max)
-	{
-		for(int y = base_y; y < stop_y; y += step_y_max)
-		{
-#endif
 			for(int j = 0; j < J; j++)
 			{
 				const int step_x_j = mul_pow2(step_x, j);
@@ -528,6 +631,7 @@ void ms_loop_unified_4x4_fused(
 					);
 				}
 			}
+#endif
 		}
 	}
 }
