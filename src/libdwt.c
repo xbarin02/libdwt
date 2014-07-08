@@ -21855,8 +21855,8 @@ void dwt_util_get_sizes_d(
 }
 
 // 1.618, 1.333, 1.28, 1.13, 1.06, 1.02
-const float g_growth_factor_s = 1.28f;
-const float g_growth_factor_d = 1.28;
+float g_growth_factor_s = 1.28f;
+float g_growth_factor_d = 1.28;
 
 void dwt_util_measure_perf_cdf97_1_s(
 	enum dwt_array array_type,

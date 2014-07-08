@@ -30,6 +30,22 @@ void ms_cdf97_2f_dl_4x4_fused_s(
 	int J
 );
 
+/**
+ * @brief Multi-scale transform. Several levels of the transform are fused in a single loop.
+ * @warning experimental
+ */
+void ms_cdf97_2f_dl_4x4_fused2_s(
+	int size_x,
+	int size_y,
+	void *src,
+	int src_stride_x,
+	int src_stride_y,
+	void *dst,
+	int dst_stride_x,
+	int dst_stride_y,
+	int J
+);
+
 void dwt_util_perf_ms_cdf97_2f_dl_4x4_s(
 	int size_x,
 	int size_y,

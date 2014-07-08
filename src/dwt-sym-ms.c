@@ -300,7 +300,1172 @@ void unified_4x4_separately(
 	}
 }
 
-// FIXME: lag
+static
+void unified_4x4_separately2(
+	int size_x,
+	int size_y,
+	// input
+	const void *src_ptr,
+	int src_stride_x,
+	int src_stride_y,
+	int src_pos_x,
+	int src_pos_y,
+	// output LL
+	void *low_ptr,
+	int low_stride_x,
+	int low_stride_y,
+	int low_pos_x,
+	int low_pos_y,
+	// output HL/LH/HH
+	void *dst_ptr,
+	int dst_stride_x,
+	int dst_stride_y,
+	int dst_pos_x,
+	int dst_pos_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y
+)
+{
+	// core size
+	const int step_y = 4;
+	const int step_x = 4;
+
+	// vertical vectorization
+	const int shift = 4;
+
+	__m128 t[4];
+
+	// LOAD = src
+	for(int xx = 0; xx < step_x; xx++)
+	{
+		for(int yy = 0; yy < step_y; yy++)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real(src_pos_x, xx, 0, size_x);
+			const int pos_y = virt2real(src_pos_y, yy, 0, size_y);
+
+			t[xx][yy] = *addr2_const_s(src_ptr, pos_y, pos_x, src_stride_x, src_stride_y);
+		}
+	}
+
+	// CALC
+	CORE_4X4_CALC(t[0], t[1], t[2], t[3], buffer_y, buffer_x);
+
+	// STORE LL = low
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(low_pos_x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(low_pos_y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(low_ptr, pos_y, pos_x, low_stride_x, low_stride_y) = t[yy][xx];
+		}
+	}
+
+	// STORE HL/LH/HH = dst
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(dst_pos_x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(dst_pos_y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(dst_pos_x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(dst_pos_y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(dst_pos_x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(dst_pos_y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+}
+
+// image(LL) => buffer(LL)
+static
+void unified_4x4_separately_img2tmp(
+	int x,
+	int y,
+	int size_x,
+	int size_y,
+	// input
+	const void *src_ptr,	// FIXME: possibly unused
+	int src_stride_x,	// FIXME: possibly unused
+	int src_stride_y,	// FIXME: possibly unused
+	// output LL
+	void *low_ptr,		// FIXME: possibly unused
+	int low_stride_x,	// FIXME: possibly unused
+	int low_stride_y,	// FIXME: possibly unused
+	// output HL/LH/HH
+	void *dst_ptr,
+	int dst_stride_x,
+	int dst_stride_y,
+	// core buffers
+	void *buffer_x,
+	void *buffer_y,
+	// LL buffers
+	int segment_x,		// FIXME: segment of output buffer (0, 1)
+	int segment_y,		// FIXME: segment of output buffer (0, 1)
+	__m128 *LL_src,		// FIXME: input from this buffer
+	__m128 *LL_dst		// FIXME: output into 1/4 of this buffer
+)
+{
+	// core size
+	const int step_y = 4;
+	const int step_x = 4;
+
+	// vertical vectorization
+	const int shift = 4;
+
+	__m128 t[4];
+
+	// LOAD
+	for(int xx = 0; xx < step_x; xx++)
+	{
+		for(int yy = 0; yy < step_y; yy++)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real(x, xx, 0, size_x);
+			const int pos_y = virt2real(y, yy, 0, size_y);
+
+			t[xx][yy] = *addr2_const_s(src_ptr, pos_y, pos_x, src_stride_x, src_stride_y);
+		}
+	}
+
+	// CALC
+	CORE_4X4_CALC(t[0], t[1], t[2], t[3], buffer_y, buffer_x);
+
+	// STORE LL
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			LL_dst[/*x*/(segment_x<<1)+(xx>>1)][/*y*/(segment_y<<1)+(yy>>1)] = /*float*/t[yy][xx];
+		}
+	}
+
+	// STORE HL/LH/HH
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+}
+
+// (segment): x=0 y=0
+static
+void unified_4x4_separately_img2tmp_segment00(
+	int x,
+	int y,
+	int size_x,
+	int size_y,
+	// input
+	const void *src_ptr,	// FIXME: possibly unused
+	int src_stride_x,	// FIXME: possibly unused
+	int src_stride_y,	// FIXME: possibly unused
+	// output LL
+	void *low_ptr,		// FIXME: possibly unused
+	int low_stride_x,	// FIXME: possibly unused
+	int low_stride_y,	// FIXME: possibly unused
+	// output HL/LH/HH
+	void *dst_ptr,
+	int dst_stride_x,
+	int dst_stride_y,
+	// core buffers
+	void *buffer_x,
+	void *buffer_y,
+	// LL buffers
+	__m128 *LL_src,		// FIXME: input from this buffer
+	__m128 *LL_dst		// FIXME: output into 1/4 of this buffer
+)
+{
+	// core size
+	const int step_y = 4;
+	const int step_x = 4;
+
+	// vertical vectorization
+	const int shift = 4;
+
+	__m128 t[4];
+
+	// LOAD
+	for(int xx = 0; xx < step_x; xx++)
+	{
+		for(int yy = 0; yy < step_y; yy++)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real(x, xx, 0, size_x);
+			const int pos_y = virt2real(y, yy, 0, size_y);
+
+			t[xx][yy] = *addr2_const_s(src_ptr, pos_y, pos_x, src_stride_x, src_stride_y);
+		}
+	}
+
+	// CALC
+	CORE_4X4_CALC(t[0], t[1], t[2], t[3], buffer_y, buffer_x);
+
+	// STORE LL
+	LL_dst[0][0] = t[1][1];
+	LL_dst[1][0] = t[1][3];
+	LL_dst[0][1] = t[3][1];
+	LL_dst[1][1] = t[3][3];
+
+	// STORE HL/LH/HH
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+}
+
+// (segment): x=0 y=1
+static
+void unified_4x4_separately_img2tmp_segment01(
+	int x,
+	int y,
+	int size_x,
+	int size_y,
+	// input
+	const void *src_ptr,	// FIXME: possibly unused
+	int src_stride_x,	// FIXME: possibly unused
+	int src_stride_y,	// FIXME: possibly unused
+	// output LL
+	void *low_ptr,		// FIXME: possibly unused
+	int low_stride_x,	// FIXME: possibly unused
+	int low_stride_y,	// FIXME: possibly unused
+	// output HL/LH/HH
+	void *dst_ptr,
+	int dst_stride_x,
+	int dst_stride_y,
+	// core buffers
+	void *buffer_x,
+	void *buffer_y,
+	// LL buffers
+	__m128 *LL_src,		// FIXME: input from this buffer
+	__m128 *LL_dst		// FIXME: output into 1/4 of this buffer
+)
+{
+	// core size
+	const int step_y = 4;
+	const int step_x = 4;
+
+	// vertical vectorization
+	const int shift = 4;
+
+	__m128 t[4];
+
+	// LOAD
+	for(int xx = 0; xx < step_x; xx++)
+	{
+		for(int yy = 0; yy < step_y; yy++)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real(x, xx, 0, size_x);
+			const int pos_y = virt2real(y, yy, 0, size_y);
+
+			t[xx][yy] = *addr2_const_s(src_ptr, pos_y, pos_x, src_stride_x, src_stride_y);
+		}
+	}
+
+	// CALC
+	CORE_4X4_CALC(t[0], t[1], t[2], t[3], buffer_y, buffer_x);
+
+	// STORE LL
+	LL_dst[0][2] = t[1][1];
+	LL_dst[1][2] = t[1][3];
+	LL_dst[0][3] = t[3][1];
+	LL_dst[1][3] = t[3][3];
+
+	// STORE HL/LH/HH
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+}
+
+// (segment): x=1 y=0
+static
+void unified_4x4_separately_img2tmp_segment10(
+	int x,
+	int y,
+	int size_x,
+	int size_y,
+	// input
+	const void *src_ptr,	// FIXME: possibly unused
+	int src_stride_x,	// FIXME: possibly unused
+	int src_stride_y,	// FIXME: possibly unused
+	// output LL
+	void *low_ptr,		// FIXME: possibly unused
+	int low_stride_x,	// FIXME: possibly unused
+	int low_stride_y,	// FIXME: possibly unused
+	// output HL/LH/HH
+	void *dst_ptr,
+	int dst_stride_x,
+	int dst_stride_y,
+	// core buffers
+	void *buffer_x,
+	void *buffer_y,
+	// LL buffers
+	__m128 *LL_src,		// FIXME: input from this buffer
+	__m128 *LL_dst		// FIXME: output into 1/4 of this buffer
+)
+{
+	// core size
+	const int step_y = 4;
+	const int step_x = 4;
+
+	// vertical vectorization
+	const int shift = 4;
+
+	__m128 t[4];
+
+	// LOAD
+	for(int xx = 0; xx < step_x; xx++)
+	{
+		for(int yy = 0; yy < step_y; yy++)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real(x, xx, 0, size_x);
+			const int pos_y = virt2real(y, yy, 0, size_y);
+
+			t[xx][yy] = *addr2_const_s(src_ptr, pos_y, pos_x, src_stride_x, src_stride_y);
+		}
+	}
+
+	// CALC
+	CORE_4X4_CALC(t[0], t[1], t[2], t[3], buffer_y, buffer_x);
+
+	// STORE LL
+	LL_dst[2][0] = t[1][1];
+	LL_dst[3][0] = t[1][3];
+	LL_dst[2][1] = t[3][1];
+	LL_dst[3][1] = t[3][3];
+
+	// STORE HL/LH/HH
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+}
+
+// (segment): x=1 y=1
+static
+void unified_4x4_separately_img2tmp_segment11(
+	int x,
+	int y,
+	int size_x,
+	int size_y,
+	// input
+	const void *src_ptr,	// FIXME: possibly unused
+	int src_stride_x,	// FIXME: possibly unused
+	int src_stride_y,	// FIXME: possibly unused
+	// output LL
+	void *low_ptr,		// FIXME: possibly unused
+	int low_stride_x,	// FIXME: possibly unused
+	int low_stride_y,	// FIXME: possibly unused
+	// output HL/LH/HH
+	void *dst_ptr,
+	int dst_stride_x,
+	int dst_stride_y,
+	// core buffers
+	void *buffer_x,
+	void *buffer_y,
+	// LL buffers
+	__m128 *LL_src,		// FIXME: input from this buffer
+	__m128 *LL_dst		// FIXME: output into 1/4 of this buffer
+)
+{
+	// core size
+	const int step_y = 4;
+	const int step_x = 4;
+
+	// vertical vectorization
+	const int shift = 4;
+
+	__m128 t[4];
+
+	// LOAD
+	for(int xx = 0; xx < step_x; xx++)
+	{
+		for(int yy = 0; yy < step_y; yy++)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real(x, xx, 0, size_x);
+			const int pos_y = virt2real(y, yy, 0, size_y);
+
+			t[xx][yy] = *addr2_const_s(src_ptr, pos_y, pos_x, src_stride_x, src_stride_y);
+		}
+	}
+
+	// CALC
+	CORE_4X4_CALC(t[0], t[1], t[2], t[3], buffer_y, buffer_x);
+
+	// STORE LL
+	LL_dst[2][2] = t[1][1];
+	LL_dst[3][2] = t[1][3];
+	LL_dst[2][3] = t[3][1];
+	LL_dst[3][3] = t[3][3];
+
+	// STORE HL/LH/HH
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+}
+
+// buffer(LL) => buffer(LL)
+static
+void unified_4x4_separately_tmp2tmp(
+	int x,
+	int y,
+	int size_x,
+	int size_y,
+	// input
+	const void *src_ptr,	// FIXME: possibly unused
+	int src_stride_x,	// FIXME: possibly unused
+	int src_stride_y,	// FIXME: possibly unused
+	// output LL
+	void *low_ptr,		// FIXME: possibly unused
+	int low_stride_x,	// FIXME: possibly unused
+	int low_stride_y,	// FIXME: possibly unused
+	// output HL/LH/HH
+	void *dst_ptr,
+	int dst_stride_x,
+	int dst_stride_y,
+	// core buffers
+	void *buffer_x,
+	void *buffer_y,
+	// LL buffers
+	int segment_x,		// FIXME: segment of output buffer (0, 1)
+	int segment_y,		// FIXME: segment of output buffer (0, 1)
+	__m128 *LL_src,		// FIXME: input from this buffer
+	__m128 *LL_dst		// FIXME: output into 1/4 of this buffer
+)
+{
+	// core size
+	const int step_y = 4;
+	const int step_x = 4;
+
+	// vertical vectorization
+	const int shift = 4;
+
+	//__m128 t[4];
+
+	// LOAD
+	__m128 *t = LL_src;
+
+	// CALC
+	CORE_4X4_CALC(t[0], t[1], t[2], t[3], buffer_y, buffer_x);
+
+	// STORE LL
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			LL_dst[/*x*/(segment_x<<1)+(xx>>1)][/*y*/(segment_y<<1)+(yy>>1)] = /*float*/t[yy][xx];
+		}
+	}
+
+	// STORE HL/LH/HH
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+}
+
+// (segments): x=0, y=0
+static
+void unified_4x4_separately_tmp2tmp_segment00(
+	int x,
+	int y,
+	int size_x,
+	int size_y,
+	// input
+	const void *src_ptr,	// FIXME: possibly unused
+	int src_stride_x,	// FIXME: possibly unused
+	int src_stride_y,	// FIXME: possibly unused
+	// output LL
+	void *low_ptr,		// FIXME: possibly unused
+	int low_stride_x,	// FIXME: possibly unused
+	int low_stride_y,	// FIXME: possibly unused
+	// output HL/LH/HH
+	void *dst_ptr,
+	int dst_stride_x,
+	int dst_stride_y,
+	// core buffers
+	void *buffer_x,
+	void *buffer_y,
+	// LL buffers
+	__m128 *LL_src,		// FIXME: input from this buffer
+	__m128 *LL_dst		// FIXME: output into 1/4 of this buffer
+)
+{
+	// core size
+	const int step_y = 4;
+	const int step_x = 4;
+
+	// vertical vectorization
+	const int shift = 4;
+
+	//__m128 t[4];
+
+	// LOAD
+	__m128 *t = LL_src;
+
+	// CALC
+	CORE_4X4_CALC(t[0], t[1], t[2], t[3], buffer_y, buffer_x);
+
+	// STORE LL
+	LL_dst[0][0] = t[1][1];
+	LL_dst[1][0] = t[1][3];
+	LL_dst[0][1] = t[3][1];
+	LL_dst[1][1] = t[3][3];
+
+	// STORE HL/LH/HH
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+}
+
+// (segments): x=0, y=1
+static
+void unified_4x4_separately_tmp2tmp_segment01(
+	int x,
+	int y,
+	int size_x,
+	int size_y,
+	// input
+	const void *src_ptr,	// FIXME: possibly unused
+	int src_stride_x,	// FIXME: possibly unused
+	int src_stride_y,	// FIXME: possibly unused
+	// output LL
+	void *low_ptr,		// FIXME: possibly unused
+	int low_stride_x,	// FIXME: possibly unused
+	int low_stride_y,	// FIXME: possibly unused
+	// output HL/LH/HH
+	void *dst_ptr,
+	int dst_stride_x,
+	int dst_stride_y,
+	// core buffers
+	void *buffer_x,
+	void *buffer_y,
+	// LL buffers
+	__m128 *LL_src,		// FIXME: input from this buffer
+	__m128 *LL_dst		// FIXME: output into 1/4 of this buffer
+)
+{
+	// core size
+	const int step_y = 4;
+	const int step_x = 4;
+
+	// vertical vectorization
+	const int shift = 4;
+
+	//__m128 t[4];
+
+	// LOAD
+	__m128 *t = LL_src;
+
+	// CALC
+	CORE_4X4_CALC(t[0], t[1], t[2], t[3], buffer_y, buffer_x);
+
+	// STORE LL
+	LL_dst[0][2] = t[1][1];
+	LL_dst[1][2] = t[1][3];
+	LL_dst[0][3] = t[3][1];
+	LL_dst[1][3] = t[3][3];
+
+	// STORE HL/LH/HH
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+}
+
+// (segments): x=1, y=0
+static
+void unified_4x4_separately_tmp2tmp_segment10(
+	int x,
+	int y,
+	int size_x,
+	int size_y,
+	// input
+	const void *src_ptr,	// FIXME: possibly unused
+	int src_stride_x,	// FIXME: possibly unused
+	int src_stride_y,	// FIXME: possibly unused
+	// output LL
+	void *low_ptr,		// FIXME: possibly unused
+	int low_stride_x,	// FIXME: possibly unused
+	int low_stride_y,	// FIXME: possibly unused
+	// output HL/LH/HH
+	void *dst_ptr,
+	int dst_stride_x,
+	int dst_stride_y,
+	// core buffers
+	void *buffer_x,
+	void *buffer_y,
+	// LL buffers
+	__m128 *LL_src,		// FIXME: input from this buffer
+	__m128 *LL_dst		// FIXME: output into 1/4 of this buffer
+)
+{
+	// core size
+	const int step_y = 4;
+	const int step_x = 4;
+
+	// vertical vectorization
+	const int shift = 4;
+
+	//__m128 t[4];
+
+	// LOAD
+	__m128 *t = LL_src;
+
+	// CALC
+	CORE_4X4_CALC(t[0], t[1], t[2], t[3], buffer_y, buffer_x);
+
+	// STORE LL
+	LL_dst[2][0] = t[1][1];
+	LL_dst[3][0] = t[1][3];
+	LL_dst[2][1] = t[3][1];
+	LL_dst[3][1] = t[3][3];
+
+	// STORE HL/LH/HH
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+}
+
+// (segments): x=1, y=1
+static
+void unified_4x4_separately_tmp2tmp_segment11(
+	int x,
+	int y,
+	int size_x,
+	int size_y,
+	// input
+	const void *src_ptr,	// FIXME: possibly unused
+	int src_stride_x,	// FIXME: possibly unused
+	int src_stride_y,	// FIXME: possibly unused
+	// output LL
+	void *low_ptr,		// FIXME: possibly unused
+	int low_stride_x,	// FIXME: possibly unused
+	int low_stride_y,	// FIXME: possibly unused
+	// output HL/LH/HH
+	void *dst_ptr,
+	int dst_stride_x,
+	int dst_stride_y,
+	// core buffers
+	void *buffer_x,
+	void *buffer_y,
+	// LL buffers
+	__m128 *LL_src,		// FIXME: input from this buffer
+	__m128 *LL_dst		// FIXME: output into 1/4 of this buffer
+)
+{
+	// core size
+	const int step_y = 4;
+	const int step_x = 4;
+
+	// vertical vectorization
+	const int shift = 4;
+
+	//__m128 t[4];
+
+	// LOAD
+	__m128 *t = LL_src;
+
+	// CALC
+	CORE_4X4_CALC(t[0], t[1], t[2], t[3], buffer_y, buffer_x);
+
+	// STORE LL
+	LL_dst[2][2] = t[1][1];
+	LL_dst[3][2] = t[1][3];
+	LL_dst[2][3] = t[3][1];
+	LL_dst[3][3] = t[3][3];
+
+	// STORE HL/LH/HH
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+}
+
+// buffer(LL) => image(LL)
+static
+void unified_4x4_separately_tmp2img(
+	int x,
+	int y,
+	int size_x,
+	int size_y,
+	// input
+	const void *src_ptr,	// FIXME: possibly unused
+	int src_stride_x,	// FIXME: possibly unused
+	int src_stride_y,	// FIXME: possibly unused
+	// output LL
+	void *low_ptr,		// FIXME: possibly unused
+	int low_stride_x,	// FIXME: possibly unused
+	int low_stride_y,	// FIXME: possibly unused
+	// output HL/LH/HH
+	void *dst_ptr,
+	int dst_stride_x,
+	int dst_stride_y,
+	// core buffers
+	void *buffer_x,
+	void *buffer_y,
+	// LL buffers
+	__m128 *LL_src,		// FIXME: input from this buffer
+	__m128 *LL_dst		// FIXME: output into 1/4 of this buffer
+)
+{
+	// core size
+	const int step_y = 4;
+	const int step_x = 4;
+
+	// vertical vectorization
+	const int shift = 4;
+
+	// LOAD
+	__m128 *t = LL_src;
+
+	// CALC
+	CORE_4X4_CALC(t[0], t[1], t[2], t[3], buffer_y, buffer_x);
+
+	// STORE LL
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(low_ptr, pos_y, pos_x, low_stride_x, low_stride_y) = t[yy][xx];
+		}
+	}
+
+	// STORE HL/LH/HH
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, 0, size_x);
+			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+}
+
 static
 void ms_loop_unified_4x4(
 	int base_x, int base_y,
@@ -367,7 +1532,6 @@ void ms_loop_unified_4x4(
 						size_x_j, size_y_j,
 						ptr, stride_x_j, stride_y_j,
 						ptr, stride_x_j, stride_y_j,
-						// TODO: try to use incremental pointers
 						buffer_x + j*buffer_x_elems + (buffer_offset+x_j)*buff_elem_size,
 						buffer_y + j*buffer_y_elems + (buffer_offset+y_j)*buff_elem_size
 					);
@@ -413,27 +1577,919 @@ void multiscale_j(
 	// others
 	int super_x,
 	int super_y,
-	int buffer_offset
+	int buffer_offset,
+	// test
+	int top,	// 1 = on top (maximal "j"), 0 otherwise
+	__m128 *temp_for_output,
+	int segment_x,
+	int segment_y
 )
 {
+	// buffer[4x4] for LL in "j-1" => "j"
+	__m128 temp_for_input[4]; // on the stack
+
+	const int step_y = 4;
+	const int step_x = 4;
+
+	if( j > 0 )
+	{
+		// process j-1: four multiscale_j(j-1)
+
+		const int step_y_j1 = mul_pow2(step_y, j-1);
+		const int step_x_j1 = mul_pow2(step_x, j-1);
+
+		// left-top (segment x=0 y=0)
+		multiscale_j(
+			j-1, x+0,         y+0,         size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input, 0, 0
+		);
+		// right-top (segment x=1 y=0)
+		multiscale_j(
+			j-1, x+step_x_j1, y+0,         size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input, 1, 0
+		);
+		// left-bottom (segment x=0 y=1)
+		multiscale_j(
+			j-1, x+0,         y+step_y_j1, size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input, 0, 1
+		);
+		// right-bottom (segment x=1 y=1)
+		multiscale_j(
+			j-1, x+step_x_j1, y+step_y_j1, size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input, 1, 1
+		);
+	}
+
+	const int words = 1; // vertical
+	const int buff_elem_size = words*4;
+
+	const int buffer_x_elems = buff_elem_size*super_x;
+	const int buffer_y_elems = buff_elem_size*super_y;
+
+	const int lag = 0;
+
+	const int lag_x = (step_x-1) + lag;
+	const int lag_y = (step_y-1) + lag;
+	
+	const int x_j = ceil_div_pow2(x, j) - lag_x;
+	const int y_j = ceil_div_pow2(y, j) - lag_y;
+
+	const int size_x_j = ceil_div_pow2(size_x, j);
+	const int size_y_j = ceil_div_pow2(size_y, j);
+	const int src_stride_x_j = mul_pow2(src_stride_x, j);
+	const int src_stride_y_j = mul_pow2(src_stride_y, j);
+	const int dst_stride_x_j = mul_pow2(dst_stride_x, j);
+	const int dst_stride_y_j = mul_pow2(dst_stride_y, j);
+
+#if 1
+	if( j > 0 )
+	{
+		// process j: unified_4x4_separately(j)
+
+		// buffer => buffer
+		unified_4x4_separately_tmp2tmp(
+			x_j, y_j,
+			size_x_j, size_y_j,
+			// input
+			src, src_stride_x_j, src_stride_y_j,
+			// output LL
+			dst, dst_stride_x_j, dst_stride_y_j,
+			// output HL/LH/HH
+			dst, dst_stride_x_j, dst_stride_y_j,
+			// core buffers
+			get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+			get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size),
+			// LL buffers
+			segment_x,		// FIXME: segment of output buffer (0, 1)
+			segment_y,		// FIXME: segment of output buffer (0, 1)
+			temp_for_input,		// FIXME: input from this buffer
+			temp_for_output		// FIXME: output into 1/4 of this buffer
+		);
+	}
+	else
+	{
+		// bottom case
+		{
+			// bottom (input from src)
+			unified_4x4_separately_img2tmp(
+				x_j, y_j,
+				size_x_j, size_y_j,
+				// input
+				src, src_stride_x_j, src_stride_y_j,
+				// output LL
+				dst, dst_stride_x_j, dst_stride_y_j,
+				// output HL/LH/HH
+				dst, dst_stride_x_j, dst_stride_y_j,
+				// core buffers
+				get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+				get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size),
+				// LL buffers
+				segment_x,		// FIXME: segment of output buffer (0, 1)
+				segment_y,		// FIXME: segment of output buffer (0, 1)
+				temp_for_input,		// FIXME: input from this buffer
+				temp_for_output		// FIXME: output into 1/4 of this buffer
+			);
+		}
+	}
+#else
+	unified_4x4_separately(
+		x_j, y_j,
+		size_x_j, size_y_j,
+		// use a single aux. buffer
+		src, src_stride_x_j, src_stride_y_j, // input
+		src, src_stride_x_j, src_stride_y_j, // output LL
+		// output to a single destination
+		dst, dst_stride_x_j, dst_stride_y_j, // output HL/LH/HH
+		// buffers
+		get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+		get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size)
+	);
+#endif
+}
+
+// decl
+static
+void multiscale_j_segment00(
+	int j,
+	// position
+	int x,
+	int y,
+	// size
+	int size_x,
+	int size_y,
+	// src
+	void *src,
+	int src_stride_x,
+	int src_stride_y,
+	// dst
+	void *dst,
+	int dst_stride_x,
+	int dst_stride_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y,
+	// others
+	int super_x,
+	int super_y,
+	int buffer_offset,
+	// test
+	int top,	// 1 = on top (maximal "j"), 0 otherwise
+	__m128 *temp_for_output
+);
+
+// decl
+static
+void multiscale_j_segment01(
+	int j,
+	// position
+	int x,
+	int y,
+	// size
+	int size_x,
+	int size_y,
+	// src
+	void *src,
+	int src_stride_x,
+	int src_stride_y,
+	// dst
+	void *dst,
+	int dst_stride_x,
+	int dst_stride_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y,
+	// others
+	int super_x,
+	int super_y,
+	int buffer_offset,
+	// test
+	int top,	// 1 = on top (maximal "j"), 0 otherwise
+	__m128 *temp_for_output
+);
+
+// decl
+static
+void multiscale_j_segment10(
+	int j,
+	// position
+	int x,
+	int y,
+	// size
+	int size_x,
+	int size_y,
+	// src
+	void *src,
+	int src_stride_x,
+	int src_stride_y,
+	// dst
+	void *dst,
+	int dst_stride_x,
+	int dst_stride_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y,
+	// others
+	int super_x,
+	int super_y,
+	int buffer_offset,
+	// test
+	int top,	// 1 = on top (maximal "j"), 0 otherwise
+	__m128 *temp_for_output
+);
+
+// decl
+static
+void multiscale_j_segment11(
+	int j,
+	// position
+	int x,
+	int y,
+	// size
+	int size_x,
+	int size_y,
+	// src
+	void *src,
+	int src_stride_x,
+	int src_stride_y,
+	// dst
+	void *dst,
+	int dst_stride_x,
+	int dst_stride_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y,
+	// others
+	int super_x,
+	int super_y,
+	int buffer_offset,
+	// test
+	int top,	// 1 = on top (maximal "j"), 0 otherwise
+	__m128 *temp_for_output
+);
+
+// (segments): x=0 y=0
+static
+void multiscale_j_segment00(
+	int j,
+	// position
+	int x,
+	int y,
+	// size
+	int size_x,
+	int size_y,
+	// src
+	void *src,
+	int src_stride_x,
+	int src_stride_y,
+	// dst
+	void *dst,
+	int dst_stride_x,
+	int dst_stride_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y,
+	// others
+	int super_x,
+	int super_y,
+	int buffer_offset,
+	// test
+	int top,	// 1 = on top (maximal "j"), 0 otherwise
+	__m128 *temp_for_output
+)
+{
+	__m128 temp_for_input[4]; // on the stack
+
+	const int step_y = 4;
+	const int step_x = 4;
+
+	if( j > 0 )
+	{
+		// process j-1: four multiscale_j(j-1)
+
+		const int step_y_j1 = mul_pow2(step_y, j-1);
+		const int step_x_j1 = mul_pow2(step_x, j-1);
+
+		// left-top (segment x=0 y=0)
+		multiscale_j_segment00(
+			j-1, x+0,         y+0,         size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+		// right-top (segment x=1 y=0)
+		multiscale_j_segment10(
+			j-1, x+step_x_j1, y+0,         size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+		// left-bottom (segment x=0 y=1)
+		multiscale_j_segment01(
+			j-1, x+0,         y+step_y_j1, size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+		// right-bottom (segment x=1 y=1)
+		multiscale_j_segment11(
+			j-1, x+step_x_j1, y+step_y_j1, size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+	}
+
+	const int words = 1; // vertical
+	const int buff_elem_size = words*4;
+
+	const int buffer_x_elems = buff_elem_size*super_x;
+	const int buffer_y_elems = buff_elem_size*super_y;
+
+	const int lag = 0;
+
+	const int lag_x = (step_x-1) + lag;
+	const int lag_y = (step_y-1) + lag;
+	
+	const int x_j = ceil_div_pow2(x, j) - lag_x;
+	const int y_j = ceil_div_pow2(y, j) - lag_y;
+
+	const int size_x_j = ceil_div_pow2(size_x, j);
+	const int size_y_j = ceil_div_pow2(size_y, j);
+	const int src_stride_x_j = mul_pow2(src_stride_x, j);
+	const int src_stride_y_j = mul_pow2(src_stride_y, j);
+	const int dst_stride_x_j = mul_pow2(dst_stride_x, j);
+	const int dst_stride_y_j = mul_pow2(dst_stride_y, j);
+
+	if( j > 0 )
+	{
+		// process j: unified_4x4_separately(j)
+
+		// buffer => buffer
+		unified_4x4_separately_tmp2tmp_segment00(
+			x_j, y_j,
+			size_x_j, size_y_j,
+			// input
+			src, src_stride_x_j, src_stride_y_j,
+			// output LL
+			dst, dst_stride_x_j, dst_stride_y_j,
+			// output HL/LH/HH
+			dst, dst_stride_x_j, dst_stride_y_j,
+			// core buffers
+			get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+			get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size),
+			// LL buffers
+			temp_for_input,		// FIXME: input from this buffer
+			temp_for_output		// FIXME: output into 1/4 of this buffer
+		);
+	}
+	else
+	{
+		// bottom case
+		{
+			// bottom (input from src)
+			unified_4x4_separately_img2tmp_segment00(
+				x_j, y_j,
+				size_x_j, size_y_j,
+				// input
+				src, src_stride_x_j, src_stride_y_j,
+				// output LL
+				dst, dst_stride_x_j, dst_stride_y_j,
+				// output HL/LH/HH
+				dst, dst_stride_x_j, dst_stride_y_j,
+				// core buffers
+				get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+				get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size),
+				// LL buffers
+				temp_for_input,		// FIXME: input from this buffer
+				temp_for_output		// FIXME: output into 1/4 of this buffer
+			);
+		}
+	}
+}
+
+// (segments): x=0 y=1
+static
+void multiscale_j_segment01(
+	int j,
+	// position
+	int x,
+	int y,
+	// size
+	int size_x,
+	int size_y,
+	// src
+	void *src,
+	int src_stride_x,
+	int src_stride_y,
+	// dst
+	void *dst,
+	int dst_stride_x,
+	int dst_stride_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y,
+	// others
+	int super_x,
+	int super_y,
+	int buffer_offset,
+	// test
+	int top,	// 1 = on top (maximal "j"), 0 otherwise
+	__m128 *temp_for_output
+)
+{
+	__m128 temp_for_input[4]; // on the stack
+
+	const int step_y = 4;
+	const int step_x = 4;
+
+	if( j > 0 )
+	{
+		// process j-1: four multiscale_j(j-1)
+
+		const int step_y_j1 = mul_pow2(step_y, j-1);
+		const int step_x_j1 = mul_pow2(step_x, j-1);
+
+		// left-top (segment x=0 y=0)
+		multiscale_j_segment00(
+			j-1, x+0,         y+0,         size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+		// right-top (segment x=1 y=0)
+		multiscale_j_segment10(
+			j-1, x+step_x_j1, y+0,         size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+		// left-bottom (segment x=0 y=1)
+		multiscale_j_segment01(
+			j-1, x+0,         y+step_y_j1, size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+		// right-bottom (segment x=1 y=1)
+		multiscale_j_segment11(
+			j-1, x+step_x_j1, y+step_y_j1, size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+	}
+
+	const int words = 1; // vertical
+	const int buff_elem_size = words*4;
+
+	const int buffer_x_elems = buff_elem_size*super_x;
+	const int buffer_y_elems = buff_elem_size*super_y;
+
+	const int lag = 0;
+
+	const int lag_x = (step_x-1) + lag;
+	const int lag_y = (step_y-1) + lag;
+	
+	const int x_j = ceil_div_pow2(x, j) - lag_x;
+	const int y_j = ceil_div_pow2(y, j) - lag_y;
+
+	const int size_x_j = ceil_div_pow2(size_x, j);
+	const int size_y_j = ceil_div_pow2(size_y, j);
+	const int src_stride_x_j = mul_pow2(src_stride_x, j);
+	const int src_stride_y_j = mul_pow2(src_stride_y, j);
+	const int dst_stride_x_j = mul_pow2(dst_stride_x, j);
+	const int dst_stride_y_j = mul_pow2(dst_stride_y, j);
+
+	if( j > 0 )
+	{
+		// process j: unified_4x4_separately(j)
+
+		// buffer => buffer
+		unified_4x4_separately_tmp2tmp_segment01(
+			x_j, y_j,
+			size_x_j, size_y_j,
+			// input
+			src, src_stride_x_j, src_stride_y_j,
+			// output LL
+			dst, dst_stride_x_j, dst_stride_y_j,
+			// output HL/LH/HH
+			dst, dst_stride_x_j, dst_stride_y_j,
+			// core buffers
+			get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+			get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size),
+			// LL buffers
+			temp_for_input,		// FIXME: input from this buffer
+			temp_for_output		// FIXME: output into 1/4 of this buffer
+		);
+	}
+	else
+	{
+		// bottom case
+		{
+			// bottom (input from src)
+			unified_4x4_separately_img2tmp_segment01(
+				x_j, y_j,
+				size_x_j, size_y_j,
+				// input
+				src, src_stride_x_j, src_stride_y_j,
+				// output LL
+				dst, dst_stride_x_j, dst_stride_y_j,
+				// output HL/LH/HH
+				dst, dst_stride_x_j, dst_stride_y_j,
+				// core buffers
+				get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+				get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size),
+				// LL buffers
+				temp_for_input,		// FIXME: input from this buffer
+				temp_for_output		// FIXME: output into 1/4 of this buffer
+			);
+		}
+	}
+}
+
+// (segments): x=1 y=0
+static
+void multiscale_j_segment10(
+	int j,
+	// position
+	int x,
+	int y,
+	// size
+	int size_x,
+	int size_y,
+	// src
+	void *src,
+	int src_stride_x,
+	int src_stride_y,
+	// dst
+	void *dst,
+	int dst_stride_x,
+	int dst_stride_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y,
+	// others
+	int super_x,
+	int super_y,
+	int buffer_offset,
+	// test
+	int top,	// 1 = on top (maximal "j"), 0 otherwise
+	__m128 *temp_for_output
+)
+{
+	__m128 temp_for_input[4]; // on the stack
+
+	const int step_y = 4;
+	const int step_x = 4;
+
+	if( j > 0 )
+	{
+		// process j-1: four multiscale_j(j-1)
+
+		const int step_y_j1 = mul_pow2(step_y, j-1);
+		const int step_x_j1 = mul_pow2(step_x, j-1);
+
+		// left-top (segment x=0 y=0)
+		multiscale_j_segment00(
+			j-1, x+0,         y+0,         size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+		// right-top (segment x=1 y=0)
+		multiscale_j_segment10(
+			j-1, x+step_x_j1, y+0,         size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+		// left-bottom (segment x=0 y=1)
+		multiscale_j_segment01(
+			j-1, x+0,         y+step_y_j1, size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+		// right-bottom (segment x=1 y=1)
+		multiscale_j_segment11(
+			j-1, x+step_x_j1, y+step_y_j1, size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+	}
+
+	const int words = 1; // vertical
+	const int buff_elem_size = words*4;
+
+	const int buffer_x_elems = buff_elem_size*super_x;
+	const int buffer_y_elems = buff_elem_size*super_y;
+
+	const int lag = 0;
+
+	const int lag_x = (step_x-1) + lag;
+	const int lag_y = (step_y-1) + lag;
+	
+	const int x_j = ceil_div_pow2(x, j) - lag_x;
+	const int y_j = ceil_div_pow2(y, j) - lag_y;
+
+	const int size_x_j = ceil_div_pow2(size_x, j);
+	const int size_y_j = ceil_div_pow2(size_y, j);
+	const int src_stride_x_j = mul_pow2(src_stride_x, j);
+	const int src_stride_y_j = mul_pow2(src_stride_y, j);
+	const int dst_stride_x_j = mul_pow2(dst_stride_x, j);
+	const int dst_stride_y_j = mul_pow2(dst_stride_y, j);
+
+	if( j > 0 )
+	{
+		// process j: unified_4x4_separately(j)
+
+		// buffer => buffer
+		unified_4x4_separately_tmp2tmp_segment10(
+			x_j, y_j,
+			size_x_j, size_y_j,
+			// input
+			src, src_stride_x_j, src_stride_y_j,
+			// output LL
+			dst, dst_stride_x_j, dst_stride_y_j,
+			// output HL/LH/HH
+			dst, dst_stride_x_j, dst_stride_y_j,
+			// core buffers
+			get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+			get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size),
+			// LL buffers
+			temp_for_input,		// FIXME: input from this buffer
+			temp_for_output		// FIXME: output into 1/4 of this buffer
+		);
+	}
+	else
+	{
+		// bottom case
+		{
+			// bottom (input from src)
+			unified_4x4_separately_img2tmp_segment10(
+				x_j, y_j,
+				size_x_j, size_y_j,
+				// input
+				src, src_stride_x_j, src_stride_y_j,
+				// output LL
+				dst, dst_stride_x_j, dst_stride_y_j,
+				// output HL/LH/HH
+				dst, dst_stride_x_j, dst_stride_y_j,
+				// core buffers
+				get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+				get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size),
+				// LL buffers
+				temp_for_input,		// FIXME: input from this buffer
+				temp_for_output		// FIXME: output into 1/4 of this buffer
+			);
+		}
+	}
+}
+
+// (segments): x=1 y=1
+static
+void multiscale_j_segment11(
+	int j,
+	// position
+	int x,
+	int y,
+	// size
+	int size_x,
+	int size_y,
+	// src
+	void *src,
+	int src_stride_x,
+	int src_stride_y,
+	// dst
+	void *dst,
+	int dst_stride_x,
+	int dst_stride_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y,
+	// others
+	int super_x,
+	int super_y,
+	int buffer_offset,
+	// test
+	int top,	// 1 = on top (maximal "j"), 0 otherwise
+	__m128 *temp_for_output
+)
+{
+	__m128 temp_for_input[4]; // on the stack
+
+	const int step_y = 4;
+	const int step_x = 4;
+
+	if( j > 0 )
+	{
+		// process j-1: four multiscale_j(j-1)
+
+		const int step_y_j1 = mul_pow2(step_y, j-1);
+		const int step_x_j1 = mul_pow2(step_x, j-1);
+
+		// left-top (segment x=0 y=0)
+		multiscale_j_segment00(
+			j-1, x+0,         y+0,         size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+		// right-top (segment x=1 y=0)
+		multiscale_j_segment10(
+			j-1, x+step_x_j1, y+0,         size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+		// left-bottom (segment x=0 y=1)
+		multiscale_j_segment01(
+			j-1, x+0,         y+step_y_j1, size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+		// right-bottom (segment x=1 y=1)
+		multiscale_j_segment11(
+			j-1, x+step_x_j1, y+step_y_j1, size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+	}
+
+	const int words = 1; // vertical
+	const int buff_elem_size = words*4;
+
+	const int buffer_x_elems = buff_elem_size*super_x;
+	const int buffer_y_elems = buff_elem_size*super_y;
+
+	const int lag = 0;
+
+	const int lag_x = (step_x-1) + lag;
+	const int lag_y = (step_y-1) + lag;
+
+	const int x_j = ceil_div_pow2(x, j) - lag_x;
+	const int y_j = ceil_div_pow2(y, j) - lag_y;
+
+	const int size_x_j = ceil_div_pow2(size_x, j);
+	const int size_y_j = ceil_div_pow2(size_y, j);
+	const int src_stride_x_j = mul_pow2(src_stride_x, j);
+	const int src_stride_y_j = mul_pow2(src_stride_y, j);
+	const int dst_stride_x_j = mul_pow2(dst_stride_x, j);
+	const int dst_stride_y_j = mul_pow2(dst_stride_y, j);
+
+	if( j > 0 )
+	{
+		// process j: unified_4x4_separately(j)
+
+		// buffer => buffer
+		unified_4x4_separately_tmp2tmp_segment11(
+			x_j, y_j,
+			size_x_j, size_y_j,
+			// input
+			src, src_stride_x_j, src_stride_y_j,
+			// output LL
+			dst, dst_stride_x_j, dst_stride_y_j,
+			// output HL/LH/HH
+			dst, dst_stride_x_j, dst_stride_y_j,
+			// core buffers
+			get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+			get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size),
+			// LL buffers
+			temp_for_input,		// FIXME: input from this buffer
+			temp_for_output		// FIXME: output into 1/4 of this buffer
+		);
+	}
+	else
+	{
+		// bottom case
+		{
+			// bottom (input from src)
+			unified_4x4_separately_img2tmp_segment11(
+				x_j, y_j,
+				size_x_j, size_y_j,
+				// input
+				src, src_stride_x_j, src_stride_y_j,
+				// output LL
+				dst, dst_stride_x_j, dst_stride_y_j,
+				// output HL/LH/HH
+				dst, dst_stride_x_j, dst_stride_y_j,
+				// core buffers
+				get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+				get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size),
+				// LL buffers
+				temp_for_input,		// FIXME: input from this buffer
+				temp_for_output		// FIXME: output into 1/4 of this buffer
+			);
+		}
+	}
+}
+
+static
+void multiscale_j_top(
+	int j,
+	// position
+	int x,
+	int y,
+	// size
+	int size_x,
+	int size_y,
+	// src
+	void *src,
+	int src_stride_x,
+	int src_stride_y,
+	// dst
+	void *dst,
+	int dst_stride_x,
+	int dst_stride_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y,
+	// others
+	int super_x,
+	int super_y,
+	int buffer_offset,
+	// test
+	int top,	// 1 = on top (maximal "j"), 0 otherwise
+	__m128 *temp_for_output,
+	int segment_x,
+	int segment_y
+)
+{
+	// buffer[4x4] for LL in "j-1" => "j"
+	__m128 temp_for_input[4]; // on the stack
+
 	const int step_y = 4;
 	const int step_x = 4;
 
 	// process j-1: four multiscale_j(j-1)
 
-	if( j > 0 )
 	{
 		const int step_y_j1 = mul_pow2(step_y, j-1);
 		const int step_x_j1 = mul_pow2(step_x, j-1);
 
-		// left-top
-		multiscale_j(j-1, x+0,         y+0,         size_x, size_y, src, src_stride_x, src_stride_y, dst, dst_stride_x, dst_stride_y, buffer_x, buffer_y, super_x, super_y, buffer_offset);
-		// right-top
-		multiscale_j(j-1, x+step_x_j1, y+0,         size_x, size_y, src, src_stride_x, src_stride_y, dst, dst_stride_x, dst_stride_y, buffer_x, buffer_y, super_x, super_y, buffer_offset);
-		// left-bottom
-		multiscale_j(j-1, x+0,         y+step_y_j1, size_x, size_y, src, src_stride_x, src_stride_y, dst, dst_stride_x, dst_stride_y, buffer_x, buffer_y, super_x, super_y, buffer_offset);
-		// right-bottom
-		multiscale_j(j-1, x+step_x_j1, y+step_y_j1, size_x, size_y, src, src_stride_x, src_stride_y, dst, dst_stride_x, dst_stride_y, buffer_x, buffer_y, super_x, super_y, buffer_offset);
+		// left-top (segment x=0 y=0)
+		multiscale_j_segment00(
+			j-1, x+0,         y+0,         size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+		// right-top (segment x=1 y=0)
+		multiscale_j_segment10(
+			j-1, x+step_x_j1, y+0,         size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+		// left-bottom (segment x=0 y=1)
+		multiscale_j_segment01(
+			j-1, x+0,         y+step_y_j1, size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
+		// right-bottom (segment x=1 y=1)
+		multiscale_j_segment11(
+			j-1, x+step_x_j1, y+step_y_j1, size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
+			buffer_x, buffer_y, super_x, super_y, buffer_offset,
+			0, temp_for_input
+		);
 	}
 
 	// process j: unified_4x4_separately(j)
@@ -459,18 +2515,27 @@ void multiscale_j(
 	const int dst_stride_x_j = mul_pow2(dst_stride_x, j);
 	const int dst_stride_y_j = mul_pow2(dst_stride_y, j);
 
-	unified_4x4_separately(
-		x_j, y_j,
-		size_x_j, size_y_j,
-		// use a single aux. buffer
-		src, src_stride_x_j, src_stride_y_j, // input
-		src, src_stride_x_j, src_stride_y_j, // output LL
-		// output to a single destination
-		dst, dst_stride_x_j, dst_stride_y_j, // output HL/LH/HH
-		// buffers
-		get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
-		get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size)
-	);
+	{
+		{
+			// top (maximal "j", output to dst)
+			unified_4x4_separately_tmp2img(
+				x_j, y_j,
+				size_x_j, size_y_j,
+				// input
+				src, src_stride_x_j, src_stride_y_j,
+				// output LL
+				dst, dst_stride_x_j, dst_stride_y_j,
+				// output HL/LH/HH
+				dst, dst_stride_x_j, dst_stride_y_j,
+				// core buffers
+				get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+				get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size),
+				// LL buffers
+				temp_for_input,		// FIXME: input from this buffer
+				temp_for_output		// FIXME: output into 1/4 of this buffer
+			);
+		}
+	}
 }
 
 static
@@ -523,6 +2588,7 @@ void multiscale_4x4(
 		size_x_j, size_y_j,
 		// use a single aux. buffer
 		ptr, stride_x_j, stride_y_j, // input
+		// LL are intermediate results for j < j_max
 		ptr, stride_x_j, stride_y_j, // output LL
 		// output to a single destination
 		ptr, stride_x_j, stride_y_j, // output HL/LH/HH
@@ -530,6 +2596,356 @@ void multiscale_4x4(
 		get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
 		get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size)
 	);
+}
+
+static
+void multiscale_4x4_separately(
+	// scale
+	int j,
+	// position
+	int x,
+	int y,
+	// size
+	int size_x,
+	int size_y,
+	// data
+	void *src,
+	int src_stride_x,
+	int src_stride_y,
+	void *low,
+	int low_stride_x,
+	int low_stride_y,
+	void *dst,
+	int dst_stride_x,
+	int dst_stride_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y,
+	// others
+	int super_x,
+	int super_y,
+	int buffer_offset
+)
+{
+	const int words = 1; // vertical
+	const int buff_elem_size = words*4;
+
+	const int buffer_x_elems = buff_elem_size*super_x;
+	const int buffer_y_elems = buff_elem_size*super_y;
+
+	const int step_y = 4;
+	const int step_x = 4;
+
+	const int lag = 0;
+
+	const int lag_x = (step_x-1) + lag;
+	const int lag_y = (step_y-1) + lag;
+	
+	const int x_j = ceil_div_pow2(x, j) - lag_x;
+	const int y_j = ceil_div_pow2(y, j) - lag_y;
+
+	const int size_x_j = ceil_div_pow2(size_x, j);
+	const int size_y_j = ceil_div_pow2(size_y, j);
+
+	const int src_stride_x_j = mul_pow2(src_stride_x, j);
+	const int src_stride_y_j = mul_pow2(src_stride_y, j);
+	const int low_stride_x_j = mul_pow2(low_stride_x, j);
+	const int low_stride_y_j = mul_pow2(low_stride_y, j);
+	const int dst_stride_x_j = mul_pow2(dst_stride_x, j);
+	const int dst_stride_y_j = mul_pow2(dst_stride_y, j);
+
+	unified_4x4_separately(
+		x_j, y_j,
+		size_x_j, size_y_j,
+		// load
+		src, src_stride_x_j, src_stride_y_j, // input
+		// store LL
+		low, low_stride_x_j, low_stride_y_j, // output LL
+		// store LH/HL/HH
+		dst, dst_stride_x_j, dst_stride_y_j, // output HL/LH/HH
+		// buffers
+		get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+		get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size)
+	);
+}
+
+// typedef __m128 __m512[4] ALIGNED(16);
+
+static
+int select_i(
+	int bool,
+	int if_true,
+	int if_zero
+)
+{
+	return bool * if_true + !bool * if_zero;
+}
+
+static
+void *select_p(
+	int bool,
+	void *if_true,
+	void *if_zero
+)
+{
+	return (intptr_t)bool * (intptr_t)if_true + (intptr_t)!bool * (intptr_t)if_zero;
+}
+
+static
+void multiscale_4x4_j_loop(
+	// scale
+	int J,
+	// position
+	int x,
+	int y,
+	// size
+	int size_x,
+	int size_y,
+	// src
+	void *src,
+	int src_stride_x,
+	int src_stride_y,
+	// dst
+	void *dst,
+	int dst_stride_x,
+	int dst_stride_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y,
+	// others
+	int super_x,
+	int super_y,
+	int buffer_offset,
+	// temp
+	void *tmp,
+	int tmp_stride_x,
+	int tmp_stride_y
+)
+{
+	const int step_y = 4;
+	const int step_x = 4;
+
+	const int step_x_max = mul_pow2(step_x, J-1);
+	const int step_y_max = mul_pow2(step_y, J-1);
+
+#if 0
+	for(int j = 0; j < J; j++)
+	{
+		const int step_x_j = mul_pow2(step_x, j);
+		const int step_y_j = mul_pow2(step_y, j);
+
+		for(int yy = y; yy < y+step_y_max; yy += step_y_j)
+		for(int xx = x; xx < x+step_x_max; xx += step_x_j)
+		{
+			multiscale_4x4_separately(
+				// scale
+				j,
+				// position
+				xx,
+				yy,
+				// size
+				size_x,
+				size_y,
+				// data
+				src, 		// input LL(j-1)
+				src_stride_x,
+				src_stride_y,
+				src,		// FIXME: output LL(j)
+				src_stride_x,
+				src_stride_y,
+				dst,		// output LH/HL/HH(j)
+				dst_stride_x,
+				dst_stride_y,
+				// buffers
+				buffer_x,
+				buffer_y,
+				// others
+				super_x,
+				super_y,
+				buffer_offset
+			);
+		}
+	}
+#endif
+#if 0
+	const int words = 1; // vertical
+	const int buff_elem_size = words*4;
+
+	const int buffer_x_elems = buff_elem_size*super_x;
+	const int buffer_y_elems = buff_elem_size*super_y;
+
+	const int lag_x = (step_x-1);
+	const int lag_y = (step_y-1);
+
+	// j = 0 (src => tmp)
+	{
+		const int j = 0;
+
+		const int size_x_j = ceil_div_pow2(size_x, j);
+		const int size_y_j = ceil_div_pow2(size_y, j);
+
+		const int src_stride_x_j = mul_pow2(src_stride_x, j);
+		const int src_stride_y_j = mul_pow2(src_stride_y, j);
+		const int tmp_stride_x_j = mul_pow2(tmp_stride_x, j);
+		const int tmp_stride_y_j = mul_pow2(tmp_stride_y, j);
+		const int dst_stride_x_j = mul_pow2(dst_stride_x, j);
+		const int dst_stride_y_j = mul_pow2(dst_stride_y, j);
+
+		const int base_y_j = ceil_div_pow2(y, j) - lag_y;
+		const int base_x_j = ceil_div_pow2(x, j) - lag_x;
+		const int stop_y_j = ceil_div_pow2(y, j) - lag_y + ceil_div_pow2(step_y_max, j);
+		const int stop_x_j = ceil_div_pow2(x, j) - lag_x + ceil_div_pow2(step_x_max, j);
+
+		for(int y_j = base_y_j, local_y_j = 0; y_j < stop_y_j; y_j += step_y, local_y_j += step_y)
+		for(int x_j = base_x_j, local_x_j = 0; x_j < stop_x_j; x_j += step_x, local_x_j += step_x)
+		{
+			unified_4x4_separately2(
+				size_x_j, size_y_j,
+				// load -- from (0,0)
+				src, src_stride_x_j, src_stride_y_j, x_j, y_j, // input
+				// store LL -- into (1-4,1-4)
+				tmp, tmp_stride_x_j, tmp_stride_y_j, local_x_j+lag_x, local_y_j+lag_y,
+				// store LH/HL/HH
+				dst, dst_stride_x_j, dst_stride_y_j, x_j, y_j, // output HL/LH/HH
+				// buffers
+				get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+				get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size)
+			);
+		}
+	}
+
+	// j = 1..J-2 (tmp => tmp)
+	for(int j = 1; j < J-1; j++)
+	{
+		const int size_x_j = ceil_div_pow2(size_x, j);
+		const int size_y_j = ceil_div_pow2(size_y, j);
+
+		const int src_stride_x_j = mul_pow2(src_stride_x, j);
+		const int src_stride_y_j = mul_pow2(src_stride_y, j);
+		const int tmp_stride_x_j = mul_pow2(tmp_stride_x, j);
+		const int tmp_stride_y_j = mul_pow2(tmp_stride_y, j);
+		const int dst_stride_x_j = mul_pow2(dst_stride_x, j);
+		const int dst_stride_y_j = mul_pow2(dst_stride_y, j);
+
+		const int base_y_j = ceil_div_pow2(y, j) - lag_y;
+		const int base_x_j = ceil_div_pow2(x, j) - lag_x;
+		const int stop_y_j = ceil_div_pow2(y, j) - lag_y + ceil_div_pow2(step_y_max, j);
+		const int stop_x_j = ceil_div_pow2(x, j) - lag_x + ceil_div_pow2(step_x_max, j);
+
+		for(int y_j = base_y_j, local_y_j = 0; y_j < stop_y_j; y_j += step_y, local_y_j += step_y)
+		for(int x_j = base_x_j, local_x_j = 0; x_j < stop_x_j; x_j += step_x, local_x_j += step_x)
+		{
+
+			unified_4x4_separately2(
+				size_x_j, size_y_j,
+				// load
+				tmp, tmp_stride_x_j, tmp_stride_y_j, local_x_j, local_y_j,
+				// store LL
+				tmp, tmp_stride_x_j, tmp_stride_y_j, local_x_j+lag_x, local_y_j+lag_y,
+				// store LH/HL/HH
+				dst, dst_stride_x_j, dst_stride_y_j, x_j, y_j, // output HL/LH/HH
+				// buffers
+				get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+				get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size)
+			);
+		}
+	}
+
+	// j = J-1 (tmp => dst)
+	{
+		const int j = J-1;
+
+		const int size_x_j = ceil_div_pow2(size_x, j);
+		const int size_y_j = ceil_div_pow2(size_y, j);
+
+		const int src_stride_x_j = mul_pow2(src_stride_x, j);
+		const int src_stride_y_j = mul_pow2(src_stride_y, j);
+		const int tmp_stride_x_j = mul_pow2(tmp_stride_x, j);
+		const int tmp_stride_y_j = mul_pow2(tmp_stride_y, j);
+		const int dst_stride_x_j = mul_pow2(dst_stride_x, j);
+		const int dst_stride_y_j = mul_pow2(dst_stride_y, j);
+
+		const int x_j = ceil_div_pow2(x, j) - lag_x;
+		const int y_j = ceil_div_pow2(y, j) - lag_y;
+
+		const int local_x_j = 0;
+		const int local_y_j = 0;
+
+		unified_4x4_separately2(
+			size_x_j, size_y_j,
+			// load
+			tmp, tmp_stride_x_j, tmp_stride_y_j, local_x_j, local_y_j,
+			// store LL
+			dst, dst_stride_x_j, dst_stride_y_j, x_j, y_j, // output LL
+			// store LH/HL/HH
+			dst, dst_stride_x_j, dst_stride_y_j, x_j, y_j, // output HL/LH/HH
+			// buffers
+			get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+			get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size)
+		);
+	}
+#endif
+#if 1
+	const int words = 1; // vertical
+	const int buff_elem_size = words*4;
+
+	const int buffer_x_elems = buff_elem_size*super_x;
+	const int buffer_y_elems = buff_elem_size*super_y;
+
+	const int lag_x = (step_x-1);
+	const int lag_y = (step_y-1);
+
+	for(int j = 0; j < J; j++)
+	{
+		const int is_first = !j;
+		const int not_first = !is_first;
+		const int is_last  = !(j-(J-1));
+		const int not_last = !is_last;
+
+		const int size_x_j = ceil_div_pow2(size_x, j);
+		const int size_y_j = ceil_div_pow2(size_y, j);
+
+		void *src_j = select_p(is_first, src, tmp);
+		const int src_stride_x_j = mul_pow2(select_i(is_first, src_stride_x, tmp_stride_x), j);
+		const int src_stride_y_j = mul_pow2(select_i(is_first, src_stride_y, tmp_stride_y), j);
+
+		void *low_j = select_p(is_last, dst, tmp);
+		const int low_stride_x_j = mul_pow2(select_i(is_last, dst_stride_x, tmp_stride_x), j);
+		const int low_stride_y_j = mul_pow2(select_i(is_last, dst_stride_y, tmp_stride_y), j);
+
+		const int dst_stride_x_j = mul_pow2(dst_stride_x, j);
+		const int dst_stride_y_j = mul_pow2(dst_stride_y, j);
+
+		const int base_y_j = ceil_div_pow2(y, j) - lag_y;
+		const int base_x_j = ceil_div_pow2(x, j) - lag_x;
+		const int stop_y_j = base_y_j + ceil_div_pow2(step_y_max, j);
+		const int stop_x_j = base_x_j + ceil_div_pow2(step_x_max, j);
+
+		for(int y_j = base_y_j; y_j < stop_y_j; y_j += step_y)
+		for(int x_j = base_x_j; x_j < stop_x_j; x_j += step_x)
+		{
+			// src: j=0: global; otherwise: local
+			const int src_pos_x = x_j - not_first * base_x_j;
+			const int src_pos_y = y_j - not_first * base_y_j;
+			// low: j=J-1: global; otherwise: local
+			const int low_pos_x = x_j - not_last * base_x_j + not_last * lag_x;
+			const int low_pos_y = y_j - not_last * base_y_j + not_last * lag_y;
+
+			unified_4x4_separately2(
+				size_x_j, size_y_j,
+				// load
+				src_j, src_stride_x_j, src_stride_y_j, src_pos_x, src_pos_y,
+				// store LL
+				low_j, low_stride_x_j, low_stride_y_j, low_pos_x, low_pos_y,
+				// store LH/HL/HH
+				dst, dst_stride_x_j, dst_stride_y_j, x_j, y_j,
+				// buffers
+				get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+x_j), buff_elem_size),
+				get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+y_j), buff_elem_size)
+			);
+		}
+	}
+#endif
 }
 
 static
@@ -567,6 +2983,11 @@ void ms_loop_unified_4x4_fused(
 	const int step_x_max = mul_pow2(step_x, J-1);
 	const int step_y_max = mul_pow2(step_y, J-1);
 
+	const int tmp_stride_y = sizeof(float);
+	const int tmp_stride_x = dwt_util_get_opt_stride(tmp_stride_y * step_x_max);
+	const int tmp_size = tmp_stride_x * step_y_max;
+	char tmp[tmp_size];
+
 // 	dwt_util_log(LOG_DBG, "step_max=(%i,%i) J=%i\n", step_y_max, step_x_max, J);
 
 	// order=horizontal
@@ -575,7 +2996,7 @@ void ms_loop_unified_4x4_fused(
 		for(int x = base_x; x < stop_x; x += step_x_max)
 		{
 #if 0
-			multiscale_j(
+			multiscale_j_top(
 				J-1,
 				// position
 				x,
@@ -597,40 +3018,150 @@ void ms_loop_unified_4x4_fused(
 				// others
 				super_x,
 				super_y,
-				buffer_offset
+				buffer_offset,
+				1, NULL, 0, 0
 			);
 #else
-			for(int j = 0; j < J; j++)
-			{
-				const int step_x_j = mul_pow2(step_x, j);
-				const int step_y_j = mul_pow2(step_y, j);
+			multiscale_4x4_j_loop(
+				// scale
+				J,
+				// position
+				x,
+				y,
+				// size
+				size_x,
+				size_y,
+				// src
+				ptr,
+				stride_x,
+				stride_y,
+				// dst
+				ptr,
+				stride_x,
+				stride_y,
+				// buffers
+				buffer_x,
+				buffer_y,
+				// others
+				super_x,
+				super_y,
+				buffer_offset,
+				// temp
+				tmp,
+				tmp_stride_x,
+				tmp_stride_y
+			);
+#endif
+		}
+	}
+}
 
-				for(int yy = y; yy < y+step_y_max; yy += step_y_j)
-				for(int xx = x; xx < x+step_x_max; xx += step_x_j)
-				{
-					multiscale_4x4(
-						// scale
-						j,
-						// position
-						xx,
-						yy,
-						// size
-						size_x,
-						size_y,
-						// data
-						ptr,
-						stride_x,
-						stride_y,
-						// buffers
-						buffer_x,
-						buffer_y,
-						// others
-						super_x,
-						super_y,
-						buffer_offset
-					);
-				}
-			}
+static
+void ms_loop_unified_4x4_fused2(
+	int base_x, int base_y,
+	int stop_x, int stop_y,
+	int size_x, int size_y,
+	void *src,
+	int src_stride_x,
+	int src_stride_y,
+	void *dst,
+	int dst_stride_x,
+	int dst_stride_y,
+	float *buffer_x,
+	float *buffer_y,
+	int J,
+	int super_x,
+	int super_y,
+	int buffer_offset
+)
+{
+// 	const int words = 1; // vertical
+// 	const int buff_elem_size = words*4;
+
+	// core size
+	const int step_y = 4;
+	const int step_x = 4;
+
+// 	const int buffer_x_elems = buff_elem_size*super_x;
+// 	const int buffer_y_elems = buff_elem_size*super_y;
+
+	// FIXME: what distance between read and write head is really needed?
+// 	const int lag = 0;
+
+// 	const int lag_x = (step_x-1) + lag;
+// 	const int lag_y = (step_y-1) + lag;
+
+	const int step_x_max = mul_pow2(step_x, J-1);
+	const int step_y_max = mul_pow2(step_y, J-1);
+
+	const int tmp_stride_y = sizeof(float);
+	const int tmp_stride_x = dwt_util_get_opt_stride(tmp_stride_y * step_x_max);
+	const int tmp_size = tmp_stride_x * step_y_max;
+	char tmp[tmp_size];
+
+// 	dwt_util_log(LOG_DBG, "step_max=(%i,%i) J=%i\n", step_y_max, step_x_max, J);
+
+	// order=horizontal
+	for(int y = base_y; y < stop_y; y += step_y_max)
+	{
+		for(int x = base_x; x < stop_x; x += step_x_max)
+		{
+#if 0
+			multiscale_j_top(
+				J-1,
+				// position
+				x,
+				y,
+				// size
+				size_x,
+				size_y,
+				// src
+				src,
+				src_stride_x,
+				src_stride_y,
+				// dst
+				dst,
+				dst_stride_x,
+				dst_stride_y,
+				// buffers
+				buffer_x,
+				buffer_y,
+				// others
+				super_x,
+				super_y,
+				buffer_offset,
+				1, NULL, 0, 0
+			);
+#else
+			multiscale_4x4_j_loop(
+				// scale
+				J,
+				// position
+				x,
+				y,
+				// size
+				size_x,
+				size_y,
+				// src
+				src,
+				src_stride_x,
+				src_stride_y,
+				// dst
+				dst,
+				dst_stride_x,
+				dst_stride_y,
+				// buffers
+				buffer_x,
+				buffer_y,
+				// others
+				super_x,
+				super_y,
+				buffer_offset,
+				// temp
+				tmp,
+				tmp_stride_x,
+				tmp_stride_y
+			);
 #endif
 		}
 	}
@@ -753,6 +3284,72 @@ void ms_cdf97_2f_dl_4x4_fused_s(
 			/* size */ size_x, size_y,
 			ptr,
 			stride_x, stride_y,
+			buffer_x, buffer_y,
+			J,
+			super_x, super_y,
+			buffer_offset
+		);
+	}
+}
+
+void ms_cdf97_2f_dl_4x4_fused2_s(
+	int size_x,
+	int size_y,
+	void *src,
+	int src_stride_x,
+	int src_stride_y,
+	void *dst,
+	int dst_stride_x,
+	int dst_stride_y,
+	int J
+)
+{
+	// TODO: assert
+
+	// offset_x, offset_y
+// 	const int offset = 1;
+
+	// core size
+// 	const int step_y = 4;
+// 	const int step_x = 4;
+
+	// vertical vectorization
+// 	const int shift = 4;
+
+	const int words = 1; // vertical
+	const int buff_elem_size = words*4;
+
+	// maximal coordinate in negative value (e.g., -(step_x-1) - lag = -3 -0 = -3)
+	const int buff_guard = 32;
+	// FIXME: what overlap is really needed?
+	// 4(j=2), 8(j=3), 32(j=5), 0(j=5), 128(j=5)
+	const int overlap_L = 0+128; // FIXME
+	// 13<<J ... with lag = 18
+	//  7<<J ... with lag =  8 (artifacts)
+	//  5<<J ... with lag =  4 (buffers)
+	//   128 ... with lag =  0 (j=5)
+	const int overlap_R = 128+0; // FIXME
+
+	const int super_x = buff_guard + overlap_L + size_x + overlap_R;
+	const int super_y = buff_guard + overlap_L + size_y + overlap_R;
+
+	const int buffer_x_elems = buff_elem_size*super_x;
+	const int buffer_y_elems = buff_elem_size*super_y;
+
+	// alloc buffers
+	float buffer_x[J*buffer_x_elems] ALIGNED(16);
+	float buffer_y[J*buffer_y_elems] ALIGNED(16);
+
+	const int buffer_offset = buff_guard+overlap_L;
+
+	// unified loop
+	{
+		ms_loop_unified_4x4_fused2(
+			/* base */ -overlap_L, -overlap_L, // x, y
+			/* stop */ size_x+overlap_R, size_y+overlap_R, // x, y
+			/* size */ size_x, size_y,
+			src, src_stride_x, src_stride_y,
+			dst, dst_stride_x, dst_stride_y,
 			buffer_x, buffer_y,
 			J,
 			super_x, super_y,
@@ -922,7 +3519,6 @@ void dwt_util_perf_ms_cdf97_2f_dl_4x4_s(
 
 extern const float g_growth_factor_s;
 
-// TODO
 void dwt_util_measure_perf_ms_cdf97_2f_dl_4x4_s(
 	int min_x,
 	int max_x,
@@ -987,7 +3583,7 @@ void dwt_util_measure_perf_ms_cdf97_2f_dl_4x4_s(
 	//FUNC_END;
 }
 
-// TODO: macro
+// macro
 #ifdef __SSE__
 #define CORE_2X2_CALC(float_y0_x0, float_y0_x1, float_y1_x0, float_y1_x1, buff_h, buff_v) \
 do { \
@@ -1114,7 +3710,7 @@ do { \
 } while(0)
 #endif
 
-// TODO: function
+// function
 #ifdef __SSE__
 static
 void core_2x2_calc(
@@ -1253,7 +3849,6 @@ void core_2x2_calc(
 }
 #endif
 
-// TODO
 static // BUG: uncomment this for SIGSEGV
 void unified_2x2(
 	int x, int y,
@@ -1309,7 +3904,6 @@ void unified_2x2(
 	}
 }
 
-// TODO
 static
 void loop_unified_2x2(
 	int base_x, int base_y,
@@ -1474,8 +4068,6 @@ void dwt_cdf97_2f_dl_2x2_s(
 	}
 }
 
-// TODO
-// FIXME: lag
 static
 void ms_loop_unified_2x2(
 	int base_x, int base_y,
@@ -1542,7 +4134,6 @@ void ms_loop_unified_2x2(
 						size_x_j, size_y_j,
 						ptr, stride_x_j, stride_y_j,
 						ptr, stride_x_j, stride_y_j,
-						// TODO: try to use incremental pointers
 						buffer_x + j*buffer_x_elems + (buffer_offset+x_j)*buff_elem_size,
 						buffer_y + j*buffer_y_elems + (buffer_offset+y_j)*buff_elem_size
 					);
@@ -1618,7 +4209,6 @@ void ms_cdf97_2f_dl_2x2_s(
 	}
 }
 
-// TODO
 void dwt_util_perf_ms_cdf97_2f_dl_2x2_s(
 	int size_x,
 	int size_y,
@@ -1773,7 +4363,6 @@ void dwt_util_perf_ms_cdf97_2f_dl_2x2_s(
 	//FUNC_END;
 }
 
-// TODO
 void dwt_util_measure_perf_ms_cdf97_2f_dl_2x2_s(
 	int min_x,
 	int max_x,
