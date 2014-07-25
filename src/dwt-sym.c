@@ -1148,7 +1148,7 @@ void dwt_util_perf_cdf97_2f_dl_4x4_s(
 		{
 			dwt_util_copy_s(template, ptr[m], stride_x, stride_y, size_x, size_y);
 		}
-	
+
 		// flush memory
 		if(flush)
 		{
@@ -1488,7 +1488,7 @@ void dwt_util_perf_dwt_cdf97_2f_dl_4x4_s(
 		{
 			dwt_util_copy_s(template, ptr[m], stride_x, stride_y, size_x, size_y);
 		}
-	
+
 		// flush memory
 		if(flush)
 		{

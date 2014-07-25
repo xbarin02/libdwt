@@ -3370,6 +3370,27 @@ void dwt_util_add_s(
 );
 
 /**
+ * @brief Multiplication of two signals.
+ *
+ * @param[in,out] ptr1 The destination signal.
+ * @param[in]     ptr2 The source signal.
+ */
+void dwt_util_mul_s(
+	void *ptr1,
+	int size1_x,
+	int size1_y,
+	int stride1_x,
+	int stride1_y,
+	int displ_x,
+	int displ_y,
+	const void *ptr2,
+	int size2_x,
+	int size2_y,
+	int stride2_x,
+	int stride2_y
+);
+
+/**
  * @brief Find minimum and maximum of matrix.
  *
  * @warning experimental

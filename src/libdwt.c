@@ -1178,7 +1178,7 @@ void *dwt_util_memcpy_stride_i(
 		for(size_t i = 0; i < n; i++)
 		{
 			*(int *restrict)ptr_dst = *(const int *restrict)ptr_src;
-	
+
 			ptr_dst += stride_dst;
 			ptr_src += stride_src;
 		}
@@ -1220,7 +1220,7 @@ void *dwt_util_memcpy_stride_s(
 		for(size_t i = 0; i < n; i++)
 		{
 			*(float *restrict)ptr_dst = *(const float *restrict)ptr_src;
-	
+
 			ptr_dst += stride_dst;
 			ptr_src += stride_src;
 		}
@@ -1262,7 +1262,7 @@ void *dwt_util_memcpy_stride_d(
 		for(size_t i = 0; i < n; i++)
 		{
 			*(double *restrict)ptr_dst = *(const double *restrict)ptr_src;
-	
+
 			ptr_dst += stride_dst;
 			ptr_src += stride_src;
 		}
@@ -2252,7 +2252,7 @@ void accel_lift_op4s_main_s(
 		for(int w = 0; w < dwt_util_get_num_workers(); w++)
 		{
 			float *arr_local = ASSUME_ALIGNED_S(calc_temp_offset2_s(arr, w, 0));
-			
+
 			assert( is_aligned_s(arr_local) );
 
 			// constants
@@ -6030,7 +6030,7 @@ void accel_lift_op4s_main_sdl_ref_s(
 
 			// prolog2: pass-prolog
 			op4s_sdl_pass_inv_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
-		
+
 			// prolog2: import(2)
 			op4s_sdl_import_s_ref(l, base, 2);
 
@@ -6099,7 +6099,7 @@ void accel_lift_op4s_main_sdl_ref_s(
 
 			// prolog2: pass-prolog
 			op4s_sdl_pass_fwd_prolog_s_ref(w, v, l, c, r, z, in, out, &addr);
-		
+
 			// prolog2: import(2)
 			op4s_sdl_import_s_ref(l, base, 2);
 
@@ -7914,7 +7914,7 @@ void accel_lift_op4s_main_dl4line_s(
 				// inputs
 				x[0] = addr[0];
 				x[1] = addr[1];
-					
+
 				// scales
 				x[0] *= v[0];
 				x[1] *= v[1];
@@ -7947,7 +7947,7 @@ void accel_lift_op4s_main_dl4line_s(
 				// pointers
 				addr += PAIR;
 			}
-			
+
 			// slide out right border
 			addr[0-4] = l[0];
 			addr[1-4] = l[1];
@@ -8172,7 +8172,7 @@ void accel_lift_op4s_main_dl4line_s(
 				// pointers
 				addr += PAIR;
 			}
-			
+
 			// slide out right border
 			addr[0-4] = l[0];
 			addr[1-4] = l[1];
@@ -8455,7 +8455,7 @@ void accel_lift_op4s_main_dl4line_sse_s(
 				// pointers
 				addr += PAIR;
 			}
-			
+
 			// slide out right border
 			_mm_storeu_ps(addr-4, l);
 		}
@@ -8646,7 +8646,7 @@ void accel_lift_op4s_main_dl4line_sse_s(
 					l4 *= v0; // mulps
 					r4 *= v1; // mulps
 				}
-				
+
 				// outputs
 				{
 					// [ A B C D ] [ E F G H ] => [ A E B F ] [ C G D H ]
@@ -8706,7 +8706,7 @@ void accel_lift_op4s_main_dl4line_sse_s(
 				// pointers
 				addr += PAIR;
 			}
-			
+
 			// slide out right border
 			_mm_storeu_ps(addr-4, l);
 		}
@@ -9415,7 +9415,7 @@ void accel_lift_op4s_main_pb_s(
 		// FIXME(ASVP): channel w according to worker ID; but each worker has independent DMA channels, thus this is not necessary
 		const uint8_t ch = w;
 		float *addr_local = calc_temp_offset2_s(addr, w, 0);
-		
+
 		assert( is_aligned_8(addr_local) );
 
 		WAL_CHECK( wal_dma_configure(worker[w], ch, addr_local, 0, WAL_BCE_JSY_DMEM_A, WAL_BANK_POS(0), size) );
@@ -9516,10 +9516,10 @@ void accel_lift_op4s_prolog_s(
 			// beta
 			arr_local[0] += 2*beta*(arr_local[1]);
 			arr_local[2] += beta*(arr_local[1]+arr_local[3]);
-		
+
 			// gamma
 			arr_local[1] += gamma*(arr_local[0]+arr_local[2]);
-		
+
 			// delta
 			arr_local[0] += 2*delta*(arr_local[1]);
 
@@ -9543,13 +9543,13 @@ void accel_lift_op4s_prolog_s(
 			// alpha
 			arr_local[0] += 2*alpha*(arr_local[1]);
 			arr_local[2] += alpha*(arr_local[1]+arr_local[3]);
-			
+
 			// beta
 			arr_local[1] += beta*(arr_local[0]+arr_local[2]);
-		
+
 			// gamma
 			arr_local[0] += 2*gamma*(arr_local[1]);
-		
+
 			// delta
 			// none
 
@@ -9596,10 +9596,10 @@ void accel_lift_op4s_prolog_stride_s(
 			// beta
 			*addr1_s(arr, 0, stride) += 2*beta*(*addr1_s(arr, 1, stride));
 			*addr1_s(arr, 2, stride) += beta*(*addr1_s(arr, 1, stride) + *addr1_s(arr, 3, stride));
-		
+
 			// gamma
 			*addr1_s(arr, 1, stride) += gamma*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
-		
+
 			// delta
 			*addr1_s(arr, 0, stride) += 2*delta*(*addr1_s(arr, 1, stride));
 
@@ -9623,10 +9623,10 @@ void accel_lift_op4s_prolog_stride_s(
 			// alpha
 			*addr1_s(arr, 0, stride) += 2*alpha*(*addr1_s(arr, 1, stride));
 			*addr1_s(arr, 2, stride) += alpha*(*addr1_s(arr, 1, stride) + *addr1_s(arr, 3, stride));
-			
+
 			// beta
 			*addr1_s(arr, 1, stride) += beta*(*addr1_s(arr, 0, stride) + *addr1_s(arr, 2, stride));
-		
+
 			// gamma
 			*addr1_s(arr, 0, stride) += 2*gamma*(*addr1_s(arr, 1, stride));
 
@@ -11887,14 +11887,14 @@ void dwt_eaw53_i_ex_stride_s(
 	{
 		float wL = w[N-2];
 		float wR = w[N-2];
-		
+
 		tmp[N-1] -= (wL * tmp[N-2] + wR * tmp[N-2]) / ( 2.f * (wL+wR) );
 	}
 	else
 	{
 		float wL = w[N-2];
 		float wR = w[N-2];
-		
+
 		tmp[N-1] += (wL * tmp[N-2] + wR * tmp[N-2]) / (wL+wR);
 	}
 
@@ -11953,14 +11953,14 @@ void dwt_eaw53_i_ex_stride_inplace_s(
 	{
 		float wL = w[N-2];
 		float wR = w[N-2];
-		
+
 		*addr1_s(tmp, N-1, stride) -= (wL * *addr1_s(tmp, N-2, stride) + wR * *addr1_s(tmp, N-2, stride)) / ( 2.f * (wL+wR) );
 	}
 	else
 	{
 		float wL = w[N-2];
 		float wR = w[N-2];
-		
+
 		*addr1_s(tmp, N-1, stride) += (wL * *addr1_s(tmp, N-2, stride) + wR * *addr1_s(tmp, N-2, stride)) / (wL+wR);
 	}
 
@@ -12287,7 +12287,7 @@ void dwt_util_switch_op(
 		default:
 		{
 			dwt_util_log(LOG_ERR, "Unknown operation.\n");
-	
+
 			dwt_util_abort();
 		}
 	}
@@ -12636,7 +12636,7 @@ void dwt_cdf97_2f_s2(
 		const int size_o_dst_y = ceil_div_pow2(size_o_big_y, j+1);
 		const int size_i_src_x = ceil_div_pow2(size_i_big_x, j  );
 		const int size_i_src_y = ceil_div_pow2(size_i_big_y, j  );
-		
+
 		const int lines_x = size_o_src_x;
 		const int lines_y = size_o_src_y;
 
@@ -12792,7 +12792,7 @@ void dwt_cdf97_2f_s(
 		const int size_o_dst_y = ceil_div_pow2(size_o_big_y, j+1);
 		const int size_i_src_x = ceil_div_pow2(size_i_big_x, j  );
 		const int size_i_src_y = ceil_div_pow2(size_i_big_y, j  );
-		
+
 		const int lines_x = size_o_src_x;
 		const int lines_y = size_o_src_y;
 
@@ -13966,7 +13966,7 @@ void op4_fwd_sdl_2x2_fast_s(
 	__m128 zL, zR;
 
 	// FIXME: if there is a pressure for number of SSE registers, it is possible to merge zL and zR into z (get rid interleaving)
-	
+
 	// A
 	buff[0] = *ptrL0;
 	buff[1] = *ptrL1;
@@ -16033,7 +16033,7 @@ void dwt_cdf97_1f_s(
 		const int size_o_src_x = ceil_div_pow2(size_o_big_x, j  );
 		const int size_o_dst_x = ceil_div_pow2(size_o_big_x, j+1);
 		const int size_i_src_x = ceil_div_pow2(size_i_big_x, j  );
-		
+
 		const int lines_x = size_o_src_x;
 
 		if( lines_x > 1 )
@@ -16102,7 +16102,7 @@ void dwt_cdf53_1f_s(
 		const int size_o_src_x = ceil_div_pow2(size_o_big_x, j  );
 		const int size_o_dst_x = ceil_div_pow2(size_o_big_x, j+1);
 		const int size_i_src_x = ceil_div_pow2(size_i_big_x, j  );
-		
+
 		const int lines_x = size_o_src_x;
 
 		if( lines_x > 1 )
@@ -16171,7 +16171,7 @@ void dwt_interp53_1f_s(
 		const int size_o_src_x = ceil_div_pow2(size_o_big_x, j  );
 		const int size_o_dst_x = ceil_div_pow2(size_o_big_x, j+1);
 		const int size_i_src_x = ceil_div_pow2(size_i_big_x, j  );
-		
+
 		const int lines_x = size_o_src_x;
 
 		if( lines_x > 1 )
@@ -16240,7 +16240,7 @@ void dwt_interp2_1f_s(
 		const int size_o_src_x = ceil_div_pow2(size_o_big_x, j  );
 		const int size_o_dst_x = ceil_div_pow2(size_o_big_x, j+1);
 		const int size_i_src_x = ceil_div_pow2(size_i_big_x, j  );
-		
+
 		const int lines_x = size_o_src_x;
 
 		if( lines_x > 1 )
@@ -18845,7 +18845,7 @@ void dwt_util_init()
 		WAL_CHECK( wal_init_worker(worker[w]) );
 
 		// FIXME(ASVP): translate DWT_OP_LIFT4SA into WAL_PBID_P0 by function
-	
+
 		WAL_CHECK( wal_set_firmware(worker[w], WAL_PBID_P0 /*DWT_OP_LIFT4SA*/, fw_fp01_lift4sa, -1) );
 
 		WAL_CHECK( wal_set_firmware(worker[w], WAL_PBID_P1 /*DWT_OP_LIFT4SB*/, fw_fp01_lift4sb, -1) );
@@ -19478,7 +19478,7 @@ int dwt_util_cmp_s_i(const float *a, const float *b)
 {
 	assert( a );
 	assert( b );
-	
+
 	const float eps = 1e-4; // FIXME: magic constant
 
 	if( !dwt_util_is_normal_or_zero_i(a) || !dwt_util_is_normal_or_zero_i(b) )
@@ -19665,7 +19665,7 @@ void dwt_util_test()
 			dwt_util_abort();
 		if( dwt_util_cmp_vec_s(addr, copy, size) )
 			dwt_util_abort();
-		
+
 		dwt_util_log(LOG_TEST, "worker %i: memory transfer to BCE memory using new-style function...\n", w);
 
 		if( wal_dma_configure(worker[w], 0, addr, 0, WAL_BCE_JSY_DMEM_A, 0, size) )
@@ -19699,7 +19699,7 @@ void dwt_util_test()
 			dwt_util_abort();
 
 		dwt_util_log(LOG_TEST, "worker %i: calling done worker...\n", w);
-		
+
 		wal_done_worker(worker[w]);
 
 		dwt_util_log(LOG_TEST, "all tests done\n");
@@ -19999,7 +19999,7 @@ const char *appname()
 
 		const char *ret = fgets(buff, page_size, f);
 		fclose(f);
-		
+
 		if(ret)
 			return basename(buff);
 		else
@@ -20755,7 +20755,7 @@ void dwt_util_perf_cdf53_2_i(
 	// pointer to M pointers to image data
 	void *ptr[M];
 	int j[M];
-	
+
 	// allocate M images
 	for(int m = 0; m < M; m++)
 	{
@@ -20769,7 +20769,7 @@ void dwt_util_perf_cdf53_2_i(
 			stride_y,
 			size_o_big_x,
 			size_o_big_y);
-		
+
 		// fill with test pattern
 		dwt_util_test_image_fill_i(
 			ptr[m],
@@ -20778,7 +20778,6 @@ void dwt_util_perf_cdf53_2_i(
 			size_i_big_x,
 			size_i_big_y,
 			0);
-		
 	}
 
 	*fwd_secs = +INFINITY;
@@ -20885,7 +20884,7 @@ void dwt_util_perf_cdf97_2_s(
 	// pointer to M pointers to image data
 	void *ptr[M];
 	int j[M];
-	
+
 	// allocate M images
 	for(int m = 0; m < M; m++)
 	{
@@ -20899,7 +20898,7 @@ void dwt_util_perf_cdf97_2_s(
 			stride_y,
 			size_o_big_x,
 			size_o_big_y);
-		
+
 		// fill with test pattern
 		dwt_util_test_image_fill_s(
 			ptr[m],
@@ -20908,7 +20907,6 @@ void dwt_util_perf_cdf97_2_s(
 			size_i_big_x,
 			size_i_big_y,
 			0);
-		
 	}
 
 	*fwd_secs = +INFINITY;
@@ -21032,7 +21030,7 @@ void dwt_util_perf_cdf97_2_inplace_s(
 	// pointer to M pointers to image data
 	void *ptr[M];
 	int j[M];
-	
+
 	// allocate M images
 	for(int m = 0; m < M; m++)
 	{
@@ -21190,7 +21188,7 @@ void dwt_util_perf_cdf97_2_inplace_sep_s(
 	// pointer to M pointers to image data
 	void *ptr[M];
 	int j[M];
-	
+
 	// allocate M images
 	for(int m = 0; m < M; m++)
 	{
@@ -21349,7 +21347,7 @@ void dwt_util_perf_cdf97_2_inplace_sep_sdl_s(
 	// pointer to M pointers to image data
 	void *ptr[M];
 	int j[M];
-	
+
 	// allocate M images
 	for(int m = 0; m < M; m++)
 	{
@@ -21490,7 +21488,7 @@ void dwt_util_perf_cdf97_2_inplace_sdl_s(
 	// pointer to M pointers to image data
 	void *ptr[M];
 	int j[M];
-	
+
 	// allocate M images
 	for(int m = 0; m < M; m++)
 	{
@@ -21504,7 +21502,7 @@ void dwt_util_perf_cdf97_2_inplace_sdl_s(
 			stride_y,
 			size_o_big_x,
 			size_o_big_y);
-		
+
 		// fill with test pattern
 		dwt_util_test_image_fill_s(
 			ptr[m],
@@ -21513,7 +21511,6 @@ void dwt_util_perf_cdf97_2_inplace_sdl_s(
 			size_i_big_x,
 			size_i_big_y,
 			0);
-		
 	}
 
 	*fwd_secs = +INFINITY;
@@ -21621,7 +21618,7 @@ void dwt_util_perf_cdf97_2_d(
 	// pointer to M pointers to image data
 	void *ptr[M];
 	int j[M];
-	
+
 	// allocate M images
 	for(int m = 0; m < M; m++)
 	{
@@ -21635,7 +21632,7 @@ void dwt_util_perf_cdf97_2_d(
 			stride_y,
 			size_o_big_x,
 			size_o_big_y);
-		
+
 		// fill with test pattern
 		dwt_util_test_image_fill_d(
 			ptr[m],
@@ -21644,7 +21641,6 @@ void dwt_util_perf_cdf97_2_d(
 			size_i_big_x,
 			size_i_big_y,
 			0);
-		
 	}
 
 	*fwd_secs = +INFINITY;
@@ -22654,7 +22650,7 @@ int dwt_util_count_subbands_s(
 		const void *band_ptr;
 		int band_x;
 		int band_y;
-		
+
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
 			count++;
@@ -22690,7 +22686,7 @@ void dwt_util_wps_s(
 		const void *band_ptr;
 		int band_x;
 		int band_y;
-		
+
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
 			fv[count++] = dwt_util_band_wps_s(band_ptr, stride_x, stride_y, band_x, band_y, j);
@@ -22724,7 +22720,7 @@ void dwt_util_med_s(
 		const void *band_ptr;
 		int band_x;
 		int band_y;
-		
+
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
 			fv[count++] = dwt_util_band_med_s(band_ptr, stride_x, stride_y, band_x, band_y);
@@ -22804,7 +22800,7 @@ float dwt_util_band_moment_s(
 	const int size = size_x * size_y;
 
 	float sum = 0.0f;
-	
+
 	for(int y = 0; y < size_y; y++)
 		for(int x = 0; x < size_x; x++)
 		{
@@ -22911,7 +22907,7 @@ float dwt_util_band_maxnorm_s(
 			if( c > max )
 				max = c;
 		}
-	
+
 	return max;
 }
 
@@ -22970,7 +22966,7 @@ void dwt_util_maxidx_s(
 		const void *band_ptr;
 		int band_x;
 		int band_y;
-		
+
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
 			fv[count++] = dwt_util_band_maxidx_s(band_ptr, stride_x, stride_y, band_x, band_y);
@@ -23004,7 +23000,7 @@ void dwt_util_mean_s(
 		const void *band_ptr;
 		int band_x;
 		int band_y;
-		
+
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
 			fv[count++] = dwt_util_band_mean_s(band_ptr, stride_x, stride_y, band_x, band_y);
@@ -23038,7 +23034,7 @@ void dwt_util_var_s(
 		const void *band_ptr;
 		int band_x;
 		int band_y;
-		
+
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
 			fv[count++] = dwt_util_band_var_s(band_ptr, stride_x, stride_y, band_x, band_y);
@@ -23072,7 +23068,7 @@ void dwt_util_stdev_s(
 		const void *band_ptr;
 		int band_x;
 		int band_y;
-		
+
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
 			fv[count++] = dwt_util_band_stdev_s(band_ptr, stride_x, stride_y, band_x, band_y);
@@ -23106,7 +23102,7 @@ void dwt_util_skew_s(
 		const void *band_ptr;
 		int band_x;
 		int band_y;
-		
+
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
 			fv[count++] = dwt_util_band_skew_s(band_ptr, stride_x, stride_y, band_x, band_y);
@@ -23140,7 +23136,7 @@ void dwt_util_kurt_s(
 		const void *band_ptr;
 		int band_x;
 		int band_y;
-		
+
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
 			fv[count++] = dwt_util_band_kurt_s(band_ptr, stride_x, stride_y, band_x, band_y);
@@ -23174,7 +23170,7 @@ void dwt_util_maxnorm_s(
 		const void *band_ptr;
 		int band_x;
 		int band_y;
-		
+
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
 			fv[count++] = dwt_util_band_maxnorm_s(band_ptr, stride_x, stride_y, band_x, band_y);
@@ -23209,7 +23205,7 @@ void dwt_util_lpnorm_s(
 		const void *band_ptr;
 		int band_x;
 		int band_y;
-		
+
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
 			fv[count++] = dwt_util_band_lpnorm_s(band_ptr, stride_x, stride_y, band_x, band_y, p);
@@ -23243,7 +23239,7 @@ void dwt_util_norm_s(
 		const void *band_ptr;
 		int band_x;
 		int band_y;
-		
+
 		dwt_util_subband_const_s(ptr, stride_x, stride_y, size_o_big_x, size_o_big_y, size_i_big_x, size_i_big_y, j, DWT_HL, &band_ptr, &band_x, &band_y);
 		if( band_x && band_y )
 			fv[count++] = dwt_util_band_norm_s(band_ptr, stride_x, stride_y, band_x, band_y);
@@ -24033,7 +24029,7 @@ void mat_cell_read_s(void *ctx, int symb, int *symb_group, int symb_no)
 	buff[cnt++] = (char)symb;
 	do{
 		int symb_new = mat_get_symb(ctx);
-		
+
 		if( fsm_symb_found(symb_new, symb_group, symb_no) )
 		{
 			buff[cnt++] = (char)symb_new;
@@ -24087,7 +24083,7 @@ void mat_cell_read_i(void *ctx, int symb, int *symb_group, int symb_no)
 	buff[cnt++] = (char)symb;
 	do{
 		int symb_new = mat_get_symb(ctx);
-		
+
 		if( fsm_symb_found(symb_new, symb_group, symb_no) )
 		{
 			buff[cnt++] = (char)symb_new;
@@ -24191,7 +24187,7 @@ int dwt_util_load_from_mat_s(
 
 	int symb_delim[] = { ',', ';', '\t', ' ' };
 	int symb_newline[] = { '\n', '\r' };
-	int symb_number[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '-', 'e' };
+	int symb_number[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '-', 'e', '+' };
 	int symb_eof[] = { EOF };
 
 	struct delta delta[] = {
@@ -24528,6 +24524,49 @@ void add_s(
 		}
 }
 
+static
+void mul_s(
+	void *ptr1,
+	int size1_x,
+	int size1_y,
+	int stride1_x,
+	int stride1_y,
+	int displ_x,
+	int displ_y,
+	const void *ptr2,
+	int size2_x,
+	int size2_y,
+	int stride2_x,
+	int stride2_y
+)
+{
+	for(int y1 = 0; y1 < size1_y; y1++)
+		for(int x1 = 0; x1 < size1_x; x1++)
+		{
+			float *pdst = dwt_util_addr_coeff_s(
+				ptr1,
+				y1,
+				x1,
+				stride1_x,
+				stride1_y
+			);
+
+			// saturation arithmetic
+			int y2 = saturate_i(y1 + displ_y, 0, size2_y-1);
+			int x2 = saturate_i(x1 + displ_x, 0, size2_x-1);
+
+			float src = *dwt_util_addr_coeff_const_s(
+				ptr2,
+				y2,
+				x2,
+				stride2_x,
+				stride2_y
+			);
+
+			*pdst *= src;
+		}
+}
+
 void dwt_util_add_s(
 	void *ptr1,
 	int size1_x,
@@ -24544,6 +24583,37 @@ void dwt_util_add_s(
 )
 {
 	add_s(
+		ptr1,
+		size1_x,
+		size1_y,
+		stride1_x,
+		stride1_y,
+		displ_x,
+		displ_y,
+		ptr2,
+		size2_x,
+		size2_y,
+		stride2_x,
+		stride2_y
+	);
+}
+
+void dwt_util_mul_s(
+	void *ptr1,
+	int size1_x,
+	int size1_y,
+	int stride1_x,
+	int stride1_y,
+	int displ_x,
+	int displ_y,
+	const void *ptr2,
+	int size2_x,
+	int size2_y,
+	int stride2_x,
+	int stride2_y
+)
+{
+	mul_s(
 		ptr1,
 		size1_x,
 		size1_y,
@@ -24652,7 +24722,7 @@ int dwt_util_find_min_max_s(
 		stride_x,
 		stride_y
 	);
-	
+
 	for(int y = 0; y < size_y; y++)
 	{
 		for(int x = 0; x < size_x; x++)
@@ -25041,7 +25111,7 @@ int dwt_util_get_center1_s(
 	if( -1 == lidx || -1 == ridx )
 	{
 		dwt_util_log(LOG_WARN, "Cannot found center indexes! lidx=%i ridx=%i norm=%f half=%f size_x=%i\n", lidx, ridx, norm, half, size_x);
-	
+
 		if( -1 == lidx && -1 == ridx )
 			return size_x / 2;
 
@@ -25268,9 +25338,9 @@ void cbuff_realloc(struct cbuff *cbuff)
 
 	if(!cbuff->size)
 		dwt_util_error("size_t is too small!\n");
-	
+
 	int offset = cbuff_offset(cbuff);
-	
+
 	cbuff->ptr = realloc(cbuff->ptr, cbuff->size);
 
 	if(!cbuff->ptr)

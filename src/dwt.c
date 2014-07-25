@@ -5087,7 +5087,7 @@ void dwt_util_wrap_image(
 
 	*offset_x = 1;
 	*offset_y = 1;
-	
+
 	// viewport to src inside of dst
 	int small_size_x = src_size_x;
 	int small_size_y = src_size_y;
@@ -5440,7 +5440,7 @@ void dwt_util_measure_perf_cdf97_2_inplace_new_s(
 
 		int mod_x = (x+10+4)%6; // HACK: 10(diag)+4(decay) modulo 6
 		int mod_y = (y+10+4)%6; // HACK: 10(diag)+4(decay) modulo 6
-	
+
 		int size_x = x-mod_x; // HACK
 		int size_y = y-mod_y; // HACK
 
@@ -5512,7 +5512,7 @@ void dwt_util_measure_perf_cdf97_2_inplace_new_VERT_s(
 #if 1
 		int mod_vert8_x = (x+ 4+4)%8; // HACK:  4(vert)+4(decay) modulo 8(super-core)
 		int mod_vert8_y = (y+ 4+4)%8; // HACK:  4(vert)+4(decay) modulo 8(super-core)
-	
+
 		int size_x = /*to_even8*/(x)-mod_vert8_x; // HACK
 		int size_y = /*to_even8*/(y)-mod_vert8_y; // HACK
 #else

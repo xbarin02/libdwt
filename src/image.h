@@ -49,9 +49,21 @@ int image_save_to_mat_s(
 	const char *path
 );
 
+void image_save_to_mat_format_s(
+	image_t *image,
+	const char *format,
+	...
+);
+
 void image_save_to_pgm_s(
 	image_t *image,
 	const char *path
+);
+
+void image_save_to_pgm_format_s(
+	image_t *image,
+	const char *format,
+	...
 );
 
 void image_zero(

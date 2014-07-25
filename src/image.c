@@ -122,6 +122,58 @@ void image_save_to_pgm_s(image_t *image, const char *path)
 	);
 }
 
+void image_save_to_pgm_format_s(
+	image_t *image,
+	const char *format,
+	...
+)
+{
+	const size_t path_max = dwt_util_get_path_max();
+
+	char *path = dwt_util_reliably_alloc1(path_max);
+
+	va_list ap;
+
+	va_start(ap, format);
+	int n = vsnprintf(path, path_max, format, ap);
+	va_end(ap);
+
+	if( n < 0 )
+	{
+		dwt_util_error("vsnprintf returned negative value!\n");
+	}
+
+	image_save_to_pgm_s(image, path);
+
+	dwt_util_free(path);
+}
+
+void image_save_to_mat_format_s(
+	image_t *image,
+	const char *format,
+	...
+)
+{
+	const size_t path_max = dwt_util_get_path_max();
+
+	char *path = dwt_util_reliably_alloc1(path_max);
+
+	va_list ap;
+
+	va_start(ap, format);
+	int n = vsnprintf(path, path_max, format, ap);
+	va_end(ap);
+
+	if( n < 0 )
+	{
+		dwt_util_error("vsnprintf returned negative value!\n");
+	}
+
+	image_save_to_mat_s(image, path);
+
+	dwt_util_free(path);
+}
+
 void image_zero(image_t *image)
 {
 	dwt_util_test_image_zero_s(

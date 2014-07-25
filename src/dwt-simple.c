@@ -1462,7 +1462,6 @@ void fdwt_eaw53_diagonal_s(
 		*addr1_s(end, 1, stride) = l[1];
 		fdwt_eaw53_diagonal_epilog_s(w, v, l, c, r, z, x, y, &addr, stride, &eaw_w[2*pairs-2]);
 		*addr1_s(end, 0, stride) = l[0];
-		
 	}
 }
 

@@ -1,5 +1,6 @@
 #include "util.h"
 #include "signal.h"
+#include "libdwt.h"
 
 void dwt_util_convolve1_s(
 	// output response
@@ -44,4 +45,48 @@ void dwt_util_convolve1_s(
 	signal_destroy(y_signal);
 	signal_const_destroy(x_signal);
 	signal_const_destroy(g_signal);
+}
+
+const float *dwt_util_find_max_pos_s(
+	// input
+	const void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	// output
+	int *pos_x,
+	int *pos_y
+)
+{
+	const float *max = dwt_util_addr_coeff_const_s(
+		ptr,
+		0,
+		0,
+		stride_x,
+		stride_y
+	);
+	
+	for(int y = 0; y < size_y; y++)
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			const float *coeff = dwt_util_addr_coeff_const_s(
+				ptr,
+				y,
+				x,
+				stride_x,
+				stride_y
+			);
+
+			if( *coeff > *max )
+			{
+				max = coeff;
+				*pos_x = x;
+				*pos_y = y;
+			}
+		}
+	}
+
+	return max;
 }

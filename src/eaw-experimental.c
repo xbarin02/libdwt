@@ -63,24 +63,6 @@ int is_odd(
 	return x & 1;
 }
 
-/** @returns (int)ceil(x/(double)2) */
-static
-int ceil_div2(
-	int x
-)
-{
-	return (x + 1) >> 1;
-}
-
-/** @returns (int)floor(x/(double)2) */
-static
-int floor_div2(
-	int x
-)
-{
-	return x >> 1;
-}
-
 static
 float dwt_eaw_w(float n, float m, float alpha)
 {

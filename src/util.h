@@ -31,4 +31,16 @@ void dwt_util_convolve1_s(
 	int g_upsample_factor
 );
 
+const float *dwt_util_find_max_pos_s(
+	// input
+	const void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	// output
+	int *pos_x,
+	int *pos_y
+);
+
 #endif
