@@ -34,6 +34,10 @@ int image_alloc(
 	image_t *image
 );
 
+void image_free(
+	image_t *image
+);
+
 image_t *image_create_s(
 	int size_x,
 	int size_y

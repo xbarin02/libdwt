@@ -6,6 +6,7 @@
 
 #include "libdwt.h"
 #include "inline.h"
+#include "system.h"
 
 #if 0
 struct image_t {
@@ -37,6 +38,13 @@ int image_alloc(image_t *image)
 	);
 
 	return image->ptr != NULL;
+}
+
+void image_free(
+	image_t *image
+)
+{
+	dwt_util_free_image(&image->ptr);
 }
 
 image_t *image_create_s(int size_x, int size_y)
@@ -95,6 +103,7 @@ void image_save_to_pgm_s(image_t *image, const char *path)
 		&minv,
 		&maxv
 	);
+
 	dwt_util_copy_s(
 		image->ptr,
 		s.ptr,
@@ -103,6 +112,7 @@ void image_save_to_pgm_s(image_t *image, const char *path)
 		s.size_x,
 		s.size_y
 	);
+
 	dwt_util_shift_s(
 		s.ptr,
 		s.size_x,
@@ -111,6 +121,7 @@ void image_save_to_pgm_s(image_t *image, const char *path)
 		s.stride_y,
 		-minv
 	);
+
 	dwt_util_save_to_pgm_s(
 		path,
 		(-minv + maxv),
@@ -120,6 +131,8 @@ void image_save_to_pgm_s(image_t *image, const char *path)
 		s.size_x,
 		s.size_y
 	);
+
+	image_free(&s);
 }
 
 void image_save_to_pgm_format_s(
