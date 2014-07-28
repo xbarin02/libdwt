@@ -207,6 +207,20 @@ void dwt_util_vec_creal_cs(
 	}
 }
 
+void dwt_util_vec_cabs_cs(
+	float *dst,
+	int dst_stride,
+	const float complex *src,
+	int src_stride,
+	int size
+)
+{
+	for(int i = 0; i < size; i++)
+	{
+		*addr1_s(dst, i, dst_stride) = cabs(*addr1_const_cs(src, i, src_stride));
+	}
+}
+
 float dwt_util_band_lpnorm_cs(
 	const void *ptr,
 	int stride_x,
@@ -927,7 +941,7 @@ void detect_ridges1_s(
 				if( mag_factor > 0.f && mag_val > threshold )
 				{
 // 					dwt_util_log(LOG_DBG, "ridge point: y=%i x=%i mag=%f\n", y, x, mag_val);
-#if 1
+#if 0
 					*out = 1.f;
 #else
 					*out = mag_val/2.f/(float)M_PI;
@@ -960,13 +974,13 @@ void detect_ridges2_s(
 			{
 				float arg_val = *addr2_const_s(inst_freq, y, x, stride_x, stride_y);
 
-				if( arg_val > 0.f && arg_val > threshold )
+				if( arg_val < 0.f && fabsf(arg_val) > threshold )
 				{
 // 					dwt_util_log(LOG_DBG, "ridge point: y=%i x=%i arg=%f\n", y, x, arg_val);
-#if 1
+#if 0
 					*out = 1.f;
 #else
-					*out = arg_val/2.f/(float)M_PI;
+					*out = fabsf(arg_val)/2.f/(float)M_PI;
 #endif
 				}
 			}
@@ -1127,7 +1141,7 @@ void detect_ridges3_s(
 				if( is_max && mag_val > threshold )
 				{
 // 					dwt_util_log(LOG_DBG, "ridge point: y=%i x=%i arg=%f\n", y, x, arg_val);
-#if 1
+#if 0
 					*out = 1.f;
 #else
 					*out = mag_val/2.f/(float)M_PI;

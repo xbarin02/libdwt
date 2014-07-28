@@ -94,6 +94,17 @@ void dwt_util_vec_creal_cs(
 );
 
 /**
+ * @brief Get an absolute value of the complex signal.
+ */
+void dwt_util_vec_cabs_cs(
+	float *dst,			///< put the real-valued signal here
+	int dst_stride,			///< the input signal stride
+	const float complex *src,	///< the complex-valued input signal
+	int src_stride,			///< the output signal stride
+	int size			///< the signal size
+);
+
+/**
  * @brief Generate the Gabor atom.
  */
 void gabor_gen_kernel(
