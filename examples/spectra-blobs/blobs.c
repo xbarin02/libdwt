@@ -51,11 +51,11 @@ void s_gen_kernel(
 
 int get_maximum(
 	image_t *ridges,
-	image_t *maxima
+	image_t *maxima,
+	int *pos_x,
+	int *pos_y
 )
 {
-	int pos_x, pos_y;
-
 	// find maximum
 	dwt_util_find_max_pos_s(
 		// input
@@ -65,11 +65,13 @@ int get_maximum(
 		ridges->stride_x,
 		ridges->stride_y,
 		// output
-		&pos_x,
-		&pos_y
+		pos_x,
+		pos_y
 	);
 
-	dwt_util_log(LOG_INFO, "maximum found at (%i,%i)\n", pos_y, pos_x);
+#if 1
+	dwt_util_log(LOG_DBG, "maximum found at (%i,%i)\n", *pos_y, *pos_x);
+#endif
 
 	// add the surrounding pixels
 	{
@@ -92,7 +94,7 @@ int get_maximum(
 
 			float norm_factor = 1.f/kern[center];
 
-			for(int x = pos_x-center; x < pos_x-center+size; x++)
+			for(int x = *pos_x-center; x < *pos_x-center+size; x++)
 			{
 				if( x < 0 || x >= maxima->size_x )
 					continue;
@@ -107,7 +109,7 @@ int get_maximum(
 #if 0
 				1.f;
 #else
-				kern[center+x-pos_x] * norm_factor;
+				kern[center+x-*pos_x] * norm_factor;
 #endif
 			}
 		}
@@ -118,6 +120,68 @@ int get_maximum(
 	remove_ridge(ridges, maxima);
 
 	return 1;
+}
+
+void spectra_st_get_strongest_ridges(
+	image_t *plane,	// input
+	image_t *points,	// output
+	int ridges_no		// number of the strongest points
+)
+{
+	// alloc "ridges"
+	struct image_t ridges = (image_t){
+		.ptr = dwt_util_alloc_image2(plane->stride_x, plane->stride_y, plane->size_x, plane->size_y),
+		.size_x = plane->size_x,
+		.size_y = plane->size_y,
+		.stride_x = plane->stride_x,
+		.stride_y = plane->stride_y
+	};
+
+#if 1
+	// extract ridges
+	detect_ridges1_s(
+		plane->ptr,
+		ridges.ptr,
+		plane->stride_x,
+		plane->stride_y,
+		plane->size_x,
+		plane->size_y,
+		0.f
+	);
+#else
+	ridges.ptr = plane->ptr;
+#endif
+
+	//  alloc "maxima"
+	struct image_t maxima = (image_t){
+		.ptr = dwt_util_alloc_image2(plane->stride_x, plane->stride_y, plane->size_x, plane->size_y),
+		.size_x = plane->size_x,
+		.size_y = plane->size_y,
+		.stride_x = plane->stride_x,
+		.stride_y = plane->stride_y
+	};
+
+	// strongest ridges
+	for(int i = 0; i < ridges_no; i++)
+	{
+		image_zero(&maxima);
+
+		int pos_x, pos_y;
+
+		get_maximum(&ridges, &maxima, &pos_x, &pos_y);
+
+		*image_coeff_s(points, i, 0) = pos_x;
+		*image_coeff_s(points, i, 1) = pos_y;
+
+#if 0
+		// store "maxima" and "ridges"
+		image_save_to_pgm_format_s(&maxima, "maxima-%i.pgm", i);
+		image_save_to_pgm_format_s(&ridges, "ridges-%i.pgm", i);
+#endif
+	}
+
+	image_free(&maxima);
+	image_free(&ridges);
 }
 
 int main(int argc, char *argv[])
@@ -136,53 +200,25 @@ int main(int argc, char *argv[])
 
 	image_save_to_pgm_s(&plane, "plane.pgm");
 
-	struct image_t ridges = (image_t){
-		.ptr = dwt_util_alloc_image2(plane.stride_x, plane.stride_y, plane.size_x, plane.size_y),
-		.size_x = plane.size_x,
-		.size_y = plane.size_y,
-		.stride_x = plane.stride_x,
-		.stride_y = plane.stride_y
-	};
+	const int ridges_no = 20;
 
-#if 1
-	detect_ridges1_s(
-		plane.ptr,
-		ridges.ptr,
-		plane.stride_x,
-		plane.stride_y,
-		plane.size_x,
-		plane.size_y,
-		0.f
+	// features
+	image_t *points = image_create_s(
+		2, 		// size_x
+		ridges_no	// size_y
 	);
-#else
-	ridges.ptr = plane.ptr;
-#endif
-
-	image_save_to_pgm_s(&ridges, "ridges.pgm");
-
-	struct image_t maxima = (image_t){
-		.ptr = dwt_util_alloc_image2(plane.stride_x, plane.stride_y, plane.size_x, plane.size_y),
-		.size_x = plane.size_x,
-		.size_y = plane.size_y,
-		.stride_x = plane.stride_x,
-		.stride_y = plane.stride_y
-	};
 
 	// strongest ridges
-	for(int i = 0; i < 20; i++)
-	{
-		dwt_util_log(LOG_INFO, "extracting ridge %i...\n", i);
+	spectra_st_get_strongest_ridges(
+		&plane,
+		points,
+		ridges_no
+	);
 
-		image_zero(&maxima);
+	image_save_to_mat_s(points, "points.mat");
 
-		get_maximum(&ridges, &maxima);
-
-		image_save_to_pgm_format_s(&maxima, "maxima-%i.pgm", i);
-		image_save_to_pgm_format_s(&ridges, "ridges-%i.pgm", i);
-	}
-
-	image_free(&maxima);
-	image_free(&ridges);
+	image_free(points); // free image->ptr
+	dwt_util_free(points); // free image
 	image_free(&plane);
 
 	dwt_util_finish();
