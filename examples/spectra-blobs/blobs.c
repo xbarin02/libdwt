@@ -189,7 +189,7 @@ int main(int argc, char *argv[])
 	dwt_util_init();
 
 	const char *path = (argc > 1) ? argv[1] :
-		"st/st-sum-class-all.mat";
+		"data/st-log/st-sum-class-all.mat";
 
 	struct image_t plane;
 
@@ -202,23 +202,18 @@ int main(int argc, char *argv[])
 
 	const int ridges_no = 20;
 
-	// features
-	image_t *points = image_create_s(
-		2, 		// size_x
-		ridges_no	// size_y
-	);
+	// strongest points: size_x=2, size_y=ridges_no
+	image_t *points = image_create_s(2, ridges_no);
 
 	// strongest ridges
-	spectra_st_get_strongest_ridges(
-		&plane,
-		points,
-		ridges_no
-	);
+	spectra_st_get_strongest_ridges(&plane, points, ridges_no);
 
 	image_save_to_mat_s(points, "points.mat");
 
+	// TODO: image_destroy
 	image_free(points); // free image->ptr
 	dwt_util_free(points); // free image
+
 	image_free(&plane);
 
 	dwt_util_finish();
