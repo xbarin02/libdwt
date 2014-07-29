@@ -30,14 +30,22 @@ void image_init(
 	int stride_y
 );
 
+/** Allocate image data */
 int image_alloc(
 	image_t *image
 );
 
+/** Free image data */
 void image_free(
 	image_t *image
 );
 
+/** Free image data as well as image structure itself */
+void image_destroy(
+	image_t *image
+);
+
+/** Allocate image structure and image data */
 image_t *image_create_s(
 	int size_x,
 	int size_y
@@ -45,6 +53,10 @@ image_t *image_create_s(
 
 int image_load_from_mat_s(
 	image_t *image,
+	const char *path
+);
+
+image_t *image_create_from_mat_s(
 	const char *path
 );
 

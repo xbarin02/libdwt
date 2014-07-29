@@ -47,6 +47,15 @@ void image_free(
 	dwt_util_free_image(&image->ptr);
 }
 
+void image_destroy(
+	image_t *image
+)
+{
+	image_free(image); // free image->ptr
+
+	dwt_util_free(image); // free image
+}
+
 image_t *image_create_s(int size_x, int size_y)
 {
 	image_t *image = dwt_util_alloc(1, sizeof(image_t));
@@ -70,6 +79,22 @@ int image_load_from_mat_s(image_t *image, const char *path)
 	);
 
 	return NULL != image->ptr;
+}
+
+image_t *image_create_from_mat_s(
+	const char *path
+)
+{
+	image_t *image = dwt_util_alloc(1, sizeof(image_t));
+
+	if( !image_load_from_mat_s(image, path) )
+	{
+		dwt_util_free(image);
+
+		return NULL;
+	}
+
+	return image;
 }
 
 int image_save_to_mat_s(image_t *image, const char *path)
