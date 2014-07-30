@@ -439,7 +439,7 @@ int main(int argc, char *argv[])
 	const char *vec_path = (argc > 1) ? argv[1]
 		: "data/spectra.dat";
 	const char *cls_path = (argc > 2) ? argv[2]
-		: "data/target_classes.dat";
+		: "data/classes.dat";
 
 	dwt_util_init();
 
@@ -462,6 +462,7 @@ int main(int argc, char *argv[])
 	// save spectra.pgm
 	dwt_util_save_to_pgm_s("data/spectra.pgm", 1.0, ptr, stride_x, stride_y, size_x, size_y);
 
+#if 0
 	// preprocessing
 	dwt_util_log(LOG_INFO, "Shifting base-line by median...\n");
 	dwt_util_shift21_med_s(
@@ -471,7 +472,8 @@ int main(int argc, char *argv[])
 		stride_x,
 		stride_y
 	);
-
+#endif
+#if 0
 	// suppress noise
 	dwt_util_denoise_spectra_s(
 		ptr,
@@ -480,12 +482,12 @@ int main(int argc, char *argv[])
 		stride_x,
 		stride_y
 	);
-
+#endif
 	// save shifted.mat
 	dwt_util_save_to_mat_s("data/shifted.mat", ptr, size_x, size_y, stride_x, stride_y);
 	// save shifted.pgm
 	dwt_util_save_to_pgm_s("data/shifted.pgm", 1.0, ptr, stride_x, stride_y, size_x, size_y);
-
+#if 0
 	dwt_util_log(LOG_INFO, "Centering...\n");
 	// center vectors
 	dwt_util_center21_s(
@@ -496,7 +498,7 @@ int main(int argc, char *argv[])
 		stride_y,
 		20
 	);
-
+#endif
 	// save centered.mat
 	dwt_util_save_to_mat_s("data/centered.mat", ptr, size_x, size_y, stride_x, stride_y);
 	// save centered.pgm

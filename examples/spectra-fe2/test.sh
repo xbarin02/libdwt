@@ -1,15 +1,26 @@
 #!/bin/bash
 
+# directories
+SDIR=../train-test
+TMPDIR=.
 OUTDIR=./tmp
 
 rm -rf -- "${OUTDIR}"
 mkdir -- "${OUTDIR}"
 cd -- "${OUTDIR}"
 
-SDIR=../train-test
-TMPFILE=/tmp/grid-temp
-RESFILE=/tmp/results
-DURFILE=/tmp/time-temp
+# hole program (or gnuplot)
+HOLE=../hole
+
+if [[ ! -x "${HOLE}" ]]; then
+    echo "File '"${HOLE}"' is not executable or found"
+    exit
+fi
+
+# aux. files
+TMPFILE=${TMPDIR}/grid-temp
+RESFILE=${TMPDIR}/results
+DURFILE=${TMPDIR}/time-temp
 
 rm -f -- "${RESFILE}"
 
@@ -19,7 +30,7 @@ for f in "${SDIR}"/fv_*.train.svm; do
 	COEFFS=$( cat "${f}" | head -n1 | sed -r 's/[[:blank:]]+/ /g' | tr ' ' '\n' | tail -n1 | cut -d: -f1 )
 	FILE=$(basename "${f/.train.svm/}")
 	TIMEFORMAT=%0R
-	( time svm-grid "${f}" 2>&1 | tail -n1 ) 2> "${DURFILE}" > "${TMPFILE}"
+	( time svm-grid -gnuplot "${HOLE}" "${f}" 2>&1 | tail -n1 ) 2> "${DURFILE}" > "${TMPFILE}"
 	RESULT_C=$(cat <"${TMPFILE}" | cut -d' ' -f1)
 	LOG_C=$(echo "l(${RESULT_C/[eE]/*10^})/l(2)" | bc -l | sed 's/\..*//')
 	RESULT_G=$(cat <"${TMPFILE}" | cut -d' ' -f2)
