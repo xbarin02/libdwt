@@ -4,6 +4,7 @@
 
 #include "libdwt.h"
 #include "swt.h"
+#include "spectra.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -451,11 +452,22 @@ int main(int argc, char *argv[])
 
 	// load spectra
 	dwt_util_log(LOG_INFO, "Loading data from ASCII MAT-file '%s'...\n", vec_path);
+
+#if 0
 	dwt_util_load_from_mat_s(vec_path, &ptr, &size_x, &size_y, &stride_x, &stride_y);
 	if( ptr )
 		dwt_util_log(LOG_INFO, "Loaded %i spectra of length of %i samples.\n", size_y, size_x);
 	else
 		dwt_util_error("Unable to load spectra.\n");
+#else
+	ptr = spectra_load(
+		vec_path,
+		&stride_x,
+		&stride_y,
+		&size_x,
+		&size_y
+	);
+#endif
 
 	// save spectra.mat
 	dwt_util_save_to_mat_s("data/spectra.mat", ptr, size_x, size_y, stride_x, stride_y);
@@ -669,7 +681,17 @@ int main(int argc, char *argv[])
 	}
 
 	dwt_util_free_image(&cls_ptr);
+#if 0
 	dwt_util_free_image(&ptr);
+#else
+	spectra_unload(
+		ptr,
+		stride_x,
+		stride_y,
+		size_x,
+		size_y
+	);
+#endif
 
 	dwt_util_finish();
 
