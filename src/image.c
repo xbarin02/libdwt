@@ -67,6 +67,17 @@ image_t *image_create_s(int size_x, int size_y)
 	return image;
 }
 
+image_t *image_create_opt_s(int size_x, int size_y)
+{
+	image_t *image = dwt_util_alloc(1, sizeof(image_t));
+
+	image_init(image, NULL, size_x, size_y, dwt_util_get_opt_stride(sizeof(float)*size_x), sizeof(float));
+
+	image_alloc(image);
+
+	return image;
+}
+
 int image_load_from_mat_s(image_t *image, const char *path)
 {
 	dwt_util_load_from_mat_s(
@@ -106,6 +117,23 @@ int image_save_to_mat_s(image_t *image, const char *path)
 		image->size_y,
 		image->stride_x,
 		image->stride_y
+	);
+}
+
+int image_save_to_svm_s(image_t *classes, image_t *features, const char *path)
+{
+	return dwt_util_save_to_svm_s(
+		path,
+		features->ptr,
+		features->size_x,
+		features->size_y,
+		features->stride_x,
+		features->stride_y,
+		classes->ptr,
+		classes->size_x,
+		classes->size_y,
+		classes->stride_x,
+		classes->stride_y
 	);
 }
 
@@ -158,6 +186,18 @@ void image_save_to_pgm_s(image_t *image, const char *path)
 	);
 
 	image_free(&s);
+}
+
+void image_save_log_to_pgm_s(image_t *image, const char *path)
+{
+	dwt_util_save_log_to_pgm_s(
+		path,
+		image->ptr,
+		image->stride_x,
+		image->stride_y,
+		image->size_x,
+		image->size_y
+	);
 }
 
 void image_save_to_pgm_format_s(
@@ -246,6 +286,21 @@ void image_subband(image_t *src, image_t *dst, int j, enum dwt_subbands band)
 float *image_coeff_s(image_t *image, int y, int x)
 {
 	return dwt_util_addr_coeff_s(image->ptr, y, x, image->stride_x, image->stride_y);
+}
+
+int *image_coeff_i(image_t *image, int y, int x)
+{
+	return dwt_util_addr_coeff_i(image->ptr, y, x, image->stride_x, image->stride_y);
+}
+
+float *image_row_s(image_t *image, int y)
+{
+	return image_coeff_s(image, y, 0);
+}
+
+int *image_row_i(image_t *image, int y)
+{
+	return image_coeff_i(image, y, 0);
 }
 
 void image_copy(image_t *src, image_t *dst)

@@ -51,6 +51,12 @@ image_t *image_create_s(
 	int size_y
 );
 
+/** Allocate image structure and image data, use an optimal stride. */
+image_t *image_create_opt_s(
+	int size_x,
+	int size_y
+);
+
 int image_load_from_mat_s(
 	image_t *image,
 	const char *path
@@ -82,6 +88,17 @@ void image_save_to_pgm_format_s(
 	...
 );
 
+void image_save_log_to_pgm_s(
+	image_t *image,
+	const char *path
+);
+
+int image_save_to_svm_s(
+	image_t *classes,
+	image_t *features,
+	const char *path
+);
+
 void image_zero(
 	image_t *image
 );
@@ -97,6 +114,22 @@ float *image_coeff_s(
 	image_t *image,
 	int y,
 	int x
+);
+
+int *image_coeff_i(
+	image_t *image,
+	int y,
+	int x
+);
+
+float *image_row_s(
+	image_t *image,
+	int y
+);
+
+int *image_row_i(
+	image_t *image,
+	int y
 );
 
 void image_copy(
