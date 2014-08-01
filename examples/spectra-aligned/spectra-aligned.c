@@ -5,6 +5,7 @@
 #include "gabor.h" // gabor_st_s
 #include "spectra.h" // spectra_load
 #include "image.h" // struct image_t
+#include "../spectra-blobs/spectra-experimental.h"
 
 static
 const char *simple_sprintf(const char *format, ...)
@@ -84,6 +85,12 @@ int main(int argc, char *argv[])
 		count[i] = 0;
 	}
 
+	const int ridges_no = 40;
+
+	image_t *fv = image_create_s(ridges_no, spectra.size_y);
+
+	image_t *ref_points = image_create_from_mat_s("../spectra-blobs/points.mat");
+
 	for(int y = 0; y < spectra.size_y; y++)
 	{
 #if 1
@@ -140,9 +147,42 @@ int main(int argc, char *argv[])
 		);
 
 		count[class-1]++;
+
+#if 1
+		// plane
+		image_t plane = (image_t){ .ptr = magnitude, .size_x = size_x, .size_y = size_y, .stride_x = stride_x, .stride_y = stride_y };
+		// size_x = 2, size_y = ridges_no
+		image_t *points = image_create_s(2, ridges_no);
+		// fill points
+		spectra_st_get_strongest_ridges(&plane, points, ridges_no);
+		// diff maxima points
+		image_t *diff = image_create_s(1/*x*/, ridges_no/*y*/);
+		spectra_diff_points(diff, ref_points, points);
+		// copy diff => fv
+		for(int i = 0; i < ridges_no; i++)
+			*image_coeff_s(fv, y, i) = *image_coeff_s(diff, i/*y*/, 0/*x*/);
+		// free
+		image_destroy(diff);
+		// free
+		image_destroy(points);
+#endif
 	}
 
 	dwt_util_log(LOG_DBG, "done\n");
+
+	dwt_util_save_to_svm_s(
+		"data/maxima.svm",
+		fv->ptr,
+		fv->size_x,
+		fv->size_y,
+		fv->stride_x,
+		fv->stride_y,
+		cls.ptr,
+		cls.size_x,
+		cls.size_y,
+		cls.stride_x,
+		cls.stride_y
+	);
 
 	for(int i = 0; i < no_classes; i++)
 	{
