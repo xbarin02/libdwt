@@ -129,6 +129,11 @@ int virt2real_error(int pos, int offset, int overlap, int size)
 {
 	int real = pos + offset - overlap;
 
+#if 0
+	if( real > size-1 )
+		dwt_util_log(LOG_DBG, "%s: real=%i > size-1=%i (diff=%i)\n", __FUNCTION__, real, size-1, real - (size-1));
+#endif
+
 	if( real < 0 )
 		return -1;
 	if( real > size-1 )
@@ -187,6 +192,71 @@ void unified_4x4(
 			const int pos_y = virt2real_error(y-shift, yy, 0, size_y);
 			if( pos_x < 0 || pos_y < 0 )
 				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+}
+
+static
+void direct_4x4(
+	int x,
+	int y,
+	int size_x,
+	int size_y,
+	const void *src_ptr,
+	int src_stride_x,
+	int src_stride_y,
+	void *dst_ptr,
+	int dst_stride_x,
+	int dst_stride_y,
+	void *buffer_x,
+	void *buffer_y
+)
+{
+	// core size
+	const int step_y = 4;
+	const int step_x = 4;
+
+	__m128 t[4];
+
+	// LOAD
+	for(int xx = 0; xx < step_x; xx++)
+	{
+		for(int yy = 0; yy < step_y; yy++)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x, xx, 0, size_x);
+			const int pos_y = virt2real_error(y, yy, 0, size_y);
+
+#if 0
+			if( pos_x < 0 || pos_y < 0 )
+			{
+				dwt_util_error("out of buffer\n");
+			}
+#endif
+			t[xx][yy] = *addr2_const_s(src_ptr, pos_y, pos_x, src_stride_x, src_stride_y);
+		}
+	}
+
+	// CALC
+	CORE_4X4_CALC(t[0], t[1], t[2], t[3], buffer_y, buffer_x);
+
+	// STORE
+	for(int yy = 0; yy < step_y; yy++)
+	{
+		for(int xx = 0; xx < step_x; xx++)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(x, xx, 0, size_x);
+			const int pos_y = virt2real_error(y, yy, 0, size_y);
+
+#if 0
+			if( pos_x < 0 || pos_y < 0 )
+			{
+				dwt_util_error("out of buffer\n");
+			}
+#endif
 
 			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
 		}
@@ -401,6 +471,121 @@ void unified_4x4_separately2(
 			// virtual => real coordinates
 			const int pos_x = virt2real_error(dst_pos_x-shift, xx, 0, size_x);
 			const int pos_y = virt2real_error(dst_pos_y-shift, yy, 0, size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+}
+
+static
+void unified_4x4_separately3(
+	// input
+	const void *src_ptr,
+	int src_stride_x,
+	int src_stride_y,
+	int src_pos_x,
+	int src_pos_y,
+	int src_size_x,
+	int src_size_y,
+	// output LL
+	void *low_ptr,
+	int low_stride_x,
+	int low_stride_y,
+	int low_pos_x,
+	int low_pos_y,
+	int low_size_x,
+	int low_size_y,
+	// output HL/LH/HH
+	void *dst_ptr,
+	int dst_stride_x,
+	int dst_stride_y,
+	int dst_pos_x,
+	int dst_pos_y,
+	int dst_size_x,
+	int dst_size_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y,
+	// debug
+	int j
+)
+{
+	// core size
+	const int step_y = 4;
+	const int step_x = 4;
+
+	// vertical vectorization
+	const int shift = 4;
+
+	__m128 t[4];
+
+	// LOAD = src
+	for(int xx = 0; xx < step_x; xx++)
+	{
+		for(int yy = 0; yy < step_y; yy++)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real(src_pos_x, xx, 0, src_size_x);
+			const int pos_y = virt2real(src_pos_y, yy, 0, src_size_y);
+
+			t[xx][yy] = *addr2_const_s(src_ptr, pos_y, pos_x, src_stride_x, src_stride_y);
+		}
+	}
+
+	// CALC
+	CORE_4X4_CALC(t[0], t[1], t[2], t[3], buffer_y, buffer_x);
+
+	// STORE LL = low
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(low_pos_x-shift, xx, 0, low_size_x);
+			const int pos_y = virt2real_error(low_pos_y-shift, yy, 0, low_size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(low_ptr, pos_y, pos_x, low_stride_x, low_stride_y) = t[yy][xx];
+		}
+	}
+
+	// STORE HL/LH/HH = dst
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(dst_pos_x-shift, xx, 0, dst_size_x);
+			const int pos_y = virt2real_error(dst_pos_y-shift, yy, 0, dst_size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 0; yy < step_y; yy+=2)
+	{
+		for(int xx = 1; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(dst_pos_x-shift, xx, 0, dst_size_x);
+			const int pos_y = virt2real_error(dst_pos_y-shift, yy, 0, dst_size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
+		}
+	}
+	for(int yy = 1; yy < step_y; yy+=2)
+	{
+		for(int xx = 0; xx < step_x; xx+=2)
+		{
+			// virtual => real coordinates
+			const int pos_x = virt2real_error(dst_pos_x-shift, xx, 0, dst_size_x);
+			const int pos_y = virt2real_error(dst_pos_y-shift, yy, 0, dst_size_y);
 			if( pos_x < 0 || pos_y < 0 )
 				continue;
 
@@ -2669,6 +2854,94 @@ void multiscale_4x4_separately(
 	);
 }
 
+static
+void multiscale_4x4_separately3(
+	// scale
+	int j,
+	// position
+	int x,
+	int y,
+	// data
+	void *src,
+	int src_stride_x,
+	int src_stride_y,
+	int src_size_x,
+	int src_size_y,
+	int src_offset_x,
+	int src_offset_y,
+	void *low,
+	int low_stride_x,
+	int low_stride_y,
+	int low_size_x,
+	int low_size_y,
+	int low_offset_x,
+	int low_offset_y,
+	void *dst,
+	int dst_stride_x,
+	int dst_stride_y,
+	int dst_size_x,
+	int dst_size_y,
+	int dst_offset_x,
+	int dst_offset_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y,
+	// others
+	int super_x,
+	int super_y,
+	int buffer_offset
+)
+{
+	const int words = 1; // vertical
+	const int buff_elem_size = words*4;
+
+	const int buffer_x_elems = buff_elem_size*super_x;
+	const int buffer_y_elems = buff_elem_size*super_y;
+
+	const int step_y = 4;
+	const int step_x = 4;
+
+	const int lag = 16; // FIXME
+
+	const int lag_x = (step_x-1) + lag;
+	const int lag_y = (step_y-1) + lag;
+
+	const int src_x_j = ceil_div_pow2(x+src_offset_x, j) - lag_x;
+	const int src_y_j = ceil_div_pow2(y+src_offset_y, j) - lag_y;
+	const int low_x_j = ceil_div_pow2(x+low_offset_x, j) - lag_x;
+	const int low_y_j = ceil_div_pow2(y+low_offset_y, j) - lag_y;
+	const int dst_x_j = ceil_div_pow2(x+dst_offset_x, j) - lag_x;
+	const int dst_y_j = ceil_div_pow2(y+dst_offset_y, j) - lag_y;
+
+	const int src_size_x_j = ceil_div_pow2(src_size_x, j);
+	const int src_size_y_j = ceil_div_pow2(src_size_y, j);
+	const int low_size_x_j = ceil_div_pow2(low_size_x, j);
+	const int low_size_y_j = ceil_div_pow2(low_size_y, j);
+	const int dst_size_x_j = ceil_div_pow2(dst_size_x, j);
+	const int dst_size_y_j = ceil_div_pow2(dst_size_y, j);
+
+	const int src_stride_x_j = mul_pow2(src_stride_x, j);
+	const int src_stride_y_j = mul_pow2(src_stride_y, j);
+	const int low_stride_x_j = mul_pow2(low_stride_x, j);
+	const int low_stride_y_j = mul_pow2(low_stride_y, j);
+	const int dst_stride_x_j = mul_pow2(dst_stride_x, j);
+	const int dst_stride_y_j = mul_pow2(dst_stride_y, j);
+
+	unified_4x4_separately3(
+		// load
+		src, src_stride_x_j, src_stride_y_j, src_x_j, src_y_j, src_size_x_j, src_size_y_j, // input
+		// store LL
+		low, low_stride_x_j, low_stride_y_j, low_x_j, low_y_j, low_size_x_j, low_size_y_j, // output LL
+		// store LH/HL/HH
+		dst, dst_stride_x_j, dst_stride_y_j, dst_x_j, dst_y_j, dst_size_x_j, dst_size_y_j, // output HL/LH/HH
+		// buffers
+		get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+src_x_j), buff_elem_size),
+		get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+src_y_j), buff_elem_size),
+		// debug
+		j
+	);
+}
+
 // typedef __m128 __m512[4] ALIGNED(16);
 
 static
@@ -2689,6 +2962,297 @@ void *select_p(
 )
 {
 	return (intptr_t)bool * (intptr_t)if_true + (intptr_t)!bool * (intptr_t)if_zero;
+}
+
+static
+void copy_src_to_buff(
+	// input image
+	const void *src_ptr,
+	int src_stride_x,
+	int src_stride_y,
+	int src_size_x,
+	int src_size_y,
+	int src_pos_x,
+	int src_pos_y,
+	// buffer
+	void *dst_ptr,
+	int dst_stride_x,
+	int dst_stride_y,
+	// copy area of (0..size)
+	int size_x,
+	int size_y
+)
+{
+	for(int virt_y = 0; virt_y < size_y; virt_y++)
+	{
+		for(int virt_x = 0; virt_x < size_x; virt_x++)
+		{
+			const int real_x = virt2real(src_pos_x, virt_x, 0, src_size_x);
+			const int real_y = virt2real(src_pos_y, virt_y, 0, src_size_y);
+
+			*addr2_s(dst_ptr, virt_y, virt_x, dst_stride_x, dst_stride_y) =
+				*addr2_const_s(src_ptr, real_y, real_x, src_stride_x, src_stride_y);
+		}
+	}
+}
+
+static
+void copy_buff_to_dst(
+	// buffer
+	const void *src_ptr,
+	int src_stride_x,
+	int src_stride_y,
+	// output image
+	void *dst_ptr,
+	int dst_stride_x,
+	int dst_stride_y,
+	int dst_size_x,
+	int dst_size_y,
+	int dst_pos_x,
+	int dst_pos_y,
+	// copy area of (0..size)
+	int size_x,
+	int size_y,
+	int J
+)
+{
+#if 0
+	const int delay = 0;
+
+	for(int virt_y = 0; virt_y < size_y; virt_y++)
+	{
+		for(int virt_x = 0; virt_x < size_x; virt_x++)
+		{
+			const int real_x = virt2real_error(dst_pos_x, virt_x-delay, 0, dst_size_x);
+			const int real_y = virt2real_error(dst_pos_y, virt_y-delay, 0, dst_size_y);
+
+			if( real_x < 0 || real_y < 0 )
+				continue;
+
+			*addr2_s(dst_ptr, real_y, real_x, dst_stride_x, dst_stride_y) =
+				*addr2_const_s(src_ptr, virt_y, virt_x, src_stride_x, src_stride_y);
+		}
+	}
+#endif
+#if 1
+	const int step = 4;
+
+	// H bands
+	for(int j = 0; j < J; j++)
+	{
+		const int start_j = mul_pow2(1, j) - 1;
+		const int short_step_j = mul_pow2(1, j);
+		const int long_step_j = mul_pow2(1, j+1);
+
+		const int delay_j = mul_pow2(step, j+1) - step;
+
+		// segments
+		for(int yy = 0; yy < 2; yy++)
+		for(int xx = 0; xx < 2; xx++)
+		{
+			// except of J-1, break loop on next level
+// 			if( 1 == xx && 1 == yy )
+			if( j < J-1 && 1 == xx && 1 == yy )
+			{
+				break;
+			}
+
+// 			dwt_util_log(LOG_DBG, "copy-back: j=%i H(%i,%i) start=%i short-step=%i long-step=%i delay=%i\n",
+// 				j, yy, xx, start_j, short_step_j, long_step_j, delay_j);
+
+			for(int y = start_j+yy*short_step_j; y < size_y; y += long_step_j)
+			for(int x = start_j+xx*short_step_j; x < size_x; x += long_step_j)
+			{
+				const int real_x = virt2real_error(dst_pos_x, x-delay_j, 0, dst_size_x);
+				const int real_y = virt2real_error(dst_pos_y, y-delay_j, 0, dst_size_y);
+
+				// out of the image
+				if( real_x < 0 || real_y < 0 )
+					continue;
+
+				*addr2_s(dst_ptr, real_y, real_x, dst_stride_x, dst_stride_y) =
+					*addr2_const_s(src_ptr, y, x, src_stride_x, src_stride_y);
+			}
+		}
+	}
+
+	// L band
+// 	{
+// 		const int start_j = mul_pow2(1, J) - 1;
+// 		const int long_step_j = mul_pow2(1, J);
+// 
+// 		const int delay_j = mul_pow2(step, J) - step;
+// 
+// // 		dwt_util_log(LOG_DBG, "copy-back: J=%i L start=%i long-step=%i delay=%i\n",
+// // 				J, start_j, long_step_j, delay_j);
+// 
+// 		for(int y = start_j; y < size_y; y += long_step_j)
+// 		for(int x = start_j; x < size_x; x += long_step_j)
+// 		{
+// 				const int real_x = virt2real_error(dst_pos_x, x-delay_j, 0, dst_size_x);
+// 				const int real_y = virt2real_error(dst_pos_y, y-delay_j, 0, dst_size_y);
+// 
+// 				// out of the image
+// 				if( real_x < 0 || real_y < 0 )
+// 					continue;
+// 
+// 				*addr2_s(dst_ptr, real_y, real_x, dst_stride_x, dst_stride_y) =
+// 					*addr2_const_s(src_ptr, y, x, src_stride_x, src_stride_y);
+// 		}
+// 	}
+#endif
+}
+
+static
+void multiscale_4x4_j_loop_new(
+	// scale
+	int J,
+	// position
+	int x,
+	int y,
+	// size
+	int size_x,
+	int size_y,
+	// src
+	void *src,
+	int src_stride_x,
+	int src_stride_y,
+	// dst
+	void *dst,
+	int dst_stride_x,
+	int dst_stride_y,
+	// buffers
+	void *buffer_x,
+	void *buffer_y,
+	// ...
+	int super_x,
+	int super_y,
+	int buffer_offset,
+	...
+)
+{
+	const int step_y = 4;
+	const int step_x = 4;
+
+	const int words = 1; // vertical
+	const int buff_elem_size = words*4;
+
+	const int buffer_x_elems = buff_elem_size*super_x;
+	const int buffer_y_elems = buff_elem_size*super_y;
+
+	const int step_x_max = mul_pow2(step_x, J-1);
+	const int step_y_max = mul_pow2(step_y, J-1);
+
+// 	dwt_util_log(LOG_DBG, "ms-core: step-max=(%i,%i) @ (%i,%i) in (0,0)..(%i,%i)\n",
+// 		step_y_max, step_x_max,
+// 		y, x,
+// 		size_y, size_x
+// 	);
+
+	// FIXME: use persistent buffer[]
+	// create buffer
+	const int buffer_size_x = step_x_max;
+	const int buffer_size_y = step_y_max;
+	const int buffer_stride_y = sizeof(float);
+	const int buffer_stride_x = /*dwt_util_get_opt_stride*/(buffer_stride_y * step_x_max);
+	float buffer_ptr[buffer_size_x*buffer_size_y] /*ALIGNED(16)*/;
+
+	// copy area (x,y)..(+step_x_max,+step_y_max) into buffer[]
+	copy_src_to_buff(
+		// image
+		src,
+		src_stride_x,
+		src_stride_y,
+		size_x,
+		size_y,
+		x,
+		y,
+		// buffer
+		buffer_ptr,
+		buffer_stride_x,
+		buffer_stride_y,
+		// size of the tile
+		buffer_size_x,
+		buffer_size_y
+	);
+
+	// for each j in [0;J)
+	for(int j = 0; j < J; j++)
+	{
+		// strides
+		const int stride_x_j = mul_pow2(buffer_stride_x, j);
+		const int stride_y_j = mul_pow2(buffer_stride_y, j);
+
+		const int step_x_j = mul_pow2(step_x, j);
+		const int step_y_j = mul_pow2(step_y, j);
+
+		const int start_j = mul_pow2(1, j) - 1;
+
+		const int len_x_j = step_x_j - start_j;
+		const int len_y_j = step_y_j - start_j;
+
+// 		dwt_util_log(LOG_DBG, "loop: j=%i start=(%i) limit=(%i,%i) len=(%i,%i) step=(%i,%i) stride=(%i,%i)\n",
+// 			j, start_j, step_y_max, step_x_max, len_y_j, len_x_j, step_y_j, step_x_j, stride_y_j, stride_x_j);
+
+		// for local_(x,y) in [0;step_max)
+		for(int local_y = start_j; local_y+len_y_j-1 < step_y_max; local_y += step_y_j)
+		for(int local_x = start_j; local_x+len_x_j-1 < step_x_max; local_x += step_x_j)
+		{
+			// buffers
+			const int pos_x_j = ceil_div_pow2(x+local_x, j);
+			const int pos_y_j = ceil_div_pow2(y+local_y, j);
+
+			void *local_buffer_x = get_buffer_ptr(buffer_x, j, buffer_x_elems, (buffer_offset+pos_x_j), buff_elem_size);
+			void *local_buffer_y = get_buffer_ptr(buffer_y, j, buffer_y_elems, (buffer_offset+pos_y_j), buff_elem_size);
+
+// 			dwt_util_log(LOG_DBG, "\t core: local=(%i,%i) global=(%i,%i) global-normalized=(%i,%i) local-buffer=(%i,%i)\n",
+// 				local_y, local_x, y+local_y, x+local_x, pos_y_j, pos_x_j,
+// 				(int)(local_buffer_y-buffer_y)/buff_elem_size/sizeof(float),
+// 				(int)(local_buffer_x-buffer_x)/buff_elem_size/sizeof(float)
+// 			);
+
+			void *block4x4 = addr2_s(buffer_ptr, local_y, local_x, buffer_stride_x, buffer_stride_y);
+
+			// core4x4 (buffer=>buffer, no shift)
+			direct_4x4(
+				0,
+				0,
+				step_x_max,
+				step_y_max,
+				block4x4,
+				stride_x_j,
+				stride_y_j,
+				block4x4,
+				stride_x_j,
+				stride_y_j,
+				local_buffer_x,
+				local_buffer_y
+			);
+
+			// FIXME: store HL/LH/HH coeffs directly here
+		}
+	}
+
+	// copy coeffs from buffer[] into output (complicated pattern)
+	copy_buff_to_dst(
+		// buffer
+		buffer_ptr,
+		buffer_stride_x,
+		buffer_stride_y,
+		// image
+		dst,
+		dst_stride_x,
+		dst_stride_y,
+		size_x,
+		size_y,
+		x,
+		y,
+		// tile size
+		buffer_size_x,
+		buffer_size_y,
+		// new
+		J
+	);
 }
 
 static
@@ -2756,6 +3320,155 @@ void multiscale_4x4_j_loop(
 				dst,		// output LH/HL/HH(j)
 				dst_stride_x,
 				dst_stride_y,
+				// buffers
+				buffer_x,
+				buffer_y,
+				// others
+				super_x,
+				super_y,
+				buffer_offset
+			);
+		}
+	}
+#endif
+#if 1
+	for(int j = 0; j < 1; j++)
+	{
+		const int step_x_j = mul_pow2(step_x, j);
+		const int step_y_j = mul_pow2(step_y, j);
+
+// 		dwt_util_log(LOG_DBG, "j=%i step_j=(%i,%i)\n", j, step_y_j, step_x_j);
+
+		for(int yy = y; yy < y+step_y_max; yy += step_y_j)
+		for(int xx = x; xx < x+step_x_max; xx += step_x_j)
+		{
+// 			dwt_util_log(LOG_DBG, "multiscale_4x4...\n");
+			multiscale_4x4_separately3(
+				// scale
+				j,
+				// position
+				xx,
+				yy,
+				// data
+				src, 		// input LL(j-1)
+				src_stride_x,
+				src_stride_y,
+				size_x,
+				size_y,
+				0,
+				0,
+				tmp,		// FIXME: output LL(j)
+				tmp_stride_x,
+				tmp_stride_y,
+				size_x,
+				size_y,
+				0,
+				0,
+				dst,		// output LH/HL/HH(j)
+				dst_stride_x,
+				dst_stride_y,
+				size_x,
+				size_y,
+				0,
+				0,
+				// buffers
+				buffer_x,
+				buffer_y,
+				// others
+				super_x,
+				super_y,
+				buffer_offset
+			);
+		}
+	}
+	for(int j = 1; j < J-1; j++)
+	{
+		const int step_x_j = mul_pow2(step_x, j);
+		const int step_y_j = mul_pow2(step_y, j);
+
+// 		dwt_util_log(LOG_DBG, "j=%i step_j=(%i,%i)\n", j, step_y_j, step_x_j);
+
+		for(int yy = y; yy < y+step_y_max; yy += step_y_j)
+		for(int xx = x; xx < x+step_x_max; xx += step_x_j)
+		{
+// 			dwt_util_log(LOG_DBG, "multiscale_4x4...\n");
+			multiscale_4x4_separately3(
+				// scale
+				j,
+				// position
+				xx,
+				yy,
+				// data
+				tmp, 		// input LL(j-1)
+				tmp_stride_x,
+				tmp_stride_y,
+				size_x,
+				size_y,
+				0,
+				0,
+				tmp,		// FIXME: output LL(j)
+				tmp_stride_x,
+				tmp_stride_y,
+				size_x,
+				size_y,
+				0,
+				0,
+				dst,		// output LH/HL/HH(j)
+				dst_stride_x,
+				dst_stride_y,
+				size_x,
+				size_y,
+				0,
+				0,
+				// buffers
+				buffer_x,
+				buffer_y,
+				// others
+				super_x,
+				super_y,
+				buffer_offset
+			);
+		}
+	}
+	for(int j = J-1; j < J; j++)
+	{
+		const int step_x_j = mul_pow2(step_x, j);
+		const int step_y_j = mul_pow2(step_y, j);
+
+// 		dwt_util_log(LOG_DBG, "j=%i step_j=(%i,%i)\n", j, step_y_j, step_x_j);
+
+		for(int yy = y; yy < y+step_y_max; yy += step_y_j)
+		for(int xx = x; xx < x+step_x_max; xx += step_x_j)
+		{
+// 			dwt_util_log(LOG_DBG, "multiscale_4x4...\n");
+			multiscale_4x4_separately3(
+				// scale
+				j,
+				// position
+				xx,
+				yy,
+				// data
+				tmp, 		// input LL(j-1)
+				tmp_stride_x,
+				tmp_stride_y,
+				size_x,
+				size_y,
+				0,
+				0,
+				dst,		// FIXME: output LL(j)
+				dst_stride_x,
+				dst_stride_y,
+				size_x,
+				size_y,
+				0,
+				0,
+				dst,		// output LH/HL/HH(j)
+				dst_stride_x,
+				dst_stride_y,
+				size_x,
+				size_y,
+				0,
+				0,
 				// buffers
 				buffer_x,
 				buffer_y,
@@ -2885,7 +3598,7 @@ void multiscale_4x4_j_loop(
 		);
 	}
 #endif
-#if 1
+#if 0
 	const int words = 1; // vertical
 	const int buff_elem_size = words*4;
 
@@ -2894,6 +3607,10 @@ void multiscale_4x4_j_loop(
 
 	const int lag_x = (step_x-1);
 	const int lag_y = (step_y-1);
+
+// 	dwt_util_log(LOG_DBG, "pos=(%i,%i)\n",
+// 		y, x
+// 	);
 
 	for(int j = 0; j < J; j++)
 	{
@@ -2930,6 +3647,10 @@ void multiscale_4x4_j_loop(
 			// low: j=J-1: global; otherwise: local
 			const int low_pos_x = x_j - not_last * base_x_j + not_last * lag_x;
 			const int low_pos_y = y_j - not_last * base_y_j + not_last * lag_y;
+
+// 			dwt_util_log(LOG_DBG, "low-pos=(%i,%i) low-stride=(%i,%i)\n",
+// 				low_pos_y, low_pos_x,  low_stride_x_j, low_stride_y_j
+// 			);
 
 			unified_4x4_separately2(
 				size_x_j, size_y_j,
@@ -3021,7 +3742,8 @@ void ms_loop_unified_4x4_fused(
 				buffer_offset,
 				1, NULL, 0, 0
 			);
-#else
+#endif
+#if 1
 			multiscale_4x4_j_loop(
 				// scale
 				J,
@@ -3085,19 +3807,16 @@ void ms_loop_unified_4x4_fused2(
 // 	const int buffer_x_elems = buff_elem_size*super_x;
 // 	const int buffer_y_elems = buff_elem_size*super_y;
 
-	// FIXME: what distance between read and write head is really needed?
-// 	const int lag = 0;
-
-// 	const int lag_x = (step_x-1) + lag;
-// 	const int lag_y = (step_y-1) + lag;
-
 	const int step_x_max = mul_pow2(step_x, J-1);
 	const int step_y_max = mul_pow2(step_y, J-1);
 
+#if 0
+	// FIXME: persistent buffer
 	const int tmp_stride_y = sizeof(float);
 	const int tmp_stride_x = dwt_util_get_opt_stride(tmp_stride_y * step_x_max);
 	const int tmp_size = tmp_stride_x * step_y_max;
 	char tmp[tmp_size];
+#endif
 
 // 	dwt_util_log(LOG_DBG, "step_max=(%i,%i) J=%i\n", step_y_max, step_x_max, J);
 
@@ -3106,6 +3825,7 @@ void ms_loop_unified_4x4_fused2(
 	{
 		for(int x = base_x; x < stop_x; x += step_x_max)
 		{
+// 			dwt_util_log(LOG_DBG, "ms-core @ (%i,%i)\n", y, x);
 #if 0
 			multiscale_j_top(
 				J-1,
@@ -3132,7 +3852,8 @@ void ms_loop_unified_4x4_fused2(
 				buffer_offset,
 				1, NULL, 0, 0
 			);
-#else
+#endif
+#if 0
 			multiscale_4x4_j_loop(
 				// scale
 				J,
@@ -3161,6 +3882,33 @@ void ms_loop_unified_4x4_fused2(
 				tmp,
 				tmp_stride_x,
 				tmp_stride_y
+			);
+#endif
+#if 1
+			multiscale_4x4_j_loop_new(
+				// scale
+				J,
+				// position
+				x,
+				y,
+				// size
+				size_x,
+				size_y,
+				// src
+				src,
+				src_stride_x,
+				src_stride_y,
+				// dst
+				dst,
+				dst_stride_x,
+				dst_stride_y,
+				// buffers
+				buffer_x,
+				buffer_y,
+				// others
+				super_x,
+				super_y,
+				buffer_offset
 			);
 #endif
 		}
@@ -3257,7 +4005,7 @@ void ms_cdf97_2f_dl_4x4_fused_s(
 	const int buff_guard = 32;
 	// FIXME: what overlap is really needed?
 	// 4(j=2), 8(j=3), 32(j=5), 0(j=5)
-	const int overlap_L = 0;
+	const int overlap_L = 128;
 	// 13<<J ... with lag = 18
 	//  7<<J ... with lag =  8 (artifacts)
 	//  5<<J ... with lag =  4 (buffers)
@@ -3307,7 +4055,7 @@ void ms_cdf97_2f_dl_4x4_fused2_s(
 	// TODO: assert
 
 	// offset_x, offset_y
-// 	const int offset = 1;
+	const int offset = 1;
 
 	// core size
 // 	const int step_y = 4;
@@ -3319,16 +4067,10 @@ void ms_cdf97_2f_dl_4x4_fused2_s(
 	const int words = 1; // vertical
 	const int buff_elem_size = words*4;
 
-	// maximal coordinate in negative value (e.g., -(step_x-1) - lag = -3 -0 = -3)
-	const int buff_guard = 32;
-	// FIXME: what overlap is really needed?
-	// 4(j=2), 8(j=3), 32(j=5), 0(j=5), 128(j=5)
-	const int overlap_L = 0+128; // FIXME
-	// 13<<J ... with lag = 18
-	//  7<<J ... with lag =  8 (artifacts)
-	//  5<<J ... with lag =  4 (buffers)
-	//   128 ... with lag =  0 (j=5)
-	const int overlap_R = 128+0; // FIXME
+	// maximal coordinate in negative value
+	const int buff_guard = 64;
+	const int overlap_L = -(offset-4-(4<<J));
+	const int overlap_R = (4<<J)-(1<<J);
 
 	const int super_x = buff_guard + overlap_L + size_x + overlap_R;
 	const int super_y = buff_guard + overlap_L + size_y + overlap_R;
@@ -3339,6 +4081,18 @@ void ms_cdf97_2f_dl_4x4_fused2_s(
 	// alloc buffers
 	float buffer_x[J*buffer_x_elems] ALIGNED(16);
 	float buffer_y[J*buffer_y_elems] ALIGNED(16);
+
+#if 0
+	dwt_util_zero_vec_s(buffer_x, J*buffer_x_elems);
+	dwt_util_zero_vec_s(buffer_y, J*buffer_y_elems);
+	dwt_util_test_image_zero_s(
+		dst,
+		dst_stride_x,
+		dst_stride_y,
+		size_x,
+		size_y
+	);
+#endif
 
 	const int buffer_offset = buff_guard+overlap_L;
 
