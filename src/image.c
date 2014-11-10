@@ -188,6 +188,19 @@ void image_save_to_pgm_s(image_t *image, const char *path)
 	image_free(&s);
 }
 
+void image_save_to_pgm2_s(image_t *image, const char *path)
+{
+	dwt_util_save_to_pgm_s(
+		path,
+		1.f,
+		image->ptr,
+		image->stride_x,
+		image->stride_y,
+		image->size_x,
+		image->size_y
+	);
+}
+
 void image_save_log_to_pgm_s(image_t *image, const char *path)
 {
 	dwt_util_save_log_to_pgm_s(

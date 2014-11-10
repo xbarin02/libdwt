@@ -82,6 +82,11 @@ void image_save_to_pgm_s(
 	const char *path
 );
 
+void image_save_to_pgm2_s(
+	image_t *image,
+	const char *path
+);
+
 void image_save_to_pgm_format_s(
 	image_t *image,
 	const char *format,
