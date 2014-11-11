@@ -20583,10 +20583,10 @@ void dwt_util_conv_show_s(
 			log_i_s(&temp, 1.f+fabsf(coeff)*a);
 			temp /= b;
 
-			if( temp != temp )
+			if( !isfinite(temp) )
 			{
 				if(!err)
-					dwt_util_log(LOG_ERR, "got NaN as result of log(1+abs(c)*a)/b; this error will be reported only once\n");
+					dwt_util_log(LOG_ERR, "either NaN or INFINITY; this error will be reported only once\n");
 				err++;
 
 				temp = 0.f;
