@@ -3,7 +3,8 @@ include ../../common.mk
 LIBNAME = libdwt
 LIBPATH = $(ROOT)/src
 CFLAGS += -I$(LIBPATH)
-BIN = nsls
+#BIN = nsls
+BIN = nsls97
 
 .PHONY: all clean
 
