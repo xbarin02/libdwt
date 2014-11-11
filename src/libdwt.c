@@ -20570,6 +20570,8 @@ void dwt_util_conv_show_s(
 	const float a = 100.f;
 	const float b = 10.f;
 
+	int err = 0;
+
 	for(int y = 0; y < size_i_big_y; y++)
 	{
 		for(int x = 0; x < size_i_big_x; x++)
@@ -20580,6 +20582,15 @@ void dwt_util_conv_show_s(
 			float temp;
 			log_i_s(&temp, 1.f+fabsf(coeff)*a);
 			temp /= b;
+
+			if( temp != temp )
+			{
+				if(!err)
+					dwt_util_log(LOG_ERR, "got NaN as result of log(1+abs(c)*a)/b; this error will be reported only once\n");
+				err++;
+
+				temp = 0.f;
+			}
 
 			*log_coeff = temp;
 		}
