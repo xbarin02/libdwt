@@ -51,13 +51,17 @@ system.o: system.c system.h
 
 spectra.o: spectra.c spectra.h
 
+volume.o: volume.c volume.h
+
+volume-dwt.o: volume-dwt.c volume-dwt.h
+
 dwt-core.S: dwt-core.c dwt-core.h
 	$(CC) $(CFLAGS) -c -Wa,-ahl=dwt-core.S -g -fverbose-asm $< -o /dev/null
 
 $(LIBNAME).S: $(LIBNAME).c $(LIBNAME).h
 	$(CC) $(CFLAGS) -S -Wa,-adhln -g -fverbose-asm $< -o $@
 
-$(LIBNAME).a: $(LIBNAME).o util.o signal.o image.o swt.o dwt.o dwt-simple.o eaw-experimental.o dwt-core.o gabor.o dwt-sym.o dwt-sym-ms.o system.o spectra.o
+$(LIBNAME).a: $(LIBNAME).o util.o signal.o image.o swt.o dwt.o dwt-simple.o eaw-experimental.o dwt-core.o gabor.o dwt-sym.o dwt-sym-ms.o system.o spectra.o volume.o volume-dwt.o
 	$(AR) -rsc $@ $^
 
 # $(LIBNAME).so: $(LIBNAME).o

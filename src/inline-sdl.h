@@ -9,6 +9,16 @@ do { \
 #endif
 
 #ifdef __SSE__
+#define _MM_TRANSPOSE2_PS(t0, t1) \
+do { \
+	__m128 temp = (t0); \
+	(t0) = _mm_unpacklo_ps((t0), (t1)); \
+	temp = _mm_unpackhi_ps(temp, (t1)); \
+	(t1) = temp; \
+} while(0)
+#endif
+
+#ifdef __SSE__
 #define op4s_sdl2_update_s_sse(c, l, r, z) \
 do { \
 	(c) = (l); \

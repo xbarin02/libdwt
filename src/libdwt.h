@@ -899,6 +899,13 @@ void dwt_cdf97_2i_inplace_s(
 	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
 );
 
+void dwt_cdf97_1i_inplace_s(
+	void *ptr,
+	int stride,
+	int size,
+	int j_max
+);
+
 void dwt_cdf97_2i_inplace_hole_s(
 	void *ptr,		///< pointer to beginning of image data
 	int stride_x,		///< difference between rows (in bytes)

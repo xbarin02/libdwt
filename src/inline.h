@@ -536,4 +536,13 @@ int ceil_div2(
 	return (x + 1) >> 1;
 }
 
+UNUSED_FUNC
+static
+int is_pow2(
+	int x
+)
+{
+	return 0 == (x & (x - 1));
+}
+
 #endif

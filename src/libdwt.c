@@ -773,14 +773,6 @@ int dwt_util_get_accel()
 
 #include "inline.h"
 
-static
-int is_pow2(
-	int x
-)
-{
-	return 0 == (x & (x - 1));
-}
-
 int dwt_util_ceil_log2(
 	int x
 )
@@ -1025,16 +1017,7 @@ int calc_and_set_temp_size_s(
 	return temp_calc_internal(alignment, elem_size, offset, elements, workers);
 }
 
-static
-int is_aligned(
-	void *ptr,
-	size_t alignment
-)
-{
-	assert( is_pow2(alignment) );
-
-	return ( (intptr_t)ptr & (intptr_t)(alignment-1) ) ? 0 : 1;
-}
+#include "system.h" // is_aligned
 
 static
 void *ptralign_down(
@@ -1196,38 +1179,38 @@ void *dwt_util_memcpy_stride_i(
  *
  * @returns The function returns a pointer to @p dst.
  */
-static
-void *dwt_util_memcpy_stride_s(
-	void *restrict dst,
-	ssize_t stride_dst,
-	const void *restrict src,
-	ssize_t stride_src,
-	size_t n		///< Number of floats to be copied, not number of bytes.
-)
-{
-	assert( NULL != dst && NULL != src );
-
-	const size_t size = sizeof(float);
-
-	if( (ssize_t)size == stride_src && (ssize_t)size == stride_dst )
-	{
-		memcpy(dst, src, n*size);
-	}
-	else
-	{
-		char *restrict ptr_dst = (char *restrict)dst;
-		const char *restrict ptr_src = (const char *restrict)src;
-		for(size_t i = 0; i < n; i++)
-		{
-			*(float *restrict)ptr_dst = *(const float *restrict)ptr_src;
-
-			ptr_dst += stride_dst;
-			ptr_src += stride_src;
-		}
-	}
-
-	return dst;
-}
+// static
+// void *dwt_util_memcpy_stride_s(
+// 	void *restrict dst,
+// 	ssize_t stride_dst,
+// 	const void *restrict src,
+// 	ssize_t stride_src,
+// 	size_t n		///< Number of floats to be copied, not number of bytes.
+// )
+// {
+// 	assert( NULL != dst && NULL != src );
+// 
+// 	const size_t size = sizeof(float);
+// 
+// 	if( (ssize_t)size == stride_src && (ssize_t)size == stride_dst )
+// 	{
+// 		memcpy(dst, src, n*size);
+// 	}
+// 	else
+// 	{
+// 		char *restrict ptr_dst = (char *restrict)dst;
+// 		const char *restrict ptr_src = (const char *restrict)src;
+// 		for(size_t i = 0; i < n; i++)
+// 		{
+// 			*(float *restrict)ptr_dst = *(const float *restrict)ptr_src;
+// 
+// 			ptr_dst += stride_dst;
+// 			ptr_src += stride_src;
+// 		}
+// 	}
+// 
+// 	return dst;
+// }
 
 /**
  * @brief Copy memory area.
@@ -17151,6 +17134,61 @@ void dwt_cdf97_2i_s(
 	FUNC_END;
 }
 
+void dwt_cdf97_1i_inplace_s(
+	void *ptr,
+	int stride,
+	int size,
+	int j_max
+)
+{
+	int j = ceil_log2( size );
+
+	if( j_max >= 0 && j_max < j )
+		j = j_max;
+
+	for(;;)
+	{
+		if( 0 == j )
+			break;
+
+		const int size_j = ceil_div_pow2(size, j-1);
+
+		const int stride_j = stride * (1 << (j-1));
+
+		if( size_j > 1 && size_j < 4 )
+		{
+			dwt_cdf97_i_ex_stride_inplace_part_exceptions_s(
+				ptr,
+				size_j,
+				stride_j
+			);
+		}
+
+		if( size_j >= 4 )
+		{
+			dwt_cdf97_i_ex_stride_inplace_part_prolog_s(
+				ptr,
+				size_j,
+				stride_j
+			);
+
+			dwt_cdf97_i_ex_stride_inplace_part_core_s(
+				ptr,
+				size_j,
+				stride_j
+			);
+
+			dwt_cdf97_i_ex_stride_inplace_part_epilog_s(
+				ptr,
+				size_j,
+				stride_j
+			);
+		}
+
+		j--;
+	}
+}
+
 void dwt_cdf97_2i_inplace_s(
 	void *ptr,
 	int stride_x,
@@ -21862,8 +21900,10 @@ void dwt_util_get_sizes_d(
 }
 
 // 1.618, 1.333, 1.28, 1.13, 1.06, 1.02
-float g_growth_factor_s = 1.28f;
-float g_growth_factor_d = 1.28;
+// float g_growth_factor_s = 1.28f;
+// float g_growth_factor_d = 1.28;
+float g_growth_factor_s = 1.13f;
+float g_growth_factor_d = 1.13;
 
 void dwt_util_measure_perf_cdf97_1_s(
 	enum dwt_array array_type,

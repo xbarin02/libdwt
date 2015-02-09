@@ -2056,6 +2056,171 @@ void fdwt2_cdf53_vertical_s(
 	}
 }
 
+void fdwt1_cdf97_horizontal_s(
+	void *ptr,
+	int size,
+	int stride,
+	int *j_max_ptr
+)
+{
+	const int offset = 1;
+
+	int j = 0;
+
+	const int j_limit = ceil_log2(size);
+
+	if( *j_max_ptr < 0 || *j_max_ptr > j_limit )
+		*j_max_ptr = j_limit;
+
+	for(;;)
+	{
+		if( *j_max_ptr == j )
+			break;
+
+		const int size_x_j = ceil_div_pow2(size, j);
+
+		const int stride_y_j = stride * (1 << j);
+
+		if( size_x_j > 1 && size_x_j < 5 )
+		{
+			fdwt_cdf97_short_s(
+				ptr,
+				size_x_j,
+				stride_y_j
+			);
+		}
+
+		if( size_x_j >= 5 )
+		{
+			fdwt_cdf97_prolog_s(
+				ptr,
+				size_x_j,
+				stride_y_j
+			);
+
+			fdwt_cdf97_horizontal_s(
+				addr1_s(ptr, 0+offset, stride_y_j),
+				size_x_j-offset,
+				stride_y_j
+			);
+
+			fdwt_cdf97_epilog_s(
+				addr1_s(ptr, 0+offset, stride_y_j),
+				size_x_j-offset,
+				stride_y_j
+			);
+		}
+
+		j++;
+	}
+}
+
+void fdwt1_single_cdf97_horizontal_s(
+	void *ptr,
+	int size,
+	int stride
+)
+{
+	const int offset = 1;
+
+	const int j_limit = ceil_log2(size);
+
+	if( j_limit < 1 )
+		return;
+
+	const int size_x_j = size;
+
+	const int stride_y_j = stride;
+
+	if( size_x_j > 1 && size_x_j < 5 )
+	{
+		fdwt_cdf97_short_s(
+			ptr,
+			size_x_j,
+			stride_y_j
+		);
+	}
+
+	if( size_x_j >= 5 )
+	{
+		fdwt_cdf97_prolog_s(
+			ptr,
+			size_x_j,
+			stride_y_j
+		);
+
+		fdwt_cdf97_horizontal_s(
+			addr1_s(ptr, 0+offset, stride_y_j),
+			size_x_j-offset,
+			stride_y_j
+		);
+
+		fdwt_cdf97_epilog_s(
+			addr1_s(ptr, 0+offset, stride_y_j),
+			size_x_j-offset,
+			stride_y_j
+		);
+	}
+}
+
+void fdwt1_single_cdf97_horizontal_min5_s(
+	void *ptr,
+	int size,
+	int stride
+)
+{
+	assert( size >= 5 );
+
+	const int offset = 1;
+
+	fdwt_cdf97_prolog_s(
+		ptr,
+		size,
+		stride
+	);
+
+	fdwt_cdf97_horizontal_s(
+		addr1_s(ptr, 0+offset, stride),
+		size-offset,
+		stride
+	);
+
+	fdwt_cdf97_epilog_s(
+		addr1_s(ptr, 0+offset, stride),
+		size-offset,
+		stride
+	);
+}
+
+void fdwt1_single_cdf97_vertical_min5_s(
+	void *ptr,
+	int size,
+	int stride
+)
+{
+	assert( size >= 5 );
+
+	const int offset = 1;
+
+	fdwt_cdf97_prolog_s(
+		ptr,
+		size,
+		stride
+	);
+
+	fdwt_cdf97_vertical_s(
+		addr1_s(ptr, 0+offset, stride),
+		size-offset,
+		stride
+	);
+
+	fdwt_cdf97_epilog_s(
+		addr1_s(ptr, 0+offset, stride),
+		size-offset,
+		stride
+	);
+}
+
 void fdwt2_cdf97_horizontal_s(
 	void *ptr,
 	int size_x,
