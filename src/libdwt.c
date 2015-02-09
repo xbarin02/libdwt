@@ -25048,6 +25048,58 @@ int dwt_util_find_min_max_s(
 	return 0;
 }
 
+int dwt_util_find_min_max_i(
+	const void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	int *min,
+	int *max
+)
+{
+	assert( ptr );
+	assert( size_x > 0 && size_y > 0 );
+
+	*min = *dwt_util_addr_coeff_const_i(
+		ptr,
+		0,
+		0,
+		stride_x,
+		stride_y
+	);
+
+	*max = *dwt_util_addr_coeff_const_i(
+		ptr,
+		0,
+		0,
+		stride_x,
+		stride_y
+	);
+
+	for(int y = 0; y < size_y; y++)
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			float coeff = *dwt_util_addr_coeff_const_i(
+				ptr,
+				y,
+				x,
+				stride_x,
+				stride_y
+			);
+
+			if( coeff > *max )
+				*max = coeff;
+
+			if( coeff < *min )
+				*min = coeff;
+		}
+	}
+
+	return 0;
+}
+
 int dwt_util_shift_s(
 	void *ptr,
 	int size_x,

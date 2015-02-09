@@ -3458,6 +3458,16 @@ int dwt_util_find_min_max_s(
 	float *max
 );
 
+int dwt_util_find_min_max_i(
+	const void *ptr,
+	int size_x,
+	int size_y,
+	int stride_x,
+	int stride_y,
+	int *min,
+	int *max
+);
+
 /**
  * @brief Add a constant to all elements of matrix.
  *
