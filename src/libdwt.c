@@ -817,16 +817,7 @@ int dwt_util_floor_div(
 	return floor_div(x, y);
 }
 
-/**
- * @brief returns 1 if x is odd, 0 otherwise; works also for negative numbers
- */
-static
-int is_odd(
-	int x
-)
-{
-	return x & 1;
-}
+#include "inline.h"
 
 static
 int up_to_even(
@@ -1407,6 +1398,29 @@ void dwt_util_test_image_fill_i(
 				y,
 				rand,
 				0
+			);
+}
+
+void dwt_util_test_image_fill2_i(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int rand,
+	int type
+)
+{
+	assert( NULL != ptr );
+
+	for(int y = 0; y < size_i_big_y; y++)
+		for(int x = 0; x < size_i_big_x; x++)
+			dwt_util_test_image_value_i_i(
+				addr2_i(ptr, y, x, stride_x, stride_y),
+				x,
+				y,
+				rand,
+				type
 			);
 }
 
@@ -17186,6 +17200,243 @@ void dwt_cdf97_1i_inplace_s(
 		}
 
 		j--;
+	}
+}
+
+void dwt_cdf97_i_ex_stride_inplace_i(
+	int *tmp,
+	int N,
+	int stride
+)
+{
+	assert( N >= 0 && NULL != tmp && 0 != stride );
+
+	// fix for small N
+	if(N < 2)
+		return;
+#if 0
+	// backward update 2 + backward predict 2
+	for(int i=2; i<N-(N&1); i+=2)
+		*addr1_i(tmp, i, stride) -= ( 1817*(*addr1_i(tmp, i-1, stride)+*addr1_i(tmp, i+1, stride)) + (1<<11) ) >> 12;
+
+	*addr1_i(tmp, 0, stride) -= ( 1817*(*addr1_i(tmp, 1, stride)+*addr1_i(tmp, 1, stride)) + (1<<11) ) >> 12;
+
+	if(is_odd(N))
+		*addr1_i(tmp, N-1, stride) -= ( 1817*(*addr1_i(tmp, N-2, stride)+*addr1_i(tmp, N-2, stride)) + (1<<11) ) >> 12;
+	else
+		*addr1_i(tmp, N-1, stride) += ( -113*(*addr1_i(tmp, N-2, stride)+*addr1_i(tmp, N-2, stride)) - (1<<6) ) >> 7;
+
+	for(int i=1; i<N-2+(N&1); i+=2)
+		*addr1_i(tmp, i, stride) += ( -113*(*addr1_i(tmp, i-1, stride)+*addr1_i(tmp, i+1, stride)) - (1<<6) ) >> 7;
+
+	// backward update 1 + backward predict 1
+	for(int i=2; i<N-(N&1); i+=2)
+		*addr1_i(tmp, i, stride) -= ( -217*(*addr1_i(tmp, i-1, stride)+*addr1_i(tmp, i+1, stride)) + (1<<11) ) >> 12;
+
+	*addr1_i(tmp, 0, stride) -= ( -217*(*addr1_i(tmp, 1, stride)+*addr1_i(tmp, 1, stride)) + (1<<11) ) >> 12;
+
+	if(is_odd(N))
+		*addr1_i(tmp, N-1, stride) -= ( -217*(*addr1_i(tmp, N-2, stride)+*addr1_i(tmp, N-2, stride)) + (1<<11) ) >> 12;
+	else
+		*addr1_i(tmp, N-1, stride) += ( +203*(*addr1_i(tmp, N-2, stride)+*addr1_i(tmp, N-2, stride)) - (1<<6) ) >> 7;
+
+	for(int i=1; i<N-2+(N&1); i+=2)
+		*addr1_i(tmp, i, stride) += ( +203*(*addr1_i(tmp, i-1, stride)+*addr1_i(tmp, i+1, stride)) - (1<<6) ) >> 7;
+#else
+	// backward update 2 + backward predict 2
+	for(int i=2; i<N-(N&1); i+=2)
+		*addr1_i(tmp, i, stride) -= ( 1817*(*addr1_i(tmp, i-1, stride)+*addr1_i(tmp, i+1, stride)) + (1<<11) ) >> 12;
+
+	*addr1_i(tmp, 0, stride) -= ( 1817*(*addr1_i(tmp, 1, stride)+*addr1_i(tmp, 1, stride)) + (1<<11) ) >> 12;
+
+	if(is_odd(N))
+		*addr1_i(tmp, N-1, stride) -= ( 1817*(*addr1_i(tmp, N-2, stride)+*addr1_i(tmp, N-2, stride)) + (1<<11) ) >> 12;
+	else
+		*addr1_i(tmp, N-1, stride) -= ( +113*(*addr1_i(tmp, N-2, stride)+*addr1_i(tmp, N-2, stride)) + (1<<6) ) >> 7;
+
+	for(int i=1; i<N-2+(N&1); i+=2)
+		*addr1_i(tmp, i, stride) -= ( +113*(*addr1_i(tmp, i-1, stride)+*addr1_i(tmp, i+1, stride)) + (1<<6) ) >> 7;
+
+	// backward update 1 + backward predict 1
+	for(int i=2; i<N-(N&1); i+=2)
+		*addr1_i(tmp, i, stride) -= ( -217*(*addr1_i(tmp, i-1, stride)+*addr1_i(tmp, i+1, stride)) + (1<<11) ) >> 12;
+
+	*addr1_i(tmp, 0, stride) -= ( -217*(*addr1_i(tmp, 1, stride)+*addr1_i(tmp, 1, stride)) + (1<<11) ) >> 12;
+
+	if(is_odd(N))
+		*addr1_i(tmp, N-1, stride) -= ( -217*(*addr1_i(tmp, N-2, stride)+*addr1_i(tmp, N-2, stride)) + (1<<11) ) >> 12;
+	else
+		*addr1_i(tmp, N-1, stride) -= ( -203*(*addr1_i(tmp, N-2, stride)+*addr1_i(tmp, N-2, stride)) + (1<<6) ) >> 7;
+
+	for(int i=1; i<N-2+(N&1); i+=2)
+		*addr1_i(tmp, i, stride) -= ( -203*(*addr1_i(tmp, i-1, stride)+*addr1_i(tmp, i+1, stride)) + (1<<6) ) >> 7;
+#endif
+}
+
+// TODO: tested only with j=1
+void dwt_cdf97_2i_inplace_i(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int j_max,
+	int decompose_one,
+	int zero_padding
+)
+{
+	const int size_o_big_min = min(size_o_big_x, size_o_big_y);
+	const int size_o_big_max = max(size_o_big_x, size_o_big_y);
+
+	int j = ceil_log2(decompose_one ? size_o_big_max : size_o_big_min);
+
+	if( j_max >= 0 && j_max < j )
+		j = j_max;
+
+	for(;;)
+	{
+		if( 0 == j )
+			break;
+
+		const int size_x_j = ceil_div_pow2(size_i_big_x, j-1);
+		const int size_y_j = ceil_div_pow2(size_i_big_y, j-1);
+
+		#pragma omp parallel for schedule(static, ceil_div(size_x_j, omp_get_num_threads()))
+		for(int x = 0; x < size_x_j; x++)
+			dwt_cdf97_i_ex_stride_inplace_i(
+				addr2_i(ptr, 0, x, stride_x, stride_y),
+				size_y_j,
+				stride_x
+			);
+		#pragma omp parallel for schedule(static, ceil_div(size_y_j, omp_get_num_threads()))
+		for(int y = 0; y < size_y_j; y++)
+			dwt_cdf97_i_ex_stride_inplace_i(
+				addr2_i(ptr, y, 0, stride_x, stride_y),
+				size_x_j,
+				stride_y
+			);
+
+		j--;
+	}
+}
+
+void dwt_cdf97_f_ex_stride_inplace_i(
+	int *tmp,
+	int N,
+	int stride
+)
+{
+	assert( N >= 0 && NULL != tmp && 0 != stride );
+
+	// fix for small N
+	if(N < 2)
+		return;
+
+#if 0
+	// predict 1 + update 1
+	for(int i=1; i<N-2+(N&1); i+=2)
+		*addr1_i(tmp, i, stride) -= ( +203*(*addr1_i(tmp, i-1, stride)+*addr1_i(tmp, i+1, stride)) - (1<<6) ) >> 7;
+
+	if(is_odd(N))
+		*addr1_i(tmp, N-1, stride) += ( -217*(*addr1_i(tmp, N-2, stride)+*addr1_i(tmp, N-2, stride)) + (1<<11) ) >> 12;
+	else
+		*addr1_i(tmp, N-1, stride) -= ( +203*(*addr1_i(tmp, N-2, stride)+*addr1_i(tmp, N-2, stride)) - (1<<6) ) >> 7;
+	*addr1_i(tmp, 0, stride) += ( -217*(*addr1_i(tmp, 1, stride)+*addr1_i(tmp, 1, stride)) + (1<<11) ) >> 12;
+
+	for(int i=2; i<N-(N&1); i+=2)
+		*addr1_i(tmp, i, stride) += ( -217*(*addr1_i(tmp, i-1, stride)+*addr1_i(tmp, i+1, stride)) + (1<<11) ) >> 12;
+
+	// predict 2 + update 2
+	for(int i=1; i<N-2+(N&1); i+=2)
+		*addr1_i(tmp, i, stride) -= ( -113*(*addr1_i(tmp, i-1, stride)+*addr1_i(tmp, i+1, stride)) - (1<<6) ) >> 7;
+
+	if(is_odd(N))
+		*addr1_i(tmp, N-1, stride) += ( 1817*(*addr1_i(tmp, N-2, stride)+*addr1_i(tmp, N-2, stride)) + (1<<11) ) >> 12;
+	else
+		*addr1_i(tmp, N-1, stride) -= ( -113*(*addr1_i(tmp, N-2, stride)+*addr1_i(tmp, N-2, stride)) - (1<<6) ) >> 7;
+	*addr1_i(tmp, 0, stride) += ( 1817*(*addr1_i(tmp, 1, stride)+*addr1_i(tmp, 1, stride)) + (1<<11) ) >> 12;
+
+	for(int i=2; i<N-(N&1); i+=2)
+		*addr1_i(tmp, i, stride) += ( 1817*(*addr1_i(tmp, i-1, stride)+*addr1_i(tmp, i+1, stride)) + (1<<11) ) >> 12;
+#else
+	// predict 1 + update 1
+	for(int i=1; i<N-2+(N&1); i+=2)
+		*addr1_i(tmp, i, stride) += ( -203*(*addr1_i(tmp, i-1, stride)+*addr1_i(tmp, i+1, stride)) + (1<<6) ) >> 7;
+
+	if(is_odd(N))
+		*addr1_i(tmp, N-1, stride) += ( -217*(*addr1_i(tmp, N-2, stride)+*addr1_i(tmp, N-2, stride)) + (1<<11) ) >> 12;
+	else
+		*addr1_i(tmp, N-1, stride) += ( -203*(*addr1_i(tmp, N-2, stride)+*addr1_i(tmp, N-2, stride)) + (1<<6) ) >> 7;
+	*addr1_i(tmp, 0, stride) += ( -217*(*addr1_i(tmp, 1, stride)+*addr1_i(tmp, 1, stride)) + (1<<11) ) >> 12;
+
+	for(int i=2; i<N-(N&1); i+=2)
+		*addr1_i(tmp, i, stride) += ( -217*(*addr1_i(tmp, i-1, stride)+*addr1_i(tmp, i+1, stride)) + (1<<11) ) >> 12;
+
+	// predict 2 + update 2
+	for(int i=1; i<N-2+(N&1); i+=2)
+		*addr1_i(tmp, i, stride) += ( +113*(*addr1_i(tmp, i-1, stride)+*addr1_i(tmp, i+1, stride)) + (1<<6) ) >> 7;
+
+	if(is_odd(N))
+		*addr1_i(tmp, N-1, stride) += ( 1817*(*addr1_i(tmp, N-2, stride)+*addr1_i(tmp, N-2, stride)) + (1<<11) ) >> 12;
+	else
+		*addr1_i(tmp, N-1, stride) += ( +113*(*addr1_i(tmp, N-2, stride)+*addr1_i(tmp, N-2, stride)) + (1<<6) ) >> 7;
+	*addr1_i(tmp, 0, stride) += ( 1817*(*addr1_i(tmp, 1, stride)+*addr1_i(tmp, 1, stride)) + (1<<11) ) >> 12;
+
+	for(int i=2; i<N-(N&1); i+=2)
+		*addr1_i(tmp, i, stride) += ( 1817*(*addr1_i(tmp, i-1, stride)+*addr1_i(tmp, i+1, stride)) + (1<<11) ) >> 12;
+#endif
+}
+
+// TODO: tested only with j=1
+void dwt_cdf97_2f_inplace_i(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int *j_max_ptr,
+	int decompose_one,
+	int zero_padding
+)
+{
+	const int size_o_big_min = min(size_o_big_x, size_o_big_y);
+	const int size_o_big_max = max(size_o_big_x, size_o_big_y);
+
+	int j = 0;
+
+	const int j_limit = ceil_log2(decompose_one ? size_o_big_max : size_o_big_min);
+
+	if( *j_max_ptr < 0 || *j_max_ptr > j_limit )
+		*j_max_ptr = j_limit;
+
+	for(;;)
+	{
+		if( *j_max_ptr == j )
+			break;
+
+		const int size_x_j = ceil_div_pow2(size_i_big_x, j  );
+		const int size_y_j = ceil_div_pow2(size_i_big_y, j  );
+
+		#pragma omp parallel for schedule(static, ceil_div(size_y_j, omp_get_num_threads()))
+		for(int y = 0; y < size_y_j; y++)
+			dwt_cdf97_f_ex_stride_inplace_i(
+				addr2_i(ptr, y, 0, stride_x, stride_y),
+				size_x_j,
+				stride_y
+			);
+		#pragma omp parallel for schedule(static, ceil_div(size_x_j, omp_get_num_threads()))
+		for(int x = 0; x < size_x_j; x++)
+			dwt_cdf97_f_ex_stride_inplace_i(
+				addr2_i(ptr, 0, x, stride_x, stride_y),
+				size_y_j,
+				stride_x
+			);
+
+		j++;
 	}
 }
 

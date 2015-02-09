@@ -52,17 +52,6 @@ void *dwt_util_memcpy_stride_s(
 	return dst;
 }
 
-/**
- * @brief returns 1 if x is odd, 0 otherwise; works also for negative numbers
- */
-static
-int is_odd(
-	int x
-)
-{
-	return x & 1;
-}
-
 static
 float dwt_eaw_w(float n, float m, float alpha)
 {

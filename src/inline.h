@@ -545,4 +545,16 @@ int is_pow2(
 	return 0 == (x & (x - 1));
 }
 
+/**
+ * @brief returns 1 if x is odd, 0 otherwise; works also for negative numbers
+ */
+UNUSED_FUNC
+static
+int is_odd(
+	int x
+)
+{
+	return x & 1;
+}
+
 #endif

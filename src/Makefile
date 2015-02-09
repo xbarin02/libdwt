@@ -55,13 +55,15 @@ volume.o: volume.c volume.h
 
 volume-dwt.o: volume-dwt.c volume-dwt.h
 
+core-int.o: core-int.c core-int.h
+
 dwt-core.S: dwt-core.c dwt-core.h
 	$(CC) $(CFLAGS) -c -Wa,-ahl=dwt-core.S -g -fverbose-asm $< -o /dev/null
 
 $(LIBNAME).S: $(LIBNAME).c $(LIBNAME).h
 	$(CC) $(CFLAGS) -S -Wa,-adhln -g -fverbose-asm $< -o $@
 
-$(LIBNAME).a: $(LIBNAME).o util.o signal.o image.o swt.o dwt.o dwt-simple.o eaw-experimental.o dwt-core.o gabor.o dwt-sym.o dwt-sym-ms.o system.o spectra.o volume.o volume-dwt.o
+$(LIBNAME).a: $(LIBNAME).o util.o signal.o image.o swt.o dwt.o dwt-simple.o eaw-experimental.o dwt-core.o gabor.o dwt-sym.o dwt-sym-ms.o system.o spectra.o volume.o volume-dwt.o core-int.o
 	$(AR) -rsc $@ $^
 
 # $(LIBNAME).so: $(LIBNAME).o

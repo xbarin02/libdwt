@@ -1010,6 +1010,42 @@ void dwt_cdf97_2i_i(
 );
 
 /**
+ * @brief Inverse image fast wavelet transform using CDF 9/7 wavelet and lifting scheme, in-place version, interleaved subbands.
+ *
+ * This function works with integers (i.e. int data type).
+ */
+void dwt_cdf97_2i_inplace_i(
+	void *ptr,		///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_o_big_x,	///< width of outer image frame (in elements)
+	int size_o_big_y,	///< height of outer image frame (in elements)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y,	///< height of nested image (in elements)
+	int j_max,		///< pointer to the number of achieved decomposition levels (scales)
+	int decompose_one,	///< should be row or column of size one pixel decomposed? zero value if not
+	int zero_padding	///< fill padding in channels with zeros? zero value if not, should be non zero only for sparse decomposition
+);
+
+/**
+ * @brief Forward image fast wavelet transform using CDF 9/7 wavelet and lifting scheme, in-place version, interleaved subbands.
+ *
+ * This function works with integers (i.e. int data type).
+ */
+void dwt_cdf97_2f_inplace_i(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_o_big_x,
+	int size_o_big_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int *j_max_ptr,
+	int decompose_one,
+	int zero_padding
+);
+
+/**
  * @brief Inverse image fast wavelet transform using CDF 5/3 wavelet and lifting scheme, in-place version.
  *
  * This function works with single precision floating point numbers (i.e. float data type).
@@ -1274,6 +1310,16 @@ void dwt_util_test_image_fill_i(
 	int size_i_big_x,	///< width of nested image (in elements)
 	int size_i_big_y,	///< height of nested image (in elements)
 	int rand		///< random seed
+);
+
+void dwt_util_test_image_fill2_i(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int rand,
+	int type
 );
 
 /**

@@ -11,11 +11,15 @@ struct image_t;
 
 #if 1
 struct image_t {
-	void *ptr;
+	union {
+		void *ptr;
+		void *base;
+	};
 	int size_x;
 	int size_y;
 	int stride_x;
 	int stride_y;
+	int size;
 };
 #endif
 
