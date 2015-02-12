@@ -449,3 +449,11 @@ void dwt_util_set_cpufreq()
 		}
 	}
 }
+
+void dwt_util_env_single_threading()
+{
+	dwt_util_set_affinity();
+
+	dwt_util_set_num_threads(1);
+	dwt_util_set_num_workers(1);
+}

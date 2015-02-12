@@ -1432,6 +1432,23 @@ int dwt_util_compare_i(
  * @brief Compare two images.
  *
  * This function compares two images and returns zero value if they equal.
+ * This function works with integers (i.e. int data type).
+ */
+int dwt_util_compare2_i(
+	void *ptr1,
+	void *ptr2,
+	int stride1_x,
+	int stride1_y,
+	int stride2_x,
+	int stride2_y,
+	int size_x,
+	int size_y
+);
+
+/**
+ * @brief Compare two images.
+ *
+ * This function compares two images and returns zero value if they equal.
  * This function works with single precision floating point numbers (i.e. float data type).
  */
 int dwt_util_compare_s(

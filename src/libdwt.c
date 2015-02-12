@@ -1646,6 +1646,39 @@ int dwt_util_compare_i(
 	return 0;
 }
 
+int dwt_util_compare2_i(
+	void *ptr1,
+	void *ptr2,
+	int stride1_x,
+	int stride1_y,
+	int stride2_x,
+	int stride2_y,
+	int size_x,
+	int size_y
+)
+{
+	assert( ptr1 != NULL && ptr2 != NULL && size_x >= 0 && size_y >= 0 );
+
+	for(int y = 0; y < size_y; y++)
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			const int a = *addr2_i(ptr1, y, x, stride1_x, stride1_y);
+			const int b = *addr2_i(ptr2, y, x, stride2_x, stride2_y);
+
+			if( abs(a - b) > 0 )
+			{
+#ifdef DEBUG
+				dwt_util_log(LOG_DBG, "%s: %i != %i at (x=%i, y=%i)\n", __FUNCTION__, a, b, x, y);
+#endif
+				return 1;
+			}
+		}
+	}
+
+	return 0;
+}
+
 int dwt_util_compare_s(
 	void *ptr1,
 	void *ptr2,

@@ -116,4 +116,6 @@ long unsigned dwt_util_get_page_fault();
 
 void dwt_util_set_cpufreq();
 
+void dwt_util_env_single_threading();
+
 #endif

@@ -8,16 +8,6 @@
 #include "inline.h"
 #include "system.h"
 
-#if 0
-struct image_t {
-	void *ptr;
-	int size_x;
-	int size_y;
-	int stride_x;
-	int stride_y;
-};
-#endif
-
 void image_init(image_t *image, void *ptr, int size_x, int size_y, int stride_x, int stride_y)
 {
 	image->ptr = ptr;

@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <complex.h>
+#include <stdint.h>
 
 #ifdef __GNUC__
 	#define UNUSED_FUNC __attribute__ ((unused))
@@ -272,6 +273,19 @@ const int *addr2_const_i(
 )
 {
 	return (const int *)((const char *)ptr+y*stride_x+x*stride_y);
+}
+
+UNUSED_FUNC
+static
+int16_t *addr2_i16(
+	void *ptr,
+	int y,
+	int x,
+	int stride_x,
+	int stride_y
+)
+{
+	return (int16_t *)((char *)ptr + y*stride_x + x*stride_y);
 }
 
 /**
