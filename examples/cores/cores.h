@@ -38,6 +38,21 @@ void cores2f_cdf97_v2x2_f32(
  *
  * * levels: 1
  * * dims: 2-D
+ * * dir: inverse
+ * * core: vert2x2
+ * * type: float
+ * * order: horizontal
+ */
+void cores2i_cdf97_v2x2_f32(
+	struct image_t *src,
+	struct image_t *dst
+);
+
+/**
+ * @brief Single-loop core.
+ *
+ * * levels: 1
+ * * dims: 2-D
  * * dir: forward
  * * core: vert2x2
  * * type: int32_t Q1.15.16

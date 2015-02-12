@@ -412,6 +412,18 @@ void image2_idwt_cdf97_ip(struct image_t *image, enum dwt_types data_type)
 	}
 }
 
+void image2_idwt_cdf97_op(struct image_t *source, struct image_t *target, enum dwt_types data_type)
+{
+	switch(data_type)
+	{
+		case TYPE_FLOAT32:
+			cores2i_cdf97_v2x2_f32(source, target);
+			break;
+		default:
+			dwt_util_error("%s: unsupported data type (%i)\n", __FUNCTION__, data_type);
+	}
+}
+
 void image2_fdwt_cdf97_op(struct image_t *source, struct image_t *target, enum dwt_types data_type)
 {
 	switch(data_type)
