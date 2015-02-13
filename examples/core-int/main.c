@@ -12,8 +12,8 @@ void ftransform(struct image_t *src, struct image_t *dst)
 {
 #if 0
 	dwt_util_copy3_s(
-		src->base,
-		dst->base,
+		src->ptr,
+		dst->ptr,
 		src->stride_y,
 		src->stride_x,
 		dst->stride_y,
@@ -25,7 +25,7 @@ void ftransform(struct image_t *src, struct image_t *dst)
 	int j = 1;
 
 	dwt_cdf97_2f_inplace_i(
-		dst->base,
+		dst->ptr,
 		dst->stride_y,
 		dst->stride_x,
 		dst->size_x,
@@ -38,10 +38,10 @@ void ftransform(struct image_t *src, struct image_t *dst)
 	);
 #else
 	dwt_cdf97_2f_vert2x2_i(
-		src->base,
+		src->ptr,
 		src->stride_x,
 		src->stride_y,
-		dst->base,
+		dst->ptr,
 		dst->stride_x,
 		dst->stride_y,
 		src->size_x,
@@ -53,7 +53,7 @@ void ftransform(struct image_t *src, struct image_t *dst)
 void itransform(struct image_t *image)
 {
 	dwt_cdf97_2i_inplace_i(
-		image->base,
+		image->ptr,
 		image->stride_y,
 		image->stride_x,
 		image->size_x,
@@ -71,7 +71,7 @@ void fill_with_test_pattern(struct image_t *image)
 	int type = 2;
 
 	dwt_util_test_image_fill2_i(
-		image->base,
+		image->ptr,
 		image->stride_y,
 		image->stride_x,
 		image->size_x,
@@ -86,7 +86,7 @@ int dump(struct image_t *image, const char *path)
 	return dwt_util_save_to_pgm_i(
 		path,
 		0xff,
-		image->base,
+		image->ptr,
 		image->stride_y,
 		image->stride_x,
 		image->size_x,
@@ -98,7 +98,7 @@ int dump_log(struct image_t *image, const char *path)
 {
 	void *copy = malloc(image->size);
 
-	dwt_util_conv_show_i(image->base, copy,  image->stride_y,  image->stride_x, image->size_x, image->size_y);
+	dwt_util_conv_show_i(image->ptr, copy,  image->stride_y,  image->stride_x, image->size_x, image->size_y);
 
 	int r = dwt_util_save_to_pgm_i(
 		path,
@@ -117,7 +117,7 @@ int dump_log(struct image_t *image, const char *path)
 
 int compare(struct image_t *src, struct image_t *dst)
 {
-	return dwt_util_compare_i(src->base, dst->base, src->stride_y, src->stride_x, src->size_x, src->size_y);
+	return dwt_util_compare_i(src->ptr, dst->ptr, src->stride_y, src->stride_x, src->size_x, src->size_y);
 }
 
 int main()
@@ -133,10 +133,10 @@ int main()
 
 	struct image_t target = source; // copy a struct
 
-	source.base = malloc(source.size);
-	target.base = malloc(target.size);
+	source.ptr = malloc(source.size);
+	target.ptr = malloc(target.size);
 
-	if( !source.base || !target.base )
+	if( !source.ptr || !target.ptr )
 	{
 		fprintf(stderr, "Not enough memory\n");
 		return 1;
@@ -173,8 +173,8 @@ int main()
 
 	dump(&target, "target.pgm");
 
-	free(source.base);
-	free(target.base);
+	free(source.ptr);
+	free(target.ptr);
 
 	return 0;
 }
