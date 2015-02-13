@@ -13,7 +13,6 @@
 // TODO: remove this macro
 //#define HIDE_NEW_CODE
 
-#ifdef __SSE__
 void fdwt_cdf97_diag_pro2x2_sse_s(
 	float *ptrL0, float *ptrL1,
 	float *ptrR0, float *ptrR1,
@@ -25,6 +24,7 @@ void fdwt_cdf97_diag_pro2x2_sse_s(
 	float *lBR
 )
 {
+#ifdef __SSE__
 	const __m128 w = { dwt_cdf97_u2_s, -dwt_cdf97_p2_s, dwt_cdf97_u1_s, -dwt_cdf97_p1_s };
 
 	__m128 buff;
@@ -63,8 +63,8 @@ void fdwt_cdf97_diag_pro2x2_sse_s(
 	// B/R
 	op4s_sdl2_op_s_sse(z, *(__m128 *)(lBR+4), w, *(__m128 *)(lBR+0), *(__m128 *)(lBR+8));
 	op4s_sdl2_update_s_sse(*(__m128 *)(lBR+4), *(__m128 *)(lBR+0), *(__m128 *)(lBR+8), z);
-}
 #endif
+}
 
 #ifndef HIDE_NEW_CODE
 // full (with register rotation) diagonal core (horizontally only)
@@ -1347,7 +1347,6 @@ void diag_6x6(
 	buff_v0 + x0*buff_elem_size,
 	buff_v0 + x1*buff_elem_size
  */
-#ifdef __SSE__
 static
 void fdwt_cdf97_diag_cor2x2_sse_s(
 	float *ptrL0, float *ptrL1, // y=0
@@ -1360,6 +1359,7 @@ void fdwt_cdf97_diag_cor2x2_sse_s(
 	float *lBR  // v1
 )
 {
+#ifdef __SSE__
 	const __m128 w = { dwt_cdf97_u2_s, -dwt_cdf97_p2_s, dwt_cdf97_u1_s, -dwt_cdf97_p1_s };
 	const __m128 v_vert = { 1/(dwt_cdf97_s1_s*dwt_cdf97_s1_s), 1.f, 1.f, (dwt_cdf97_s1_s*dwt_cdf97_s1_s) };
 
@@ -1411,11 +1411,10 @@ void fdwt_cdf97_diag_cor2x2_sse_s(
 	*outL1 = buff[1];
 	*outR0 = buff[2];
 	*outR1 = buff[3];
-}
 #endif
+}
 
 #ifndef HIDE_NEW_CODE
-#ifdef __SSE__
 static
 void fdwt_cdf97_diag_cor6x2_sse_s(
 	intptr_t ptr_y0_x0,
@@ -1426,6 +1425,7 @@ void fdwt_cdf97_diag_cor6x2_sse_s(
 	float *buff_v0  // +(0..?)*(3*4) [ x right> ]
 )
 {
+#ifdef __SSE__
 #if 0
 	const int buff_elem_size = 3*4; // diagonal core
 
@@ -1561,9 +1561,9 @@ void fdwt_cdf97_diag_cor6x2_sse_s(
 	/* y= x= */ *(float *)(out_y0_x0 + 1*stride_x + 4*stride_y) = t2[1];
 	/* y= x= */ *(float *)(out_y0_x0 + 1*stride_x + 5*stride_y) = t2[3];
 #endif
+#endif /* __SSE__ */
 }
-#endif
-#endif
+#endif /* HIDE_NEW_CODE */
 
 #ifndef HIDE_NEW_CODE
 #ifdef __SSE__
