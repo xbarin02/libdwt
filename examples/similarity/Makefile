@@ -4,7 +4,7 @@ LIBPATH = $(ROOT)/src
 LIBNAME = libdwt
 LIBNAME_CV = cvdwt
 CXXFLAGS = `pkg-config --cflags opencv` -std=c++98 -pedantic -Wall -Wextra -O2 -I$(LIBPATH)
-LDLIBS += `pkg-config --libs opencv`
+LDLIBS += `pkg-config --libs opencv` -lstdc++
 BIN = compare
 
 .PHONY: all clean
