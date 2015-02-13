@@ -1804,6 +1804,54 @@ int dwt_util_compare2_destructive_s(
 	return ret;
 }
 
+int dwt_util_compare2_destructive2_s(
+	void *ptr1,
+	const void *ptr2,
+	void *map,
+	int stride1_x,
+	int stride1_y,
+	int stride2_x,
+	int stride2_y,
+	int map_stride_x,
+	int map_stride_y,
+	int size_x,
+	int size_y
+)
+{
+	assert( ptr1 && ptr2 && map && size_x >= 0 && size_y >= 0 );
+
+	int ret = 0;
+
+	const float eps = 1.e-3f;
+
+	for(int y = 0; y < size_y; y++)
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			const float a = *addr2_s      (ptr1, y, x, stride1_x, stride1_y);
+			const float b = *addr2_const_s(ptr2, y, x, stride2_x, stride2_y);
+
+			float *dest = addr2_s(map, y, x, map_stride_x, map_stride_y);
+
+			*dest = 0.f;
+
+			if( isnan(a) || isinf(a) || isnan(b) || isinf(b) )
+			{
+				*dest = 1.f;
+				ret = 1;
+			}
+
+			if( fabsf(a - b) > eps )
+			{
+				*dest = 1.f;
+				ret = 1;
+			}
+		}
+	}
+
+	return ret;
+}
+
 void dwt_cdf97_f_d(
 	const double *src,
 	double *dst,

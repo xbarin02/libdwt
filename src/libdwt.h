@@ -1482,6 +1482,20 @@ int dwt_util_compare2_destructive_s(
 	int size_y
 );
 
+int dwt_util_compare2_destructive2_s(
+	void *ptr1,
+	const void *ptr2,
+	void *map,
+	int stride1_x,
+	int stride1_y,
+	int stride2_x,
+	int stride2_y,
+	int map_stride_x,
+	int map_stride_y,
+	int size_x,
+	int size_y
+);
+
 /**
  * @brief Difference of two images.
  */
