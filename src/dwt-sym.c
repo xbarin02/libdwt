@@ -477,6 +477,7 @@ void unified_4x4(
 	void *buffer_y
 )
 {
+#ifdef __SSE__
 	const int step_y = 4;
 	const int step_x = 4;
 
@@ -529,6 +530,7 @@ void unified_4x4(
 			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
 		}
 	}
+#endif /* __SSE__ */
 }
 
 static
@@ -546,6 +548,7 @@ void unified_4x4_inv(
 	void *buffer_y
 )
 {
+#ifdef __SSE__
 	const int step_y = 4;
 	const int step_x = 4;
 
@@ -587,6 +590,7 @@ void unified_4x4_inv(
 			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
 		}
 	}
+#endif /* __SSE__ */
 }
 
 static

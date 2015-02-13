@@ -41,6 +41,7 @@ int virt2real_error(int pos, int offset, int overlap, int size)
 	return real;
 }
 
+#ifdef __SSE__
 static
 void vert2x1(
 	float *x0,
@@ -84,6 +85,7 @@ void vert2x1(
 	l[2] = r[2];
 	l[3] = r[3];
 }
+#endif
 
 /**
  * vertical 2^3 core

@@ -3913,6 +3913,7 @@ void cdf97_fwd_core_dl_2x2_sse_s(
 		buff_v1
 	);
 #else
+#ifdef __SSE__
 	const __m128 w = { dwt_cdf97_u2_s, -dwt_cdf97_p2_s, dwt_cdf97_u1_s, -dwt_cdf97_p1_s };
 	const __m128 v = { 1/dwt_cdf97_s1_s, dwt_cdf97_s1_s, 1/dwt_cdf97_s1_s, dwt_cdf97_s1_s };
 
@@ -4069,6 +4070,7 @@ void cdf97_fwd_core_dl_2x2_sse_s(
 		l[2] = r[2];
 		l[3] = r[3];
 	}
+#endif /* __SSE__ */
 #endif
 }
 
@@ -4835,6 +4837,7 @@ void cdf97_fwd_core_dl_sc_sse_s(
 	int size_y
 )
 {
+#ifdef __SSE__
 	// forward transform with offset = 1
 	int offset = 1;
 
@@ -4883,6 +4886,7 @@ void cdf97_fwd_core_dl_sc_sse_s(
 			out2_x = addr1_s(out2_x, 2, dst_stride_y);
 		}
 	}
+#endif
 }
 
 void dwt_util_alloc_zero(
@@ -5130,6 +5134,7 @@ void dwt_cdf97_2f_inplace_alg_s(
 
 	core_func_t core_func[DWT_ALG_LAST] = {
 		[DWT_ALG_SL_CORE_SDL] = cdf97_fwd_core_sdl_s,			// 0.057469
+#ifdef __SSE__
 		[DWT_ALG_SL_CORE_SDL_SSE] = cdf97_fwd_core_sdl_sse_s,		// 0.043640
 		[DWT_ALG_SL_CORE_SDL_SC_SSE] = cdf97_fwd_core_sdl_sc_sse_s,	// 0.041391
 		[DWT_ALG_SL_CORE_SDL_SC_SSE_OFF0] = cdf97_fwd_core_sdl_sc_sse_off0_s,
@@ -5137,12 +5142,17 @@ void dwt_cdf97_2f_inplace_alg_s(
 		[DWT_ALG_SL_CORE_DL_SC_SSE_OFF1] = cdf97_fwd_core_dl_sc_sse_off1_s,
 		[DWT_ALG_SL_CORE_SDL_SC_SSE_OFF0_OVL1] = cdf97_fwd_core_sdl_sc_sse_off0_ovl1_s,
 		[DWT_ALG_SL_CORE_SDL_SC_SSE_OFF1_OVL1] = cdf97_fwd_core_sdl_sc_sse_off1_ovl1_s,
+#endif
 		[DWT_ALG_SL_CORE_DL] = cdf97_fwd_core_dl_s,			// 0.042970
+#ifdef __SSE__
 		[DWT_ALG_SL_CORE_DL_SSE] = cdf97_fwd_core_dl_sse_s, 		// 0.043767
+#endif
 		[DWT_ALG_SL_CORE_DL_SC] = cdf97_fwd_core_dl_sc_s,		// 0.042255
+#ifdef __SSE__
 		[DWT_ALG_SL_CORE_DL_SC_SSE] = cdf97_fwd_core_dl_sc_sse_s,	// 0.041465
 		[DWT_ALG_SL_CORE_DL_SC_SSE_OFF1_4X4] = cdf97_fwd_core_dl_sc_sse_off1_4x4_s,
 		[DWT_ALG_SL_CORE_SDL_SC_SSE_OFF1_6X2] = cdf97_fwd_core_sdl_sc_sse_off1_6x2_s,
+#endif
 	};
 
 	core_func[alg](

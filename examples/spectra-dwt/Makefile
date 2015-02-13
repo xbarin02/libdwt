@@ -13,12 +13,12 @@ clean:
 	$(MAKE) -C $(LIBPATH) $@
 	-$(RM) $(BIN) *.o *.elf *.gdb
 
-$(BIN): $(BIN).o $(LIBPATH)/$(LIBNAME).o
+$(BIN): $(BIN).o $(LIBPATH)/$(LIBNAME).a
 
 $(BIN).o: $(BIN).c $(LIBPATH)/$(LIBNAME).h
 
-$(LIBPATH)/$(LIBNAME).o: $(LIBPATH)/$(LIBNAME).c $(LIBPATH)/$(LIBNAME).h
-	$(MAKE) -C $(LIBPATH) $(LIBNAME).o
+$(LIBPATH)/$(LIBNAME).a:
+	$(MAKE) -C $(LIBPATH) $(LIBNAME).a
 
 .PHONY: distclean
 distclean: clean

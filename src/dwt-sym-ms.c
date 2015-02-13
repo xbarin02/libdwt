@@ -157,6 +157,7 @@ void unified_4x4(
 	void *buffer_y
 )
 {
+#ifdef __SSE__
 	// core size
 	const int step_y = 4;
 	const int step_x = 4;
@@ -196,6 +197,7 @@ void unified_4x4(
 			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
 		}
 	}
+#endif /* __SSE__ */
 }
 
 static
@@ -214,6 +216,7 @@ void direct_4x4(
 	void *buffer_y
 )
 {
+#ifdef __SSE__
 	// core size
 	const int step_y = 4;
 	const int step_x = 4;
@@ -261,6 +264,7 @@ void direct_4x4(
 			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
 		}
 	}
+#endif /* __SSE__ */
 }
 
 // store LL and HL/LH/HH separately
@@ -288,6 +292,7 @@ void unified_4x4_separately(
 	void *buffer_y
 )
 {
+#ifdef __SSE__
 	// core size
 	const int step_y = 4;
 	const int step_x = 4;
@@ -368,6 +373,7 @@ void unified_4x4_separately(
 			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
 		}
 	}
+#endif /* __SSE__ */
 }
 
 static
@@ -397,6 +403,7 @@ void unified_4x4_separately2(
 	void *buffer_y
 )
 {
+#ifdef __SSE__
 	// core size
 	const int step_y = 4;
 	const int step_x = 4;
@@ -477,6 +484,7 @@ void unified_4x4_separately2(
 			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
 		}
 	}
+#endif /* __SSE__ */
 }
 
 static
@@ -512,6 +520,7 @@ void unified_4x4_separately3(
 	int j
 )
 {
+#ifdef __SSE__
 	// core size
 	const int step_y = 4;
 	const int step_x = 4;
@@ -592,8 +601,10 @@ void unified_4x4_separately3(
 			*addr2_s(dst_ptr, pos_y, pos_x, dst_stride_x, dst_stride_y) = t[yy][xx];
 		}
 	}
+#endif /* __SSE__ */
 }
 
+#ifdef __SSE__
 // image(LL) => buffer(LL)
 static
 void unified_4x4_separately_img2tmp(
@@ -698,7 +709,9 @@ void unified_4x4_separately_img2tmp(
 		}
 	}
 }
+#endif /* __SSE__ */
 
+#ifdef __SSE__
 // (segment): x=0 y=0
 static
 void unified_4x4_separately_img2tmp_segment00(
@@ -798,7 +811,9 @@ void unified_4x4_separately_img2tmp_segment00(
 		}
 	}
 }
+#endif /* __SSE__ */
 
+#ifdef __SSE__
 // (segment): x=0 y=1
 static
 void unified_4x4_separately_img2tmp_segment01(
@@ -898,7 +913,9 @@ void unified_4x4_separately_img2tmp_segment01(
 		}
 	}
 }
+#endif /* __SSE__ */
 
+#ifdef __SSE__
 // (segment): x=1 y=0
 static
 void unified_4x4_separately_img2tmp_segment10(
@@ -998,7 +1015,9 @@ void unified_4x4_separately_img2tmp_segment10(
 		}
 	}
 }
+#endif /* __SSE__ */
 
+#ifdef __SSE__
 // (segment): x=1 y=1
 static
 void unified_4x4_separately_img2tmp_segment11(
@@ -1098,7 +1117,9 @@ void unified_4x4_separately_img2tmp_segment11(
 		}
 	}
 }
+#endif /* __SSE__ */
 
+#ifdef __SSE__
 // buffer(LL) => buffer(LL)
 static
 void unified_4x4_separately_tmp2tmp(
@@ -1193,7 +1214,9 @@ void unified_4x4_separately_tmp2tmp(
 		}
 	}
 }
+#endif /* __SSE__ */
 
+#ifdef __SSE__
 // (segments): x=0, y=0
 static
 void unified_4x4_separately_tmp2tmp_segment00(
@@ -1283,7 +1306,9 @@ void unified_4x4_separately_tmp2tmp_segment00(
 		}
 	}
 }
+#endif /* __SSE__ */
 
+#ifdef __SSE__
 // (segments): x=0, y=1
 static
 void unified_4x4_separately_tmp2tmp_segment01(
@@ -1373,7 +1398,9 @@ void unified_4x4_separately_tmp2tmp_segment01(
 		}
 	}
 }
+#endif /* __SSE__ */
 
+#ifdef __SSE__
 // (segments): x=1, y=0
 static
 void unified_4x4_separately_tmp2tmp_segment10(
@@ -1463,7 +1490,9 @@ void unified_4x4_separately_tmp2tmp_segment10(
 		}
 	}
 }
+#endif /* __SSE__ */
 
+#ifdef __SSE__
 // (segments): x=1, y=1
 static
 void unified_4x4_separately_tmp2tmp_segment11(
@@ -1553,7 +1582,9 @@ void unified_4x4_separately_tmp2tmp_segment11(
 		}
 	}
 }
+#endif /* __SSE__ */
 
+#ifdef __SSE__
 // buffer(LL) => image(LL)
 static
 void unified_4x4_separately_tmp2img(
@@ -1650,6 +1681,7 @@ void unified_4x4_separately_tmp2img(
 		}
 	}
 }
+#endif /* __SSE__ */
 
 static
 void ms_loop_unified_4x4(
@@ -1739,6 +1771,7 @@ float *get_buffer_ptr(
 	return buffer + j*buffer_elems + pos*buff_elem_size;
 }
 
+#ifdef __SSE__
 static
 void multiscale_j(
 	int j,
@@ -1903,7 +1936,9 @@ void multiscale_j(
 	);
 #endif
 }
+#endif /* __SSE__ */
 
+#ifdef __SSE__
 // decl
 static
 void multiscale_j_segment00(
@@ -1933,7 +1968,9 @@ void multiscale_j_segment00(
 	int top,	// 1 = on top (maximal "j"), 0 otherwise
 	__m128 *temp_for_output
 );
+#endif
 
+#ifdef __SSE__
 // decl
 static
 void multiscale_j_segment01(
@@ -1963,7 +2000,9 @@ void multiscale_j_segment01(
 	int top,	// 1 = on top (maximal "j"), 0 otherwise
 	__m128 *temp_for_output
 );
+#endif
 
+#ifdef __SSE__
 // decl
 static
 void multiscale_j_segment10(
@@ -1993,7 +2032,9 @@ void multiscale_j_segment10(
 	int top,	// 1 = on top (maximal "j"), 0 otherwise
 	__m128 *temp_for_output
 );
+#endif
 
+#ifdef __SSE__
 // decl
 static
 void multiscale_j_segment11(
@@ -2023,7 +2064,9 @@ void multiscale_j_segment11(
 	int top,	// 1 = on top (maximal "j"), 0 otherwise
 	__m128 *temp_for_output
 );
+#endif
 
+#ifdef __SSE__
 // (segments): x=0 y=0
 static
 void multiscale_j_segment00(
@@ -2722,6 +2765,7 @@ void multiscale_j_top(
 		}
 	}
 }
+#endif /* __SSE__ */
 
 static
 void multiscale_4x4(
