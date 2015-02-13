@@ -156,7 +156,6 @@ void vert_2x4_inv(
 #endif
 
 // ~ fdwt_cdf97_vert_cor4x4_sse_s
-#ifdef __SSE__
 static
 void vert_4x4(
 	intptr_t src_y0_x0, // pointer to (0,0)
@@ -169,6 +168,7 @@ void vert_4x4(
 	float *buff_v0  // +(0..3)*(1*4) [ x right> ]
 )
 {
+#ifdef __SSE__
 	// this 4x4 core approach corresponds to "transpose-SIMD" in Figure 9 in Kutil2006 (the "line-SIMD" should be 8x2 core)
 	__m128 t0, t1, t2, t3;
 
@@ -261,8 +261,8 @@ void vert_4x4(
 	*(float *)(dst_y0_x0 + 1*dst_stride_x + 3*dst_stride_y) = t1[3];
 	*(float *)(dst_y0_x0 + 2*dst_stride_x + 3*dst_stride_y) = t2[3];
 	*(float *)(dst_y0_x0 + 3*dst_stride_x + 3*dst_stride_y) = t3[3];
+#endif /* __SSE__ */
 }
-#endif
 
 #define CDF97_S1_FWD_SQR_S 1.3215902738787f
 #define CDF97_S1_INV_SQR_S 0.75666416420054f
