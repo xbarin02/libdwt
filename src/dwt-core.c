@@ -10,9 +10,6 @@
 #endif
 #include "inline-sdl.h"
 
-// TODO: remove this macro
-//#define HIDE_NEW_CODE
-
 void fdwt_cdf97_diag_pro2x2_sse_s(
 	float *ptrL0, float *ptrL1,
 	float *ptrR0, float *ptrR1,
@@ -63,10 +60,9 @@ void fdwt_cdf97_diag_pro2x2_sse_s(
 	// B/R
 	op4s_sdl2_op_s_sse(z, *(__m128 *)(lBR+4), w, *(__m128 *)(lBR+0), *(__m128 *)(lBR+8));
 	op4s_sdl2_update_s_sse(*(__m128 *)(lBR+4), *(__m128 *)(lBR+0), *(__m128 *)(lBR+8), z);
-#endif
+#endif /* __SSE__ */
 }
 
-#ifndef HIDE_NEW_CODE
 // full (with register rotation) diagonal core (horizontally only)
 // returns in format [ y0x0 y0x1 y1x0 y1x1 ]
 #ifdef __SSE__
@@ -105,9 +101,9 @@ __m128 diag_horizontally_2x2(
 
 	return in;
 }
-#endif
+#endif /* __SSE__ */
 
-#ifndef HIDE_NEW_CODE
+#ifdef __SSE__
 #define diag_horizontally_2x2_MACRO(in, buff_h0_0, buff_h0_4, buff_h0_8, buff_h1_0, buff_h1_4, buff_h1_8) \
 	do { \
 		const __m128 w = { \
@@ -131,9 +127,7 @@ __m128 diag_horizontally_2x2(
 		op4s_sdl2_update_s_sse(*buff_h1_4, *buff_h1_0, *buff_h1_8, z); \
 	} while(0)
 #endif /* __SSE__ */
-#endif
 
-#ifndef HIDE_NEW_CODE
 // fast (without register rotation) diagonal core (horizontally only)
 // returns in format [ y0x0 y0x1 y1x0 y1x1 ]
 #ifdef __SSE__
@@ -172,9 +166,9 @@ __m128 diag_horizontally_2x2_fast(
 
 	return in;
 }
-#endif
+#endif /* __SSE__ */
 
-#ifndef HIDE_NEW_CODE
+#ifdef __SSE__
 #define diag_horizontally_2x2_FAST_MACRO(in, buff_h0_0, buff_h0_4, buff_h0_8, buff_h1_0, buff_h1_4, buff_h1_8) \
 	do { \
 		const __m128 w = { \
@@ -198,9 +192,7 @@ __m128 diag_horizontally_2x2_fast(
 		op4s_sdl2_update_s_sse_FAST(*buff_h1_4, *buff_h1_0, *buff_h1_8, z); \
 	} while(0)
 #endif /* __SSE__ */
-#endif
 
-#ifndef HIDE_NEW_CODE
 #ifdef __SSE__
 static
 void diag_6x2(
@@ -556,10 +548,8 @@ void diag_6x2(
 
 #endif
 }
-#endif
-#endif
+#endif /* __SSE__ */
 
-#ifndef HIDE_NEW_CODE
 #ifdef __SSE__
 static
 void diag_2x6(
@@ -710,10 +700,8 @@ void diag_2x6(
 
 #endif
 }
-#endif
-#endif
+#endif /* __SSE__ */
 
-#ifndef HIDE_NEW_CODE
 #ifdef __SSE__
 static
 void diag_6x6(
@@ -1338,8 +1326,7 @@ void diag_6x6(
 	// done
 #endif
 }
-#endif
-#endif
+#endif /* __SSE__ */
 
 /*
 	buff_h0 + y0*buff_elem_size,
@@ -1411,10 +1398,9 @@ void fdwt_cdf97_diag_cor2x2_sse_s(
 	*outL1 = buff[1];
 	*outR0 = buff[2];
 	*outR1 = buff[3];
-#endif
+#endif /* __SSE__ */
 }
 
-#ifndef HIDE_NEW_CODE
 static
 void fdwt_cdf97_diag_cor6x2_sse_s(
 	intptr_t ptr_y0_x0,
@@ -1563,10 +1549,7 @@ void fdwt_cdf97_diag_cor6x2_sse_s(
 #endif
 #endif /* __SSE__ */
 }
-#endif /* HIDE_NEW_CODE */
 
-#ifndef HIDE_NEW_CODE
-#ifdef __SSE__
 static
 void fdwt_cdf97_diag_cor2x6_sse_s(
 	intptr_t ptr_y0_x0,
@@ -1577,6 +1560,7 @@ void fdwt_cdf97_diag_cor2x6_sse_s(
 	float *buff_v0  // +(0..?)*(3*4) [ x right> ]
 )
 {
+#ifdef __SSE__
 #if 1
 	__m128 t0, t1, t2;
 
@@ -1628,12 +1612,9 @@ void fdwt_cdf97_diag_cor2x6_sse_s(
 	/* y= x= */ *(float *)(out_y0_x0 + 4*stride_x + 1*stride_y) = t2[2];
 	/* y= x= */ *(float *)(out_y0_x0 + 5*stride_x + 1*stride_y) = t2[3];
 #endif
+#endif /* __SSE__ */
 }
-#endif
-#endif
 
-#ifndef HIDE_NEW_CODE
-#ifdef __SSE__
 static
 void fdwt_cdf97_diag_cor6x6_sse_s(
 	intptr_t ptr_y0_x0,
@@ -1644,6 +1625,7 @@ void fdwt_cdf97_diag_cor6x6_sse_s(
 	float *buff_v0  // +(0..?)*(3*4) [ x right> ]
 )
 {
+#ifdef __SSE__
 #if 1
 	__m128 t00, t01, t02;
 	__m128 t10, t11, t12;
@@ -1790,11 +1772,9 @@ void fdwt_cdf97_diag_cor6x6_sse_s(
 	/* y=4 x= */ *(float *)(out_y0_x0 + 4*stride_x + 5*stride_y) = t22[2];
 	/* y=5 x= */ *(float *)(out_y0_x0 + 5*stride_x + 5*stride_y) = t22[3];
 #endif
+#endif /* __SSE__ */
 }
-#endif
-#endif
 
-#ifdef __SSE__
 static
 void fdwt_cdf97_vert_cor2x2_sse_s(
 	float *ptr_y0_x0, // in
@@ -1811,6 +1791,7 @@ void fdwt_cdf97_vert_cor2x2_sse_s(
 	float *buff_v1  // [4]
 )
 {
+#ifdef __SSE__
 	const __m128 w = { dwt_cdf97_u2_s, -dwt_cdf97_p2_s, dwt_cdf97_u1_s, -dwt_cdf97_p1_s };
 
 	const __m128 v_vertL = { 1/(dwt_cdf97_s1_s*dwt_cdf97_s1_s), 1.f,
@@ -1963,8 +1944,8 @@ void fdwt_cdf97_vert_cor2x2_sse_s(
 		l[2] = r[2];
 		l[3] = r[3];
 	}
+#endif /* __SSE__ */
 }
-#endif
 
 // NOTE: read from (x,y) write to (x-shift,y-shift) for (base_x,base_y) <= (x,y) < (stop_x, stop_y)
 void fdwt_vert_2x2_cor_HORIZ(
@@ -2050,7 +2031,6 @@ void fdwt_vert_2x2_cor_HORIZ(
 	}
 }
 
-#ifndef HIDE_NEW_CODE
 #ifdef __SSE__
 static
 void vert_2x4(
@@ -2121,12 +2101,9 @@ void vert_2x4(
 	_mm_store_ps(&buff[2*(1*4)], l2);
 	_mm_store_ps(&buff[3*(1*4)], l3);
 }
-#endif
-#endif
+#endif /* __SSE__ */
 
-#ifndef HIDE_NEW_CODE
 // vert 4x4 core
-#ifdef __SSE__
 static
 void fdwt_cdf97_vert_cor4x4_sse_s(
 	intptr_t ptr_y0_x0, // pointer to (0,0)
@@ -2137,6 +2114,7 @@ void fdwt_cdf97_vert_cor4x4_sse_s(
 	float *buff_v0  // +(0..3)*(1*4) [ x right> ]
 )
 {
+#ifdef __SSE__
 #if 1
 	// this 4x4 core approach corresponds to "transpose-SIMD" in Figure 9 in Kutil2006 (the "line-SIMD" should be 8x2 core)
 	__m128 t0, t1, t2, t3;
@@ -2910,11 +2888,9 @@ void fdwt_cdf97_vert_cor4x4_sse_s(
 		}
 	}
 #endif
+#endif /* __SSE__ */
 }
-#endif
-#endif
 
-#ifndef HIDE_NEW_CODE
 #ifdef __SSE__
 /*
 L[0] = *ptr;
@@ -2961,10 +2937,8 @@ __m128 shuff(__m128 r, float *ptr)
 	return r;
 #endif
 }
-#endif
-#endif
+#endif /* __SSE__ */
 
-#ifndef HIDE_NEW_CODE
 #ifdef __SSE__
 static
 void vert_8x1(
@@ -3082,11 +3056,8 @@ void vert_8x1(
 	*out0 = y0;
 	*out1 = y1;
 }
-#endif
-#endif
+#endif /* __SSE__ */
 
-#ifndef HIDE_NEW_CODE
-#ifdef __SSE__
 static
 void fdwt_cdf97_vert_cor8x2_sse_s(
 	intptr_t ptr_y0_x0, // pointer to (0,0)
@@ -3097,6 +3068,7 @@ void fdwt_cdf97_vert_cor8x2_sse_s(
 	float *buff_v0  // +(0..7)*(1*4) [ x right> ]
 )
 {
+#ifdef __SSE__
 #if 0
 	const int buff_elem_size = 1*4; // vertical core
 
@@ -3286,12 +3258,9 @@ void fdwt_cdf97_vert_cor8x2_sse_s(
 	*(float *)(out_y0_x0 + /*y=*/1*stride_x + /*x=*/5*stride_y) = t1o[2];
 	*(float *)(out_y0_x0 + /*y=*/1*stride_x + /*x=*/7*stride_y) = t1o[3];
 #endif
+#endif /* __SSE__ */
 }
-#endif
-#endif
 
-#ifndef HIDE_NEW_CODE
-#ifdef __SSE__
 static
 void fdwt_cdf97_vert_cor2x8_sse_s(
 	intptr_t ptr_y0_x0, // pointer to (0,0)
@@ -3302,6 +3271,7 @@ void fdwt_cdf97_vert_cor2x8_sse_s(
 	float *buff_v0  // +(0..7)*(1*4) [ x right> ]
 )
 {
+#ifdef __SSE__
 #if 0
 	const int buff_elem_size = 1*4; // vertical core
 
@@ -3491,12 +3461,9 @@ void fdwt_cdf97_vert_cor2x8_sse_s(
 	*(float *)(out_y0_x0 + /*y=*/5*stride_x + /*x=*/1*stride_y) = t1o[2];
 	*(float *)(out_y0_x0 + /*y=*/7*stride_x + /*x=*/1*stride_y) = t1o[3];
 #endif
+#endif /* __SSE__ */
 }
-#endif
-#endif
 
-#ifndef HIDE_NEW_CODE
-#ifdef __SSE__
 static
 void fdwt_cdf97_vert_cor8x8_sse_s(
 	intptr_t ptr_y0_x0, // pointer to (0,0)
@@ -3507,6 +3474,7 @@ void fdwt_cdf97_vert_cor8x8_sse_s(
 	float *buff_v0  // +(0..7)*(1*4) [ x right> ]
 )
 {
+#ifdef __SSE__
 #if 0
 	const int buff_elem_size = 1*4; // vertical core
 
@@ -3651,11 +3619,9 @@ void fdwt_cdf97_vert_cor8x8_sse_s(
 #undef set
 
 #endif
+#endif /* __SSE__ */
 }
-#endif
-#endif
 
-#ifdef __SSE__
 void fdwt_cdf97_diag_epi2x2_sse_s(
 	float *ptrL0, float *ptrL1,
 	float *ptrR0, float *ptrR1,
@@ -3667,6 +3633,7 @@ void fdwt_cdf97_diag_epi2x2_sse_s(
 	float *lBR
 )
 {
+#ifdef __SSE__
 	const __m128 w = { dwt_cdf97_u2_s, -dwt_cdf97_p2_s, dwt_cdf97_u1_s, -dwt_cdf97_p1_s };
 	const __m128 v_vert = { 1/(dwt_cdf97_s1_s*dwt_cdf97_s1_s), 1.f, 1.f, (dwt_cdf97_s1_s*dwt_cdf97_s1_s) };
 
@@ -3711,10 +3678,9 @@ void fdwt_cdf97_diag_epi2x2_sse_s(
 	*outL1 = buff[1];
 	*outR0 = buff[2];
 	*outR1 = buff[3];
+#endif /* __SSE__ */
 }
-#endif
 
-#ifdef __SSE__
 void fdwt_cdf97_diag_nul2x2_sse_s(
 	float *ptrL0, float *ptrL1,
 	float *ptrR0, float *ptrR1,
@@ -3726,6 +3692,7 @@ void fdwt_cdf97_diag_nul2x2_sse_s(
 	float *lBR
 )
 {
+#ifdef __SSE__
 	const __m128 w = { dwt_cdf97_u2_s, -dwt_cdf97_p2_s, dwt_cdf97_u1_s, -dwt_cdf97_p1_s };
 
 	__m128 buff = { 0.f, 0.f, 0.f, 0.f };
@@ -3759,8 +3726,8 @@ void fdwt_cdf97_diag_nul2x2_sse_s(
 	// B/R
 	op4s_sdl2_op_s_sse(z, *(__m128 *)(lBR+4), w, *(__m128 *)(lBR+0), *(__m128 *)(lBR+8));
 	op4s_sdl2_update_s_sse(*(__m128 *)(lBR+4), *(__m128 *)(lBR+0), *(__m128 *)(lBR+8), z);
+#endif /* __SSE__ */
 }
-#endif
 
 int check_sink(float *sink)
 {
@@ -3864,7 +3831,6 @@ void fdwt_diag_2x2_cor_HORIZ(
 	}
 }
 
-#ifndef HIDE_NEW_CODE
 // NOTE: read from (x,y) write to (x-shift,y-shift) for (base_x,base_y) <= (x,y) < (stop_x, stop_y)
 void fdwt_diag_6x2_cor_HORIZ(
 	void *ptr,
@@ -3934,9 +3900,7 @@ void fdwt_diag_6x2_cor_HORIZ(
 		buffer_y0_i += step_y*(buff_elem_size);
 	}
 }
-#endif
 
-#ifndef HIDE_NEW_CODE
 // NOTE: read from (x,y) write to (x-shift,y-shift) for (base_x,base_y) <= (x,y) < (stop_x, stop_y)
 void fdwt_diag_2x6_cor_HORIZ(
 	void *ptr,
@@ -4011,9 +3975,7 @@ void fdwt_diag_2x6_cor_HORIZ(
 		buffer_y0_i += step_y*(buff_elem_size);
 	}
 }
-#endif
 
-#ifndef HIDE_NEW_CODE
 // NOTE: read from (x,y) write to (x-shift,y-shift) for (base_x,base_y) <= (x,y) < (stop_x, stop_y)
 void fdwt_diag_6x6_cor_HORIZ(
 	void *ptr,
@@ -4083,7 +4045,6 @@ void fdwt_diag_6x6_cor_HORIZ(
 		buffer_y0_i += step_y*(buff_elem_size);
 	}
 }
-#endif
 
 // NOTE: read from (x,y) write to (x-shift,y-shift) for (base_x,base_y) <= (x,y) < (stop_x, stop_y)
 void fdwt_diag_2x2_cor_HORIZ_nice(
@@ -4302,7 +4263,6 @@ void fdwt_vert_2x2_cor_HORIZ_4pointers(
 	}
 }
 
-#ifndef HIDE_NEW_CODE
 // NOTE: read from (x,y) write to (x-shift,y-shift) for (base_x,base_y) <= (x,y) < (stop_x, stop_y)
 void fdwt_vert_4x4_cor_HORIZ(
 	void *ptr,
@@ -4367,9 +4327,7 @@ void fdwt_vert_4x4_cor_HORIZ(
 		buffer_y0_i += 4*(buff_elem_size);
 	}
 }
-#endif
 
-#ifndef HIDE_NEW_CODE
 void fdwt_vert_8x2_cor_HORIZ(
 	void *ptr,
 	int stride_x,
@@ -4437,9 +4395,7 @@ void fdwt_vert_8x2_cor_HORIZ(
 		buffer_y0_i += step_y*(buff_elem_size);
 	}
 }
-#endif
 
-#ifndef HIDE_NEW_CODE
 void fdwt_vert_2x8_cor_HORIZ(
 	void *ptr,
 	int stride_x,
@@ -4507,9 +4463,7 @@ void fdwt_vert_2x8_cor_HORIZ(
 		buffer_y0_i += step_y*(buff_elem_size);
 	}
 }
-#endif
 
-#ifndef HIDE_NEW_CODE
 void fdwt_vert_8x8_cor_HORIZ(
 	void *ptr,
 	int stride_x,
@@ -4577,7 +4531,6 @@ void fdwt_vert_8x8_cor_HORIZ(
 		buffer_y0_i += step_y*(buff_elem_size);
 	}
 }
-#endif
 
 // NOTE: read from (x,y) write to (x-shift,y-shift) for (base_x,base_y) <= (x,y) < (stop_x, stop_y)
 void fdwt_vert_2x2_cor_HORIZ_nice(
@@ -5357,7 +5310,6 @@ void fdwt_diag_2x2_HORIZ(
 	);
 }
 
-#ifndef HIDE_NEW_CODE
 void fdwt_diag_6x2_HORIZ(
 	void *ptr,
 	int stride_x,
@@ -5392,9 +5344,7 @@ void fdwt_diag_6x2_HORIZ(
 		buffer_x
 	);
 }
-#endif
 
-#ifndef HIDE_NEW_CODE
 void fdwt_diag_2x6_HORIZ(
 	void *ptr,
 	int stride_x,
@@ -5429,9 +5379,7 @@ void fdwt_diag_2x6_HORIZ(
 		buffer_x
 	);
 }
-#endif
 
-#ifndef HIDE_NEW_CODE
 void fdwt_diag_6x6_HORIZ(
 	void *ptr,
 	int stride_x,
@@ -5466,9 +5414,7 @@ void fdwt_diag_6x6_HORIZ(
 		buffer_x
 	);
 }
-#endif
 
-#ifndef HIDE_NEW_CODE
 void fdwt_vert_4x4_HORIZ(
 	void *ptr,
 	int stride_x,
@@ -5503,9 +5449,7 @@ void fdwt_vert_4x4_HORIZ(
 		buffer_x
 	);
 }
-#endif
 
-#ifndef HIDE_NEW_CODE
 void fdwt_vert_8x2_HORIZ(
 	void *ptr,
 	int stride_x,
@@ -5540,9 +5484,7 @@ void fdwt_vert_8x2_HORIZ(
 		buffer_x
 	);
 }
-#endif
 
-#ifndef HIDE_NEW_CODE
 void fdwt_vert_2x8_HORIZ(
 	void *ptr,
 	int stride_x,
@@ -5577,9 +5519,7 @@ void fdwt_vert_2x8_HORIZ(
 		buffer_x
 	);
 }
-#endif
 
-#ifndef HIDE_NEW_CODE
 void fdwt_vert_8x8_HORIZ(
 	void *ptr,
 	int stride_x,
@@ -5614,7 +5554,6 @@ void fdwt_vert_8x8_HORIZ(
 		buffer_x
 	);
 }
-#endif
 
 void fdwt_diag_2x2_VERT(
 	void *ptr,
@@ -6303,11 +6242,9 @@ fdwt_diag_2x2_func_t get_fdwt_diag_2x2_func(enum order order)
 		[ORDER_HORIZ_BLOCKS] = fdwt_diag_2x2_HORIZ_BLOCK,
 		[ORDER_VERT_BLOCKS]  = fdwt_diag_2x2_VERT_BLOCK,
 		// fused
-#ifndef HIDE_NEW_CODE
 		[ORDER_HORIZ_6X2]    = fdwt_diag_6x2_HORIZ,
 		[ORDER_HORIZ_2X6]    = fdwt_diag_2x6_HORIZ,
 		[ORDER_HORIZ_6X6]    = fdwt_diag_6x6_HORIZ,
-#endif
 	};
 
 	return fdwt_diag_2x2_func[order];
@@ -6319,23 +6256,17 @@ fdwt_vert_2x2_func_t get_fdwt_vert_2x2_func(enum order order)
 
 	fdwt_vert_2x2_func_t fdwt_vert_2x2_func[ORDER_LAST] = {
 		// 2x2
-#if 1
 		[ORDER_HORIZ]        = fdwt_vert_2x2_HORIZ,
-#else
-		[ORDER_HORIZ]        = fdwt_vert_2x2_HORIZ_test,
-#endif
 		[ORDER_VERT]         = fdwt_vert_2x2_VERT,
 		[ORDER_HORIZ_STRIPS] = fdwt_vert_2x2_HORIZ_STRIPS,
 		[ORDER_VERT_STRIPS]  = fdwt_vert_2x2_VERT_STRIPS,
 		[ORDER_HORIZ_BLOCKS] = fdwt_vert_2x2_HORIZ_BLOCK,
 		[ORDER_VERT_BLOCKS]  = fdwt_vert_2x2_VERT_BLOCK,
 		// fused
-#ifndef HIDE_NEW_CODE
 		[ORDER_HORIZ_4X4]    = fdwt_vert_4x4_HORIZ,
 		[ORDER_HORIZ_8X2]    = fdwt_vert_8x2_HORIZ,
 		[ORDER_HORIZ_2X8]    = fdwt_vert_2x8_HORIZ,
 		[ORDER_HORIZ_8X8]    = fdwt_vert_8x8_HORIZ,
-#endif
 	};
 
 	return fdwt_vert_2x2_func[order];
