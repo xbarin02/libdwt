@@ -232,16 +232,16 @@ void core_sse(
 			+ H11 * (blue1[0])[3-0] // NW = d
 			;
 #else
-		(*red)[0] +=
-			+ H1  * (blue2[1])[6-4] // N  = v
-			+ H11 * (blue2[1])[7-4] // NE = d
+		red[0][0] +=
+			+ H1  * blue2[1][2] // N  = v
+			+ H11 * blue2[1][3] // NE = d
 
 			+ dot_sse3(red[0], (__m128){ 0.f, H1, H1, H11 })
 
-			+ H11 * (blue1[1])[7-4] // SW = d
-			+ H1  * (blue1[1])[5-4] // W  = h
+			+ H11 * blue1[1][3] // SW = d
+			+ H1  * blue1[1][1] // W  = h
 
-			+ H11 * (blue1[0])[3-0] // NW = d
+			+ H11 * blue1[0][3] // NW = d
 		;
 #endif
 	}

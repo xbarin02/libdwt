@@ -37,3 +37,7 @@ run: all
 .PHONY: valgrind
 valgrind: all
 	valgrind --leak-check=full ./$(BIN)
+
+.PHONY: time
+time: all
+	\time -- ./$(BIN)
