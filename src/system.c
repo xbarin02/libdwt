@@ -107,8 +107,7 @@ void *dwt_util_memcpy_stride_s(
 	int elements		///< Number of floats to be copied, not number of bytes.
 )
 {
-	assert( NULL != dst );
-	assert( NULL != src );
+	assert( dst && src );
 
 	const size_t size = sizeof(float);
 
@@ -123,6 +122,70 @@ void *dwt_util_memcpy_stride_s(
 		for(int i = 0; i < elements; i++)
 		{
 			*(float *restrict)ptr_dst = *(const float *restrict)ptr_src;
+
+			ptr_dst += stride_dst;
+			ptr_src += stride_src;
+		}
+	}
+
+	return dst;
+}
+
+void *dwt_util_memcpy_stride_i(
+	void *restrict dst,
+	size_t stride_dst,
+	const void *restrict src,
+	size_t stride_src,
+	int elements		///< Number of ints to be copied, not number of bytes.
+)
+{
+	assert( dst && src );
+
+	const size_t size = sizeof(int);
+
+	if( size == stride_src && size == stride_dst )
+	{
+		memcpy(dst, src, elements*size);
+	}
+	else
+	{
+		char *restrict ptr_dst = (char *restrict)dst;
+		const char *restrict ptr_src = (const char *restrict)src;
+		for(int i = 0; i < elements; i++)
+		{
+			*(int *restrict)ptr_dst = *(const int *restrict)ptr_src;
+
+			ptr_dst += stride_dst;
+			ptr_src += stride_src;
+		}
+	}
+
+	return dst;
+}
+
+void *dwt_util_memcpy_stride_d(
+	void *restrict dst,
+	size_t stride_dst,
+	const void *restrict src,
+	size_t stride_src,
+	int elements		///< Number of doubles to be copied, not number of bytes.
+)
+{
+	assert( dst && src );
+
+	const size_t size = sizeof(double);
+
+	if( size == stride_src && size == stride_dst )
+	{
+		memcpy(dst, src, elements*size);
+	}
+	else
+	{
+		char *restrict ptr_dst = (char *restrict)dst;
+		const char *restrict ptr_src = (const char *restrict)src;
+		for(int i = 0; i < elements; i++)
+		{
+			*(double *restrict)ptr_dst = *(const double *restrict)ptr_src;
 
 			ptr_dst += stride_dst;
 			ptr_src += stride_src;

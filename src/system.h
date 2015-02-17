@@ -69,6 +69,40 @@ void *dwt_util_memcpy_stride_s(
 	int elements		///< Number of floats to be copied, not number of bytes.
 );
 
+/**
+ * @brief Copy memory area.
+ *
+ * This function copies @p n ints from memory area @p src to memory area
+ * @p dst. Memory areas can be sparse. The strides (in bytes) are determined by
+ * @p stride_dst and @p stride_src arguments. The memory areas must not overlap.
+ *
+ * @returns The function returns a pointer to @p dst.
+ */
+void *dwt_util_memcpy_stride_i(
+	void *restrict dst,
+	size_t stride_dst,
+	const void *restrict src,
+	size_t stride_src,
+	int elements		///< Number of ints to be copied, not number of bytes.
+);
+
+/**
+ * @brief Copy memory area.
+ *
+ * This function copies @p n doubles from memory area @p src to memory area
+ * @p dst. Memory areas can be sparse. The strides (in bytes) are determined by
+ * @p stride_dst and @p stride_src arguments. The memory areas must not overlap.
+ *
+ * @returns The function returns a pointer to @p dst.
+ */
+void *dwt_util_memcpy_stride_d(
+	void *restrict dst,
+	size_t stride_dst,
+	const void *restrict src,
+	size_t stride_src,
+	int elements		///< Number of doubles to be copied, not number of bytes.
+);
+
 #include "inline.h" // UNUSED_FUNC
 #include <stddef.h> // size_t
 #include <stdint.h> // intptr_t

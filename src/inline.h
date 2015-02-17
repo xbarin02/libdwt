@@ -342,6 +342,19 @@ int ceil_div(
 }
 
 /**
+ * @returns (int)floor(x/(double)y)
+ */
+UNUSED_FUNC
+static
+int floor_div(
+	int x,
+	int y
+)
+{
+	return x / y;
+}
+
+/**
  * @brief Minimum of two integers.
  */
 UNUSED_FUNC
@@ -460,6 +473,27 @@ int to_even(
 }
 
 /**
+ * @brief returns closest odd integer not larger than x; works also for negative numbers
+ */
+UNUSED_FUNC
+static
+int to_odd(
+	int x
+)
+{
+	return x - (1 & ~x);
+}
+
+UNUSED_FUNC
+static
+int up_to_even(
+	int x
+)
+{
+	return (x+1) & ~1;
+}
+
+/**
  * @brief returns closest integer what is multiple of 4 (2^2) and is not larger than x; works also for negative numbers
  */
 UNUSED_FUNC
@@ -469,6 +503,15 @@ int to_even4(
 )
 {
 	return x & ~3;
+}
+
+UNUSED_FUNC
+static
+int up_to_mul4(
+	int x
+)
+{
+	return (x+3) & ~3;
 }
 
 /**

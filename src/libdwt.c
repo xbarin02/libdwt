@@ -51,8 +51,11 @@
 #if (GCC_VERSION >= 40700) && (GCC_VERSION < 40800)
 	#warning "GCC 4.7"
 #endif
-#if (GCC_VERSION >= 40800)
-	#warning "GCC 4.8+"
+#if (GCC_VERSION >= 40800) && (GCC_VERSION < 40900)
+	#warning "GCC 4.8"
+#endif
+#if (GCC_VERSION >= 40900)
+	#warning "GCC 4.9+"
 #endif
 
 #if (GCC_VERSION < 40300)
@@ -797,18 +800,6 @@ int dwt_util_ceil_div(
 	return ceil_div(x, y);
 }
 
-/**
- * @returns (int)floor(x/(double)y)
- */
-static
-int floor_div(
-	int x,
-	int y
-)
-{
-	return x / y;
-}
-
 int dwt_util_floor_div(
 	int x,
 	int y
@@ -818,22 +809,6 @@ int dwt_util_floor_div(
 }
 
 #include "inline.h"
-
-static
-int up_to_even(
-	int x
-)
-{
-	return (x+1) & ~1;
-}
-
-static
-int up_to_mul4(
-	int x
-)
-{
-	return (x+3) & ~3;
-}
 
 int dwt_util_to_even(
 	int x
@@ -854,17 +829,6 @@ int dwt_util_up_to_mul4(
 )
 {
 	return up_to_mul4(x);
-}
-
-/**
- * @brief returns closest odd integer not larger than x; works also for negative numbers
- */
-static
-int to_odd(
-	int x
-)
-{
-	return x - (1 & ~x);
 }
 
 int dwt_util_to_odd(
@@ -1117,132 +1081,6 @@ void *dwt_util_addr_coeff(
 )
 {
 	return addr2(ptr, y, x, stride_x, stride_y);
-}
-
-/**
- * @brief Copy memory area.
- *
- * This function copies @p n ints from memory area @p src to memory area
- * @p dst. Memory areas can be sparse. The strides (in bytes) are determined by
- * @p stride_dst and @p stride_src arguments.
- *
- * @returns The function returns a pointer to @p dst.
- */
-static
-void *dwt_util_memcpy_stride_i(
-	void *restrict dst,
-	ssize_t stride_dst,
-	const void *restrict src,
-	ssize_t stride_src,
-	size_t n		///< Number of ints to be copied, not number of bytes.
-)
-{
-	assert( NULL != dst && NULL != src );
-
-	const size_t size = sizeof(int);
-
-	if( (ssize_t)size == stride_src && (ssize_t)size == stride_dst )
-	{
-		memcpy(dst, src, n*size);
-	}
-	else
-	{
-		char *restrict ptr_dst = (char *restrict)dst;
-		const char *restrict ptr_src = (const char *restrict)src;
-		for(size_t i = 0; i < n; i++)
-		{
-			*(int *restrict)ptr_dst = *(const int *restrict)ptr_src;
-
-			ptr_dst += stride_dst;
-			ptr_src += stride_src;
-		}
-	}
-
-	return dst;
-}
-
-/**
- * @brief Copy memory area.
- *
- * This function copies @p n floats from memory area @p src to memory area
- * @p dst. Memory areas can be sparse. The strides (in bytes) are determined by
- * @p stride_dst and @p stride_src arguments.
- *
- * @returns The function returns a pointer to @p dst.
- */
-// static
-// void *dwt_util_memcpy_stride_s(
-// 	void *restrict dst,
-// 	ssize_t stride_dst,
-// 	const void *restrict src,
-// 	ssize_t stride_src,
-// 	size_t n		///< Number of floats to be copied, not number of bytes.
-// )
-// {
-// 	assert( NULL != dst && NULL != src );
-// 
-// 	const size_t size = sizeof(float);
-// 
-// 	if( (ssize_t)size == stride_src && (ssize_t)size == stride_dst )
-// 	{
-// 		memcpy(dst, src, n*size);
-// 	}
-// 	else
-// 	{
-// 		char *restrict ptr_dst = (char *restrict)dst;
-// 		const char *restrict ptr_src = (const char *restrict)src;
-// 		for(size_t i = 0; i < n; i++)
-// 		{
-// 			*(float *restrict)ptr_dst = *(const float *restrict)ptr_src;
-// 
-// 			ptr_dst += stride_dst;
-// 			ptr_src += stride_src;
-// 		}
-// 	}
-// 
-// 	return dst;
-// }
-
-/**
- * @brief Copy memory area.
- *
- * This function copies @p n doubles from memory area @p src to memory area
- * @p dst. Memory areas can be sparse. The strides (in bytes) are determined by
- * @p stride_dst and @p stride_src arguments.
- *
- * @returns The function returns a pointer to @p dst.
- */
-static
-void *dwt_util_memcpy_stride_d(
-	void *restrict dst,
-	ssize_t stride_dst,
-	const void *restrict src,
-	ssize_t stride_src,
-	size_t n		///< Number of doubles to be copied, not number of bytes.
-)
-{
-	assert( NULL != dst && NULL != src );
-
-	const size_t size = sizeof(double);
-
-	if( (ssize_t)size == stride_src && (ssize_t)size == stride_dst )
-	{
-		memcpy(dst, src, n*size);
-	}
-	else
-	{
-		char *restrict ptr_dst = (char *restrict)dst;
-		const char *restrict ptr_src = (const char *restrict)src;
-		for(size_t i = 0; i < n; i++)
-		{
-			*(double *restrict)ptr_dst = *(const double *restrict)ptr_src;
-
-			ptr_dst += stride_dst;
-			ptr_src += stride_src;
-		}
-	}
-
-	return dst;
 }
 
 /**
@@ -4893,7 +4731,6 @@ void op4s_sdl_pass_inv_epilog_s_ref(const float *w, const float *v, float *l, fl
 	// pointers
 	(*addr) += 2;
 }
-
 
 #ifdef __SSE__
 /**
