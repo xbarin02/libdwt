@@ -169,7 +169,7 @@ float image2_mse(struct image_t *source, struct image_t *target, enum dwt_types 
 
 void image2_fill(struct image_t *image, enum dwt_types data_type)
 {
-	int pattern_type = 2;
+	int pattern_type = 1;
 
 	switch(data_type)
 	{
@@ -233,7 +233,8 @@ void image2_save_to_pgm_s(struct image_t *image, const char *path)
 		.stride_y = image->stride_x,
 	};
 
-	image_save_to_pgm_s(&swapped, path);
+	// FIXME: image_save_to_pgm_s(&swapped, path);
+	image_save_to_pgm2_s(&swapped, path);
 }
 
 void image2_save_to_pgm(struct image_t *image, const char *path, enum dwt_types data_type)
@@ -445,6 +446,30 @@ void image2_fdwt_cdf97_op(struct image_t *source, struct image_t *target, enum d
 	}
 }
 
+int image2_compare_map(struct image_t *source, struct image_t *target, struct image_t *map, enum dwt_types data_type)
+{
+	switch(data_type)
+	{
+		case TYPE_FLOAT32:
+			return dwt_util_compare2_destructive2_s(
+				source->ptr,
+				target->ptr,
+				map->ptr,
+				source->stride_y,
+				source->stride_x,
+				target->stride_y,
+				target->stride_x,
+				map->stride_y,
+				map->stride_x,
+				source->size_x,
+				source->size_y
+			);
+		default:
+			dwt_util_error("%s: unsupported data type (%i)\n", __FUNCTION__, data_type);
+	}
+
+	return 1;
+}
 int image2_compare(struct image_t *source, struct image_t *target, enum dwt_types data_type)
 {
 	switch(data_type)

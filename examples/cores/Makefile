@@ -13,11 +13,13 @@ clean:
 	$(MAKE) -C $(LIBPATH) $@
 	-$(RM) $(BIN) *.o *.elf *.gdb
 
-$(BIN): $(BIN).o cores.o fix.o image2.o $(LIBPATH)/$(LIBNAME).a
+$(BIN): $(BIN).o cores.o cores-nsls.o fix.o image2.o $(LIBPATH)/$(LIBNAME).a
 
 $(BIN).o: $(BIN).c
 
 cores.o: cores.c cores.h
+
+cores-nsls.o: cores-nsls.c cores-nsls.h
 
 fix.o: fix.c fix.h
 
