@@ -10,6 +10,9 @@
 #ifdef __SSE3__
 	#include <pmmintrin.h>
 #endif
+#ifdef __SSE4_1__
+	#include <smmintrin.h>
+#endif
 
 static
 int virt2real(int pos, int offset, int overlap, int size)
@@ -182,18 +185,26 @@ void core(
 	}
 }
 
-#ifdef __SSE3__
 static
 float dot_sse3(__m128 a, __m128 b)
 {
+#ifdef __SSE4_1__
+	return _mm_dp_ps(a, b, 0xff)[0];
+#endif
+#ifdef __SSE3__
 	a *= b;
 
 	a = _mm_hadd_ps(a, a);
 	a = _mm_hadd_ps(a, a);
 
 	return a[0];
-}
 #endif
+#ifdef __SSE__
+	a *= b;
+
+	return a[0] + a[1] + a[2] + a[3];
+#endif
+}
 
 #ifdef __SSE__
 static
