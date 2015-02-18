@@ -234,6 +234,7 @@ void core(
 }
 #pragma GCC diagnostic warning "-Wmaybe-uninitialized"
 
+#ifdef __SSE__
 static
 float dot_sse(__m128 a, __m128 b)
 {
@@ -248,12 +249,11 @@ float dot_sse(__m128 a, __m128 b)
 
 	return a[0];
 #endif
-#ifdef __SSE__
 	a *= b;
 
 	return a[0] + a[1] + a[2] + a[3];
-#endif
 }
+#endif
 
 #ifdef __SSE__
 static

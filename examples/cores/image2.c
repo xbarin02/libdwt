@@ -169,7 +169,7 @@ float image2_mse(struct image_t *source, struct image_t *target, enum dwt_types 
 
 void image2_fill(struct image_t *image, enum dwt_types data_type)
 {
-	int pattern_type = 1;
+	int pattern_type = 2;
 
 	switch(data_type)
 	{

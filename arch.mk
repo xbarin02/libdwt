@@ -53,7 +53,8 @@ ifeq ($(ARCH),armv7l)
 	CROSS_COMPILE = 
 	CFLAGS += -fopenmp -fPIC
 #	CFLAGS += -O3 -ftree-vectorize -mfpu=neon -march=armv7-a -mfloat-abi=softfp -mvectorize-with-neon-quad -funsafe-math-optimizations
-	CFLAGS += -O3 -ftree-vectorize -mfpu=neon -march=armv7-a -mvectorize-with-neon-quad -funsafe-math-optimizations
+#	CFLAGS += -O3 -ftree-vectorize -mfpu=neon -march=armv7-a -mvectorize-with-neon-quad -funsafe-math-optimizations
+	CFLAGS += -O3 -ftree-vectorize -mfpu=neon -mcpu=cortex-a7 -mtune=cortex-a7 -mvectorize-with-neon-quad -funsafe-math-optimizations
 	LDFLAGS += -fopenmp
 	LDLIBS += -lrt
 endif

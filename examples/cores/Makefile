@@ -2,7 +2,10 @@ include ../../common.mk
 
 LIBNAME = libdwt
 LIBPATH = $(ROOT)/src
-CFLAGS += -I$(LIBPATH) -msse3 -msse4.1
+CFLAGS += -I$(LIBPATH)
+ifeq ($(ARCH),x86_64)
+	CFLAGS += -msse3 -msse4.1
+endif
 BIN = main
 
 .PHONY: all clean
