@@ -356,6 +356,31 @@ void image2_save_log_to_pgm(struct image_t *image, const char *path, enum dwt_ty
 	}
 }
 
+void image2_idwt_cdf53_ip(struct image_t *image, enum dwt_types data_type)
+{
+	switch(data_type)
+	{
+		case TYPE_FLOAT32:
+		{
+			dwt_cdf53_2i_inplace_s(
+				image->ptr,
+				image->stride_y,
+				image->stride_x,
+				image->size_x,
+				image->size_y,
+				image->size_x,
+				image->size_y,
+				1,
+				1,
+				0
+			);
+			break;
+		}
+		default:
+			dwt_util_error("%s: unsupported data type (%i)\n", __FUNCTION__, data_type);
+	}
+}
+
 void image2_idwt_cdf97_ip(struct image_t *image, enum dwt_types data_type)
 {
 	switch(data_type)
@@ -419,6 +444,18 @@ void image2_idwt_cdf97_op(struct image_t *source, struct image_t *target, enum d
 	{
 		case TYPE_FLOAT32:
 			cores2i_cdf97_v2x2_f32(source, target);
+			break;
+		default:
+			dwt_util_error("%s: unsupported data type (%i)\n", __FUNCTION__, data_type);
+	}
+}
+
+void image2_fdwt_cdf53_op(struct image_t *source, struct image_t *target, enum dwt_types data_type)
+{
+	switch(data_type)
+	{
+		case TYPE_FLOAT32:
+			cores2f_cdf53_v2x2_f32(source, target);
 			break;
 		default:
 			dwt_util_error("%s: unsupported data type (%i)\n", __FUNCTION__, data_type);

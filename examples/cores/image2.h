@@ -38,9 +38,13 @@ void image2_save_log_to_pgm(struct image_t *image, const char *path, enum dwt_ty
 
 void image2_idwt_cdf97_ip(struct image_t *image, enum dwt_types data_type);
 
+void image2_idwt_cdf53_ip(struct image_t *image, enum dwt_types data_type);
+
 void image2_idwt_cdf97_op(struct image_t *source, struct image_t *target, enum dwt_types data_type);
 
 void image2_fdwt_cdf97_op(struct image_t *source, struct image_t *target, enum dwt_types data_type);
+
+void image2_fdwt_cdf53_op(struct image_t *source, struct image_t *target, enum dwt_types data_type);
 
 int image2_compare(struct image_t *source, struct image_t *target, enum dwt_types data_type);
 
