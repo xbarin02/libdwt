@@ -78,6 +78,53 @@ void copy4_sse(__m128 *dst, const __m128 *src)
 
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 static
+void cdf53_core(
+	float *red, // 4 = input
+	float *green, // 4 = output
+	float *blue_left, // 4
+	float *blue_top // 4
+)
+{
+	// P
+	{
+		// square += +1/4*circle -1/2*cross -1/2*triangle
+		red[0] +=
+			+0.25f * ( green[3] + blue_top[3] + blue_left[3] + red[3] )
+			-0.5f  * ( blue_top[2] + red[2] )
+			-0.5f  * ( blue_left[1] + red[1] );
+	}
+	// PP
+	{
+		// cross += -1/2*circle +1/4*square
+		blue_top[2] +=
+			-0.5f  * ( green[3] + blue_top[3] )
+			+0.25f * ( blue_top[0] + red[0] );
+
+		// triangle += -1/2*circle +1/4*square
+		blue_left[1] +=
+			-0.5f  * ( green[3] + blue_left[3] )
+			+0.25f * ( blue_left[0] + red[0] );
+	}
+	// U
+	{
+		// circle += +1/4*cross +1/4*triangle -1/16*square
+		green[3] +=
+			+0.25f   * ( green[2] + blue_top[2] )
+			+0.25f   * ( green[1] + blue_left[1] )
+			-0.0625f * ( green[0] + blue_top[0] + blue_left[0] + red[0] );
+	}
+	// S
+	{
+		green[0] *= 0.5f;
+		green[1] *= 1.0f;
+		green[2] *= 1.0f;
+		green[3] *= 2.0f;
+	}
+}
+#pragma GCC diagnostic warning "-Wmaybe-uninitialized"
+
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+static
 void core(
 	float *red, // 4 = input
 	float *green, // 4 = output
@@ -452,6 +499,71 @@ void cores2f_cdf97_v2x2_f32_core(
 	}
 }
 
+static
+void cores2f_cdf53_v2x2_f32_core(
+	struct image_t *src,
+	struct image_t *dst,
+	int x,
+	int y,
+	float *green, // [4]
+	float *blue_left, // [4]
+	float *blue_top // [4]
+)
+{
+	const int overlap_x_L = 3;
+	const int overlap_y_L = 3;
+
+	const int step_y = 2;
+	const int step_x = 2;
+
+	const int shift = 2;
+
+	// 2x2
+	float red[4];
+
+	// load
+	for(int xx = 0; xx < step_x; xx++)
+	{
+		for(int yy = 0; yy < step_y; yy++)
+		{
+			// virtual to real coordinates
+			const int pos_x = virt2real(x, xx, overlap_x_L, src->size_x);
+			const int pos_y = virt2real(y, yy, overlap_y_L, src->size_y);
+
+			red[yy*step_x+xx] = *addr2_s(src->ptr, pos_y, pos_x, src->stride_y, src->stride_x);
+		}
+	}
+
+	// core
+	cdf53_core(
+		red,   // 4 = input
+		green, // 4 = output
+		blue_left, // 4
+		blue_top // 4
+	);
+
+	// store
+	for(int yy = 0; yy < step_y; yy++)
+	{
+		for(int xx = 0; xx < step_x; xx++)
+		{
+			// virtual to real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, overlap_x_L, src->size_x);
+			const int pos_y = virt2real_error(y-shift, yy, overlap_y_L, src->size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst->ptr, pos_y, pos_x, dst->stride_y, dst->stride_x) = green[yy*step_x+xx];
+		}
+	}
+
+	// shuffle
+	{
+		copy4(green, blue_top);
+		copy4(blue_top, red);
+	}
+}
+
 #ifdef __SSE__
 static
 void cores2f_cdf97_v2x2_f32_core_sse(
@@ -562,6 +674,42 @@ void cores2f_cdf97_n2x2_f32(
 				blue+buff_elem_size*(x-4), // blue0
 				blue+buff_elem_size*(x-2), // blue1
 				blue+buff_elem_size*(x-0)  // blue2
+			);
+}
+
+void cores2f_cdf53_n2x2_f32(
+	struct image_t *src,
+	struct image_t *dst
+)
+{
+	assert( src->size_x == dst->size_x && src->size_y == dst->size_y );
+
+	const int buff_elem_size = 2;
+
+	const int step_x = 2;
+	const int step_y = 2;
+
+	const int overlap_x_L = 3;
+	const int overlap_y_L = 3;
+	const int overlap_x_R = 3;
+	const int overlap_y_R = 3;
+
+	const int super_x = overlap_x_L + src->size_x + overlap_x_R;
+	const int super_y = overlap_y_L + src->size_y + overlap_y_R;
+
+	float blue[buff_elem_size*super_x];
+	float green[4];
+
+	for(int y = 0; y < super_y; y += step_y)
+		for(int x = 0; x < super_x; x += step_x)
+			cores2f_cdf53_v2x2_f32_core(
+				src,
+				dst,
+				x,
+				y,
+				green, // green
+				blue+buff_elem_size*(x-2), // blue_left
+				blue+buff_elem_size*(x-0)  // blue_top
 			);
 }
 
