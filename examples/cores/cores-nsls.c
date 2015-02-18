@@ -76,6 +76,7 @@ void copy4_sse(__m128 *dst, const __m128 *src)
 }
 #endif
 
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 static
 void core(
 	float *red, // 4 = input
@@ -184,9 +185,10 @@ void core(
 		green[3] *= SZ;
 	}
 }
+#pragma GCC diagnostic warning "-Wmaybe-uninitialized"
 
 static
-float dot_sse3(__m128 a, __m128 b)
+float dot_sse(__m128 a, __m128 b)
 {
 #ifdef __SSE4_1__
 	return _mm_dp_ps(a, b, 0xff)[0];
@@ -236,7 +238,7 @@ void core_sse(
 			+ H1  * blue2[1][2] // N  = v
 			+ H11 * blue2[1][3] // NE = d
 
-			+ dot_sse3(red[0], (__m128){ 0.f, H1, H1, H11 })
+			+ dot_sse(red[0], (__m128){ 0.f, H1, H1, H11 })
 
 			+ H11 * blue1[1][3] // SW = d
 			+ H1  * blue1[1][1] // W  = h
@@ -278,7 +280,7 @@ void core_sse(
 			;
 #else
 		blue1[0][3] +=
-			+ dot_sse3(blue1[0], (__m128){ H22, H2, H2, 0.f })
+			+ dot_sse(blue1[0], (__m128){ H22, H2, H2, 0.f })
 
 			+ H22 * blue2[1][0] // NE = d
 			+ H2  * blue2[1][2] // E  = h
@@ -310,7 +312,7 @@ void core_sse(
 			+ H3  * yellow[0][2] // N  = v
 			+ H33 * yellow[0][3] // NE = d
 
-			+ dot_sse3(blue1[0], (__m128){ 0.f, H3, H3, H33 })
+			+ dot_sse(blue1[0], (__m128){ 0.f, H3, H3, H33 })
 
 			+ H33 * blue0[0][3]  // SW = d
 			+ H3  * blue0[0][1]  // W  = h
@@ -352,7 +354,7 @@ void core_sse(
 			;
 #else
 		(*green)[3] +=
-			+ dot_sse3(green[0], (__m128){ H44, H4, H4, 0.f })
+			+ dot_sse(green[0], (__m128){ H44, H4, H4, 0.f })
 
 			+ H44 * yellow[0][0] // NE = d
 			+ H4  * yellow[0][2] // E  = h
@@ -570,8 +572,6 @@ void cores2f_cdf97_n2x2_f32_sse(
 {
 #ifdef __SSE__
 	assert( src->size_x == dst->size_x && src->size_y == dst->size_y );
-
-	const int buff_elem_size = 4;
 
 	const int step_x = 2;
 	const int step_y = 2;
