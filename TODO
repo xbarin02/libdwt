@@ -1,7 +1,7 @@
 * unit tests
-* better SIMD support
+* Intel SIMD support for integer and fixed-point transforms
 * more wavelets (Haar, Daubechies)
-* more data types (fixed point)
+* more data types (fixed-point)
 * relicense to some better license
 * OpenCV wrapper (C)
 * C++ interface
@@ -10,8 +10,7 @@
 * tiling (e.g., as in JPEG 2000)
 * remove "lib" prefix from source file names
 * use size_t, etc. instead of unsigned int, etc.
-* 3D data support
-* better ARM support
+* ARM support: NEON instructions
 * ASVP: upload new data when waiting for preceding operation (use memory bank "D", then copy to bank "A")
 * ASVP: number of workers should be adjustable by environment variable like number of threads in OpenMP
 * MS Windows support
