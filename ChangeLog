@@ -1,8 +1,9 @@
-2014-XX-XX David Barina <ibarina@fit.vutbr.cz>
+2015-XX-XX David Barina <ibarina@fit.vutbr.cz>
 * Added implementation of the single-loop core approach with the symmetric
 border extension.
 * Added an experimental multi-scale single-loop implementation.
 * Added 3-D transforms.
+* Added some non-separable lifting scheme (NSLS) core implementation.
 * Code can be compiled on Cortex-A7.
 
 2014-05-19 David Barina <ibarina@fit.vutbr.cz>
