@@ -69,6 +69,46 @@ void core_fwd_haar_n2x2_f32(
 
 #ifdef __SSE__
 static
+void core_fwd_haar_n4x4_f32(
+        __m128 *data
+)
+{
+	// variables
+	__m128 a, h, v, d;
+
+	// inputs
+	a = data[0];
+	h = data[1];
+	v = data[2];
+	d = data[3];
+
+	// \alpha = +1/2
+	// \beta = -1
+
+	// P
+	// D += \alpha^2 * A + \alpha * V + \alpha * H
+	d += a - v - h;
+
+	// PP
+	// H += \beta * D + \alpha * A
+	h += (__m128){0.5f,0.5f,0.5f,0.5f}*d - a;
+	// V += \beta * D + \alpha * A
+	v += (__m128){0.5f,0.5f,0.5f,0.5f}*d - a;
+
+	// U
+	// A += \beta * H + \beta * V + \alpha*\beta^2 * D
+	a += (__m128){0.5f,0.5f,0.5f,0.5f}*h + (__m128){0.5f,0.5f,0.5f,0.5f}*v - (__m128){0.25f,0.25f,0.25f,0.25f}*d;
+
+	// outputs
+	data[0] = a;
+	data[1] = h;
+	data[2] = v;
+	data[3] = d;
+}
+#endif
+
+#ifdef __SSE__
+static
 void core_fwd_haar_v4x2_f32(
         __m128 *data0, // left [1]
         __m128 *data1 // right [1]
@@ -225,6 +265,70 @@ void cores2f_haar_n2x2_f32_core(
 			*addr2_s(dst->ptr, pos_y, pos_x, dst->stride_y, dst->stride_x) = t[yy*step_x+xx];
 		}
 	}
+}
+
+static
+void cores2f_haar_n4x4_f32_core(
+	struct image_t *src,
+	struct image_t *dst,
+	int x,
+	int y
+)
+{
+#ifdef __SSE__
+	const int overlap_x_L = 0;
+	const int overlap_y_L = 0;
+
+	const int shift = 0;
+
+	// 4x4
+	__m128 t[4];
+
+	// load
+	for(int xx = 0; xx < 2; xx++)
+	{
+		for(int yy = 0; yy < 2; yy++)
+		{
+			for(int xxx = 0; xxx < 2; xxx++)
+			{
+				for(int yyy = 0; yyy < 2; yyy++)
+				{
+					// virtual to real coordinates
+					const int pos_x = virt2real(x, xx+2*xxx, overlap_x_L, src->size_x);
+					const int pos_y = virt2real(y, yy+2*yyy, overlap_y_L, src->size_y);
+
+					t[yy*2+xx][yyy*2+xxx] = *addr2_s(src->ptr, pos_y, pos_x, src->stride_y, src->stride_x);
+				}
+			}
+		}
+	}
+
+	// calc
+	core_fwd_haar_n4x4_f32(t);
+
+	// scaling
+
+	// store
+	for(int yy = 0; yy < 2; yy++)
+	{
+		for(int xx = 0; xx < 2; xx++)
+		{
+			for(int xxx = 0; xxx < 2; xxx++)
+			{
+				for(int yyy = 0; yyy < 2; yyy++)
+				{
+					// virtual to real coordinates
+					const int pos_x = virt2real_error(x-shift, xx+2*xxx, overlap_x_L, src->size_x);
+					const int pos_y = virt2real_error(y-shift, yy+2*yyy, overlap_y_L, src->size_y);
+					if( pos_x < 0 || pos_y < 0 )
+						continue;
+
+					*addr2_s(dst->ptr, pos_y, pos_x, dst->stride_y, dst->stride_x) = t[yy*2+xx][yyy*2+xxx];
+				}
+			}
+		}
+	}
+#endif
 }
 
 static
@@ -390,6 +494,29 @@ void cores2f_haar_n2x2_f32(
 	for(int y = 0; y < super_y; y += step_y)
 		for(int x = 0; x < super_x; x += step_x)
 			cores2f_haar_n2x2_f32_core(src, dst, x, y);
+}
+
+void cores2f_haar_n4x4_f32(
+	struct image_t *src,
+	struct image_t *dst
+)
+{
+	assert( src->size_x == dst->size_x && src->size_y == dst->size_y );
+
+	const int step_x = 4;
+	const int step_y = 4;
+
+	const int overlap_x_L = 0;
+	const int overlap_y_L = 0;
+	const int overlap_x_R = 0;
+	const int overlap_y_R = 0;
+
+	const int super_x = overlap_x_L + src->size_x + overlap_x_R;
+	const int super_y = overlap_y_L + src->size_y + overlap_y_R;
+
+	for(int y = 0; y < super_y; y += step_y)
+		for(int x = 0; x < super_x; x += step_x)
+			cores2f_haar_n4x4_f32_core(src, dst, x, y);
 }
 
 void cores2f_haar_v4x4_f32(
