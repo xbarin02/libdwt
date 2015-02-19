@@ -43,8 +43,8 @@ void core_fwd_haar_n2x2_f32(
 	v = data[2];
 	d = data[3];
 
-	// \alpha = +1/2
-	// \beta = -1
+	// \alpha = -1
+	// \beta = +1/2
 
 	// P
 	// D += \alpha^2 * A + \alpha * V + \alpha * H
@@ -82,8 +82,11 @@ void core_fwd_haar_n4x4_f32(
 	v = data[2];
 	d = data[3];
 
-	// \alpha = +1/2
-	// \beta = -1
+	// \alpha = -1
+	// \beta = +1/2
+	const __m128 beta = { 0.5f, 0.5f, 0.5f, 0.5f };
+	// \beta^2 = +1/4
+	const __m128 beta2 = { 0.25f, 0.25f, 0.25f, 0.25f };
 
 	// P
 	// D += \alpha^2 * A + \alpha * V + \alpha * H
@@ -91,13 +94,13 @@ void core_fwd_haar_n4x4_f32(
 
 	// PP
 	// H += \beta * D + \alpha * A
-	h += (__m128){0.5f,0.5f,0.5f,0.5f}*d - a;
+	h += beta*d - a;
 	// V += \beta * D + \alpha * A
-	v += (__m128){0.5f,0.5f,0.5f,0.5f}*d - a;
+	v += beta*d - a;
 
 	// U
 	// A += \beta * H + \beta * V + \alpha*\beta^2 * D
-	a += (__m128){0.5f,0.5f,0.5f,0.5f}*h + (__m128){0.5f,0.5f,0.5f,0.5f}*v - (__m128){0.25f,0.25f,0.25f,0.25f}*d;
+	a += beta*h + beta*v - beta2*d;
 
 	// outputs
 	data[0] = a;
