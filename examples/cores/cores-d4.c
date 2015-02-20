@@ -210,13 +210,13 @@ void core1_d4_2x1(
 	*data1 = x1;
 }
 
-
-// inplace
 static
 void fdwt1_d4_vert(
-	float *arr,
-	int size,
-	int stride
+	float *src,
+	int src_stride,
+	float *dst,
+	int dst_stride,
+	int size
 )
 {
 	float buff[2] = {0};
@@ -226,15 +226,15 @@ void fdwt1_d4_vert(
 		float t[2];
 
 		// load
-		t[0] = *addr1_s(arr, x+0, stride);
-		t[1] = *addr1_s(arr, x+1, stride);
+		t[0] = *addr1_s(src, x+0, src_stride);
+		t[1] = *addr1_s(src, x+1, src_stride);
 
 		// calc
 		core1_d4_2x1(t+0, t+1, buff);
 
 		// store
-		*addr1_s(arr, x-1, stride) = t[0];
-		*addr1_s(arr, x+0, stride) = t[1];
+		*addr1_s(dst, x-1, dst_stride) = t[0];
+		*addr1_s(dst, x+0, dst_stride) = t[1];
 	}
 }
 
@@ -252,16 +252,7 @@ void fdwt2_d4_sep_vert(
 		float *target_row = image_pix_s(target, 0, y);
 		float *source_row = image_pix_s(source, 0, y);
 
-		// copy row from source into target
-		dwt_util_memcpy_stride_s(
-			target_row,
-			target->stride_x,
-			source_row,
-			source->stride_x,
-			source->size_x
-		);
-
-		fdwt1_d4_vert(target_row, source->size_x, target->stride_x);
+		fdwt1_d4_vert(source_row, source->stride_x, target_row, target->stride_x, source->size_x);
 	}
 
 	// for each column
@@ -269,6 +260,6 @@ void fdwt2_d4_sep_vert(
 	{
 		float *target_col = image_pix_s(target, x, 0);
 
-		fdwt1_d4_vert(target_col, source->size_y, target->stride_y);
+		fdwt1_d4_vert(target_col, target->stride_y, target_col, target->stride_y, source->size_y);
 	}
 }
