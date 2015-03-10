@@ -46,6 +46,8 @@ void image2_fdwt_cdf97_op(struct image_t *source, struct image_t *target, enum d
 
 void image2_fdwt_cdf53_op(struct image_t *source, struct image_t *target, enum dwt_types data_type);
 
+void image2_idwt_cdf53_op(struct image_t *source, struct image_t *target, enum dwt_types data_type);
+
 int image2_compare(struct image_t *source, struct image_t *target, enum dwt_types data_type);
 
 int image2_compare_map(struct image_t *source, struct image_t *target, struct image_t *map, enum dwt_types data_type);

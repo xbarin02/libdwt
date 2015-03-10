@@ -20,6 +20,7 @@ int virt2real(int pos, int offset, int overlap, int size)
 }
 
 // constant padding with first/last value
+UNUSED_FUNC
 static
 int virt2real_copy(int pos, int offset, int overlap, int size)
 {
@@ -161,6 +162,45 @@ void cdf53_vert_2x1_f32(
 	// outputs
 	*data0 = y0;
 	*data1 = y1;
+}
+
+// not a lifting scheme
+static
+void cdf53_vert_2x1B_f32(
+        float *data0, // left [1]
+        float *data1, // right [1]
+        float *buff // [2]
+)
+{
+	const float alpha = -dwt_cdf53_p1_s;
+	const float beta  = +dwt_cdf53_u1_s;
+
+	// inputs
+	float d0 = *data0;
+	float s0 = *data1;
+	float s = buff[0];
+	float r = buff[1];
+
+	// in parallel
+	float s_next = s0;
+	float r_next =
+		+ alpha*beta * s
+		+ beta * d0
+		+ (1.f+2*alpha*beta) * s0;
+	float s2 =
+		+ 1.f * r
+		+ beta * d0
+		+ alpha*beta * s0;
+	float d2 =
+		+ alpha * s
+		+ 1.f * d0
+		+ alpha * s0;
+
+	// outputs
+	*data0 = s2;
+	*data1 = d2;
+	buff[0] = s_next;
+	buff[1] = r_next;
 }
 
 static
@@ -399,6 +439,18 @@ void cdf53_scale_2x2_f32(float *t)
 }
 
 static
+void cdf53_scale2_2x2_f32(float *t)
+{
+	const float zeta2 = dwt_cdf53_s1_s*dwt_cdf53_s1_s;
+	const float v[4] = {
+		zeta2, 1.f,
+		1.f,   1/zeta2
+	};
+	for(int i = 0; i < 4; i++)
+		t[i] *= v[i];
+}
+
+static
 void scale_2x2_x32(FIX32_T *t)
 {
 	//const FIX32_T z2_x32 = conv_float32_to_fix32( dwt_cdf97_s1_s*dwt_cdf97_s1_s );
@@ -532,6 +584,65 @@ void cores2f_cdf53_v2x2_f32_core(
 
 	// scaling
 	cdf53_scale_2x2_f32(t);
+
+	// store
+	for(int yy = 0; yy < step_y; yy++)
+	{
+		for(int xx = 0; xx < step_x; xx++)
+		{
+			// virtual to real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, overlap_x_L, src->size_x);
+			const int pos_y = virt2real_error(y-shift, yy, overlap_y_L, src->size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_s(dst->ptr, pos_y, pos_x, dst->stride_y, dst->stride_x) = t[yy*step_x+xx];
+		}
+	}
+}
+
+static
+void cores2f_cdf53_v2x2B_f32_core(
+	struct image_t *src,
+	struct image_t *dst,
+	int x,
+	int y,
+	float *buffer_x_ptr,
+	float *buffer_y_ptr
+)
+{
+	const int overlap_x_L = 3;
+	const int overlap_y_L = 3;
+
+	const int step_y = 2;
+	const int step_x = 2;
+
+	const int shift = 1;
+
+	// 2x2
+	float t[4];
+
+	// load
+	for(int xx = 0; xx < step_x; xx++)
+	{
+		for(int yy = 0; yy < step_y; yy++)
+		{
+			// virtual to real coordinates
+			const int pos_x = virt2real(x, xx, overlap_x_L, src->size_x);
+			const int pos_y = virt2real(y, yy, overlap_y_L, src->size_y);
+
+			t[yy*step_x+xx] = *addr2_s(src->ptr, pos_y, pos_x, src->stride_y, src->stride_x);
+		}
+	}
+
+	// calc
+	cdf53_vert_2x1B_f32(t+0, t+1, buffer_y_ptr+0);
+	cdf53_vert_2x1B_f32(t+2, t+3, buffer_y_ptr+2);
+	cdf53_vert_2x1B_f32(t+0, t+2, buffer_x_ptr+0);
+	cdf53_vert_2x1B_f32(t+1, t+3, buffer_x_ptr+2);
+
+	// scaling
+	cdf53_scale2_2x2_f32(t);
 
 	// store
 	for(int yy = 0; yy < step_y; yy++)
@@ -851,6 +962,34 @@ void cores2f_cdf53_v2x2_f32(
 	for(int y = 0; y < super_y; y += step_y)
 		for(int x = 0; x < super_x; x += step_x)
 			cores2f_cdf53_v2x2_f32_core(src, dst, x, y, buffer_x+x*buff_elem_size, buffer_y+y*buff_elem_size);
+}
+
+void cores2f_cdf53_v2x2B_f32(
+	struct image_t *src,
+	struct image_t *dst
+)
+{
+	assert( src->size_x == dst->size_x && src->size_y == dst->size_y );
+
+	const int buff_elem_size = 2;
+
+	const int step_x = 2;
+	const int step_y = 2;
+
+	const int overlap_x_L = 3;
+	const int overlap_y_L = 3;
+	const int overlap_x_R = 3;
+	const int overlap_y_R = 3;
+
+	const int super_x = overlap_x_L + src->size_x + overlap_x_R;
+	const int super_y = overlap_y_L + src->size_y + overlap_y_R;
+
+	float buffer_x[buff_elem_size*super_x];
+	float buffer_y[buff_elem_size*super_y];
+
+	for(int y = 0; y < super_y; y += step_y)
+		for(int x = 0; x < super_x; x += step_x)
+			cores2f_cdf53_v2x2B_f32_core(src, dst, x, y, buffer_x+x*buff_elem_size, buffer_y+y*buff_elem_size);
 }
 
 void cores2i_cdf97_v2x2_f32(
