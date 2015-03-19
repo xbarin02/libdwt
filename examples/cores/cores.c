@@ -791,9 +791,6 @@ void cores2f_cdf53_v2x2B_f32_core(
 	float h1_x1y1 = buff_y[4];
 	float v1_x1y1 = buff_x[4];
 
-#if 0
-	// NSLS Iwahashi2013
-
 	float d1_x0y0 = d0_x0y0
 		+ alpha*alpha * ( a0_x0y0 + a0_x0y1 + a0_x1y0 + a0_x1y1 )
 		+ alpha       * ( h0_x0y0 + h0_x0y1 )
@@ -815,40 +812,6 @@ void cores2f_cdf53_v2x2B_f32_core(
 		+ beta      * ( h1_x1y1 + h1_x0y1 )
 		+ beta      * ( v1_x1y1 + v1_x1y0 )
 	;
-#else
-	// {d,h,v} in parallel
-	float d1_x0y0 = d0_x0y0
-		+ alpha*alpha * ( a0_x0y0 + a0_x0y1 + a0_x1y0 + a0_x1y1 )
-		+ alpha       * ( h0_x0y0 + h0_x0y1 )
-		+ alpha       * ( v0_x0y0 + v0_x1y0 )
-	;
-
-	float h1_x0y1 = h0_x0y1
-		+ alpha * ( a0_x1y1 + a0_x0y1 )
-		+ beta  * ( d1_x0y1 )
-		+ beta  * ( d0_x0y0
-			+ alpha*alpha * ( a0_x0y0 + a0_x0y1 + a0_x1y0 + a0_x1y1 )
-			+ alpha       * ( h0_x0y0 + h0_x0y1 )
-			+ alpha       * ( v0_x0y0 + v0_x1y0 )
-		)
-	;
-
-	float v1_x1y0 = v0_x1y0
-		+ alpha * ( a0_x1y1 + a0_x1y0 )
-		+ beta  * ( d1_x1y0 )
-		+ beta  * ( d0_x0y0
-			+ alpha*alpha * ( a0_x0y0 + a0_x0y1 + a0_x1y0 + a0_x1y1 )
-			+ alpha       * ( h0_x0y0 + h0_x0y1 )
-			+ alpha       * ( v0_x0y0 + v0_x1y0 )
-		)
-	;
-
-	float a1_x1y1 = a0_x1y1
-		- beta*beta * ( d1_x0y0 + d1_x0y1 + d1_x1y0 + d1_x1y1 )
-		+ beta      * ( h1_x1y1 + h1_x0y1 )
-		+ beta      * ( v1_x1y1 + v1_x1y0 )
-	;
-#endif
 
 	// push into buffers
 	buff_x[0] = h0_x0y0;
@@ -899,41 +862,11 @@ void cores2f_cdf53_v2x2B_f32_core(
 		+ alpha       * ( v0_x0y0 + v0_x1y0 )
 	;
 
-	// ---
-
 	float v1a_x0y0 = v0_x0y0 + alpha * ( a0_x0y0 + a0_x0y1 );
-
 	float h1a_x0y0 = h0_x0y0 + alpha * ( a0_x0y0 + a0_x1y0 );
 
 	// ---
-#if 0
-	// H
-	float v1_x0y0 = v1a_x0y0 + beta * d1_x0y0;
 
-	// H
-	float a1a_x0y0 = a0_x0y0 + beta * h1a_x0y0;
-
-	// H
-	float a2_x1y1 = a1_x1y1 + beta * h1_x0y1;
-
-	// H
-	float v2_x1y0 = v1_x1y0 + beta * d1_x0y0;
-
-	// ---
-
-	// V
-	float h1_x0y0 = h1a_x0y0 + beta * d1_x0y0;
-
-	// V
-	float a1_x0y0 = a1a_x0y0 + beta * v1_x0y0;
-
-	// V
-	float h2_x0y1 = h1_x0y1 + beta * d1_x0y0;
-
-	// V
-	float a3_x1y1 = a2_x1y1 + beta * v2_x1y0;
-#else
-	// 2 steps, 22 MACs
 	float a3_x1y1 = a1_x1y1
 		+ beta*beta * d1_x0y0
 		+ beta * ( h1_x0y1 + v1_x1y0 );
@@ -949,7 +882,6 @@ void cores2f_cdf53_v2x2B_f32_core(
 		+ beta * d1_x0y0;
 	float h1_x0y0 = h1a_x0y0
 		+ beta * d1_x0y0;
-#endif
 
 	// push into buffers
 	buff_x[0] = h0_x0y0;
