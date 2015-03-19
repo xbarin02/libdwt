@@ -164,6 +164,48 @@ void cdf53_vert_2x1_f32(
 	*data1 = y1;
 }
 
+// lag=1 steps=2
+static
+void cdf53_vert_2x1A_f32(
+        float *data0, // left [1]
+        float *data1, // right [1]
+        float *buff // [2]
+)
+{
+	const float w[2] = { +dwt_cdf53_u1_s, -dwt_cdf53_p1_s }; 
+
+	// variables
+	float c[2];
+	float r[2];
+	float x0, x1;
+	float y0, y1;
+
+	// load
+	float *l = buff;
+
+	// inputs
+	x0 = *data0;
+	x1 = *data1;
+
+	// shuffles
+	y0   = l[0];
+	c[0] = l[1];
+	c[1] = x0;
+
+	// operation
+	r[1] = x1;
+	r[0] = c[1] + op_f32(l[1], r[1], w[1]);
+	y1   = c[0] + op_f32(l[0], r[0], w[0]);
+
+	// update
+	l[0] = r[0];
+	l[1] = r[1];
+
+	// outputs
+	*data0 = y1;
+	*data1 = r[0];
+}
+
 // not a lifting scheme
 static
 void cdf53_vert_2x1B_f32(
@@ -635,8 +677,15 @@ void cores2f_cdf53_v2x2B_f32_core(
 		}
 	}
 
-#if 0
+#if 1
 	// separable
+	cdf53_vert_2x1A_f32(t+0, t+1, buffer_y_ptr+0);
+	cdf53_vert_2x1A_f32(t+2, t+3, buffer_y_ptr+2);
+	cdf53_vert_2x1A_f32(t+0, t+2, buffer_x_ptr+0);
+	cdf53_vert_2x1A_f32(t+1, t+3, buffer_x_ptr+2);
+#endif
+#if 0
+	// separable with reduced latency
 	cdf53_vert_2x1B_f32(t+0, t+1, buffer_y_ptr+0);
 	cdf53_vert_2x1B_f32(t+2, t+3, buffer_y_ptr+2);
 	cdf53_vert_2x1B_f32(t+0, t+2, buffer_x_ptr+0);
@@ -742,7 +791,7 @@ void cores2f_cdf53_v2x2B_f32_core(
 	t[2] = v1_x1y0;
 	t[3] = d1_x0y0;
 #endif
-#if 1
+#if 0
 	// proposed
 
 	float *buff_y = buffer_y_ptr;
