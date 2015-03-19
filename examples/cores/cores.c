@@ -635,11 +635,212 @@ void cores2f_cdf53_v2x2B_f32_core(
 		}
 	}
 
-	// calc
+#if 0
+	// separable
 	cdf53_vert_2x1B_f32(t+0, t+1, buffer_y_ptr+0);
 	cdf53_vert_2x1B_f32(t+2, t+3, buffer_y_ptr+2);
 	cdf53_vert_2x1B_f32(t+0, t+2, buffer_x_ptr+0);
 	cdf53_vert_2x1B_f32(t+1, t+3, buffer_x_ptr+2);
+#endif
+#if 0
+	// proposed
+	float *buff_y = buffer_y_ptr;
+	float *buff_x = buffer_x_ptr;
+
+	const float alpha = -dwt_cdf53_p1_s;
+	const float beta  = +dwt_cdf53_u1_s;
+
+	float a0_x0y0 = t[3];
+	float v0_x0y0 = t[1];
+	float h0_x0y0 = t[2];
+	float d0_x0y0 = t[0];
+
+	// pop from buffers
+	float h0_x0y1 = buff_x[0];
+	float a0_x0y1 = buff_x[1];
+	float v0_x1y0 = buff_y[0];
+	float a0_x1y0 = buff_y[1];
+	float a0_x1y1 = buff_y[2];
+	float d1_x0y1 = buff_x[2];
+	float d1_x1y0 = buff_y[3];
+	float d1_x1y1 = buff_x[3];
+	float h1_x1y1 = buff_y[4];
+	float v1_x1y1 = buff_x[4];
+
+#if 0
+	// sequentially
+	float d1_x0y0 = d0_x0y0
+		+ alpha*alpha * ( a0_x0y0 + a0_x0y1 + a0_x1y0 + a0_x1y1 )
+		+ alpha       * ( h0_x0y0 + h0_x0y1 )
+		+ alpha       * ( v0_x0y0 + v0_x1y0 )
+	;
+
+	float h1_x0y1 = h0_x0y1
+		+ alpha * ( a0_x1y1 + a0_x0y1 )
+		+ beta  * ( d1_x0y1 + d1_x0y0 )
+	;
+
+	float v1_x1y0 = v0_x1y0
+		+ alpha * ( a0_x1y1 + a0_x1y0 )
+		+ beta  * ( d1_x1y0 + d1_x0y0 )
+	;
+
+	float a1_x1y1 = a0_x1y1
+		- beta*beta * ( d1_x0y0 + d1_x0y1 + d1_x1y0 + d1_x1y1 )
+		+ beta      * ( h1_x1y1 + h1_x0y1 )
+		+ beta      * ( v1_x1y1 + v1_x1y0 )
+	;
+#else
+	// in parallel
+	float d1_x0y0 = d0_x0y0
+		+ alpha*alpha * ( a0_x0y0 + a0_x0y1 + a0_x1y0 + a0_x1y1 )
+		+ alpha       * ( h0_x0y0 + h0_x0y1 )
+		+ alpha       * ( v0_x0y0 + v0_x1y0 )
+	;
+
+	float h1_x0y1 = h0_x0y1
+		+ alpha * ( a0_x1y1 + a0_x0y1 )
+		+ beta  * ( d1_x0y1 )
+		+ beta  * ( d0_x0y0
+			+ alpha*alpha * ( a0_x0y0 + a0_x0y1 + a0_x1y0 + a0_x1y1 )
+			+ alpha       * ( h0_x0y0 + h0_x0y1 )
+			+ alpha       * ( v0_x0y0 + v0_x1y0 )
+		)
+	;
+
+	float v1_x1y0 = v0_x1y0
+		+ alpha * ( a0_x1y1 + a0_x1y0 )
+		+ beta  * ( d1_x1y0 )
+		+ beta  * ( d0_x0y0
+			+ alpha*alpha * ( a0_x0y0 + a0_x0y1 + a0_x1y0 + a0_x1y1 )
+			+ alpha       * ( h0_x0y0 + h0_x0y1 )
+			+ alpha       * ( v0_x0y0 + v0_x1y0 )
+		)
+	;
+
+	float a1_x1y1 = a0_x1y1
+		- beta*beta * ( d1_x0y0 + d1_x0y1 + d1_x1y0 + d1_x1y1 )
+		+ beta      * ( h1_x1y1 + h1_x0y1 )
+		+ beta      * ( v1_x1y1 + v1_x1y0 )
+	;
+#endif
+
+	// push into buffers
+	buff_x[0] = h0_x0y0;
+	buff_x[1] = a0_x0y0;
+	buff_x[2] = d1_x0y0;
+	buff_x[3] = d1_x1y0;
+	buff_y[4] = h1_x0y1;
+	buff_y[0] = v0_x0y0;
+	buff_y[1] = a0_x0y0;
+	buff_y[2] = a0_x0y1;
+	buff_y[3] = d1_x0y0;
+	buff_x[4] = v1_x1y0;
+
+	t[0] = a1_x1y1;
+	t[1] = h1_x0y1;
+	t[2] = v1_x1y0;
+	t[3] = d1_x0y0;
+#endif
+#if 1
+	// proposed
+
+	float *buff_y = buffer_y_ptr;
+	float *buff_x = buffer_x_ptr;
+
+	const float alpha = -dwt_cdf53_p1_s;
+	const float beta  = +dwt_cdf53_u1_s;
+
+	float a0_x0y0 = t[3];
+	float v0_x0y0 = t[1];
+	float h0_x0y0 = t[2];
+	float d0_x0y0 = t[0];
+
+	// pop from buffers
+	float h0_x0y1 = buff_x[0]; // h0_x0y0->h0_x0y1 -- vertical
+	float a0_x0y1 = buff_x[1]; // a0_x0y0->a0_x0y1 -- vertical (+diagonal a0_x0y0->a0_x1y1 part 1)
+	float v0_x1y0 = buff_y[0]; // v0_x0y0->v0_x1y0 -- horizontal
+	float a0_x1y0 = buff_y[1]; // a0_x0y0->a0_x1y0 -- horizontal
+	float a0_x1y1 = buff_y[2]; // a0_x0y0->a0_x1y1 -- diagonal (part 2)
+	float v1_x1y0 = buff_y[5]; // v1_x0y0->v1_x1y0 -- horizontal
+	float h1_x0y1 = buff_x[5]; // h1_x0y0->h1_x0y1 -- vertical
+	float a1_x0y1 = buff_x[6]; // a1_x0y0->a1_x1y1 -- diagonal (part 1)
+	float a1_x1y1 = buff_y[7]; // a1_x0y0->a1_x1y1 -- diagonal (part 2)
+
+	// D-*
+	float d1_x0y0 = d0_x0y0
+		+ alpha*alpha * ( a0_x0y0 + a0_x0y1 + a0_x1y0 + a0_x1y1 )
+		+ alpha       * ( h0_x0y0 + h0_x0y1 )
+		+ alpha       * ( v0_x0y0 + v0_x1y0 )
+	;
+
+	// ---
+
+	float v1a_x0y0 = v0_x0y0 + alpha * ( a0_x0y0 + a0_x0y1 );
+
+	float h1a_x0y0 = h0_x0y0 + alpha * ( a0_x0y0 + a0_x1y0 );
+
+	// ---
+#if 0
+	// H
+	float v1_x0y0 = v1a_x0y0 + beta * d1_x0y0;
+
+	// H
+	float a1a_x0y0 = a0_x0y0 + beta * h1a_x0y0;
+
+	// H
+	float a2_x1y1 = a1_x1y1 + beta * h1_x0y1;
+
+	// H
+	float v2_x1y0 = v1_x1y0 + beta * d1_x0y0;
+
+	// ---
+
+	// V
+	float h1_x0y0 = h1a_x0y0 + beta * d1_x0y0;
+
+	// V
+	float a1_x0y0 = a1a_x0y0 + beta * v1_x0y0;
+
+	// V
+	float h2_x0y1 = h1_x0y1 + beta * d1_x0y0;
+
+	// V
+	float a3_x1y1 = a2_x1y1 + beta * v2_x1y0;
+#else
+	float a3_x1y1 = a1_x1y1
+		+ beta*beta * d1_x0y0
+		+ beta * ( h1_x0y1 + v1_x1y0 );
+	float h2_x0y1 = h1_x0y1
+		+ beta * d1_x0y0;
+	float v2_x1y0 = v1_x1y0
+		+ beta * d1_x0y0;
+
+	float a1_x0y0 = a0_x0y0
+		+ beta*beta * d1_x0y0
+		+ beta * ( v1a_x0y0 + h1a_x0y0 );
+	float v1_x0y0 = v1a_x0y0
+		+ beta * d1_x0y0;
+	float h1_x0y0 = h1a_x0y0
+		+ beta * d1_x0y0;
+#endif
+
+	// push into buffers
+	buff_x[0] = h0_x0y0;
+	buff_x[1] = a0_x0y0;
+	buff_y[0] = v0_x0y0;
+	buff_y[1] = a0_x0y0;
+	buff_y[2] = a0_x0y1;
+	buff_y[5] = v1_x0y0;
+	buff_x[5] = h1_x0y0;
+	buff_x[6] = a1_x0y0;
+	buff_y[7] = a1_x0y1;
+
+	t[0] = a3_x1y1;
+	t[1] = h2_x0y1;
+	t[2] = v2_x1y0;
+	t[3] = d1_x0y0;
+#endif
 
 	// scaling
 	cdf53_scale2_2x2_f32(t);
@@ -971,7 +1172,7 @@ void cores2f_cdf53_v2x2B_f32(
 {
 	assert( src->size_x == dst->size_x && src->size_y == dst->size_y );
 
-	const int buff_elem_size = 2;
+	const int buff_elem_size = 8; // FIXME: 2
 
 	const int step_x = 2;
 	const int step_y = 2;
@@ -987,8 +1188,8 @@ void cores2f_cdf53_v2x2B_f32(
 	float buffer_x[buff_elem_size*super_x];
 	float buffer_y[buff_elem_size*super_y];
 
-	for(int y = 0; y < super_y; y += step_y)
-		for(int x = 0; x < super_x; x += step_x)
+	for(int y = 0; y+step_y-1 < super_y; y += step_y)
+		for(int x = 0; x+step_x-1 < super_x; x += step_x)
 			cores2f_cdf53_v2x2B_f32_core(src, dst, x, y, buffer_x+x*buff_elem_size, buffer_y+y*buff_elem_size);
 }
 
