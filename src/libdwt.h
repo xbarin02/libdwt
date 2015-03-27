@@ -6,7 +6,7 @@
 #ifndef LIBDWT_H
 #define LIBDWT_H
 
-#include <stdint.h> // int64_t
+#include <stdint.h> // int64_t, int16_t
 #include <stdio.h> // FILE
 #include <stdarg.h> // va_list
 #include <stddef.h> // size_t
@@ -1322,6 +1322,16 @@ void dwt_util_test_image_fill2_i(
 	int type
 );
 
+void dwt_util_test_image_fill2_i16(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int rand,
+	int type
+);
+
 /**
  * @brief Fill image with test pattern.
  *
@@ -1483,6 +1493,20 @@ int dwt_util_compare2_destructive_s(
 );
 
 int dwt_util_compare2_destructive2_s(
+	void *ptr1,
+	const void *ptr2,
+	void *map,
+	int stride1_x,
+	int stride1_y,
+	int stride2_x,
+	int stride2_y,
+	int map_stride_x,
+	int map_stride_y,
+	int size_x,
+	int size_y
+);
+
+int dwt_util_compare2_destructive2_i16(
 	void *ptr1,
 	const void *ptr2,
 	void *map,
@@ -1731,6 +1755,16 @@ void dwt_util_finish();
 int dwt_util_save_to_pgm_i(
 	const char *filename,	///< target file name, e.g. "output.pgm"
 	int max_value, 		///< maximum value of pixel, e.g. 255 if image values lie inside an interval [0; 255]
+	const void *ptr,	///< pointer to beginning of image data
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y	///< height of nested image (in elements)
+);
+
+int dwt_util_save_to_pgm_i16(
+	const char *filename,	///< target file name, e.g. "output.pgm"
+	int16_t max_value, 	///< maximum value of pixel, e.g. 255 if image values lie inside an interval [0; 255]
 	const void *ptr,	///< pointer to beginning of image data
 	int stride_x,		///< difference between rows (in bytes)
 	int stride_y,		///< difference between columns (in bytes)
@@ -2387,6 +2421,15 @@ void *dwt_util_addr_coeff(
  * @brief Convert transform to viewable format.
  */
 void dwt_util_conv_show_i(
+	const void *src,	///< transform
+	void *dst,		///< viewable image of transform
+	int stride_x,		///< difference between rows (in bytes)
+	int stride_y,		///< difference between columns (in bytes)
+	int size_i_big_x,	///< width of nested image (in elements)
+	int size_i_big_y	///< height of nested image (in elements)
+);
+
+void dwt_util_conv_show_i16(
 	const void *src,	///< transform
 	void *dst,		///< viewable image of transform
 	int stride_x,		///< difference between rows (in bytes)

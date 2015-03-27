@@ -1144,6 +1144,34 @@ void dwt_util_test_image_value_i_i(
 	}
 }
 
+static
+void dwt_util_test_image_value_i_i16(
+	int16_t *dest,
+	int x,
+	int y,
+	int rand,
+	int type
+)
+{
+	switch(type)
+	{
+		case 0:
+			x >>= rand;
+			*dest = (int16_t)( 255 * (2*x*y) / (x*x + y*y + 1) );
+			break;
+		case 2:
+			*dest = (int16_t)( x^y );
+			*dest &= (int16_t)( 0xff );
+			break;
+		default:
+		{
+			dwt_util_log(LOG_ERR, "Unknown test image type.\n");
+
+			dwt_util_abort();
+		}
+	}
+}
+
 /**
  * @brief Pixel value of test image.
  */
@@ -1255,6 +1283,29 @@ void dwt_util_test_image_fill2_i(
 		for(int x = 0; x < size_i_big_x; x++)
 			dwt_util_test_image_value_i_i(
 				addr2_i(ptr, y, x, stride_x, stride_y),
+				x,
+				y,
+				rand,
+				type
+			);
+}
+
+void dwt_util_test_image_fill2_i16(
+	void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_i_big_x,
+	int size_i_big_y,
+	int rand,
+	int type
+)
+{
+	assert( NULL != ptr );
+
+	for(int y = 0; y < size_i_big_y; y++)
+		for(int x = 0; x < size_i_big_x; x++)
+			dwt_util_test_image_value_i_i16(
+				addr2_i16(ptr, y, x, stride_x, stride_y),
 				x,
 				y,
 				rand,
@@ -1682,6 +1733,46 @@ int dwt_util_compare2_destructive2_s(
 			if( fabsf(a - b) > eps )
 			{
 				*dest = 1.f;
+				ret = 1;
+			}
+		}
+	}
+
+	return ret;
+}
+
+int dwt_util_compare2_destructive2_i16(
+	void *ptr1,
+	const void *ptr2,
+	void *map,
+	int stride1_x,
+	int stride1_y,
+	int stride2_x,
+	int stride2_y,
+	int map_stride_x,
+	int map_stride_y,
+	int size_x,
+	int size_y
+)
+{
+	assert( ptr1 && ptr2 && map && size_x >= 0 && size_y >= 0 );
+
+	int ret = 0;
+
+	for(int y = 0; y < size_y; y++)
+	{
+		for(int x = 0; x < size_x; x++)
+		{
+			const int16_t a = *addr2_i16      (ptr1, y, x, stride1_x, stride1_y);
+			const int16_t b = *addr2_const_i16(ptr2, y, x, stride2_x, stride2_y);
+
+			int16_t *dest = addr2_i16(map, y, x, map_stride_x, map_stride_y);
+
+			*dest = 0;
+
+			if( abs(a - b) > 0 )
+			{
+				*dest = 255;
 				ret = 1;
 			}
 		}
@@ -19198,6 +19289,75 @@ int dwt_util_save_to_pgm_i(
 	return 0;
 }
 
+int dwt_util_save_to_pgm_i16(
+	const char *filename,
+	int16_t max_value,
+	const void *ptr,
+	int stride_x,
+	int stride_y,
+	int size_i_big_x,
+	int size_i_big_y
+)
+{
+	assert( max_value != 0 && size_i_big_x >= 0 && size_i_big_y >= 0 );
+
+	const int target_max_value = 255;
+
+	FILE *file = fopen(filename, "w");
+	if(NULL == file)
+		return 1;
+
+	fprintf(file, "P2\n%i %i\n%i\n", size_i_big_x, size_i_big_y, target_max_value);
+
+	int err = 0;
+
+	for(int y = 0; y < size_i_big_y; y++)
+	{
+		for(int x = 0; x < size_i_big_x; x++)
+		{
+			const int16_t px = *addr2_const_i16(ptr, y, x, stride_x, stride_y);
+
+			int val = (target_max_value*px/max_value);
+
+			if( px > max_value )
+			{
+				if( !err++ )
+					dwt_util_log(LOG_WARN, "%s: Maximum pixel intensity exceeded (%i > %i) at (y=%i, x=%i). Such an incident will be reported only once.\n", __FUNCTION__, px, max_value, y, x);
+			}
+
+			if( px > max_value )
+			{
+				val = target_max_value;
+			}
+
+			if( px < 0 )
+			{
+				if( !err++ )
+					dwt_util_log(LOG_WARN, "%s: Minimum pixel intensity exceeded (%i < %i) at (y=%i, x=%i). Such an incident will be reported only once.\n", __FUNCTION__, px, 0, y, x);
+			}
+
+			if( px < 0 )
+			{
+				val = 0;
+			}
+
+			if( fprintf(file, "%i\n", val) < 0 )
+			{
+				dwt_util_log(LOG_WARN, "%s: error writing into file.\n", __FUNCTION__);
+				fclose(file);
+				return 1;
+			}
+		}
+	}
+
+	fclose(file);
+
+	if( err )
+		dwt_util_log(LOG_WARN, "%s: %i errors ocurred while saving a file.\n", __FUNCTION__, err);
+
+	return 0;
+}
+
 static
 int skip_mess(FILE *file)
 {
@@ -20755,6 +20915,34 @@ void dwt_util_conv_show_i(
 
 			// FIXME: *log_coeff = ceil_log2(1+abs(coeff)<<a)<<b;
 			*log_coeff = abs(coeff);
+		}
+	}
+
+	FUNC_END;
+}
+
+void dwt_util_conv_show_i16(
+	const void *src,
+	void *dst,
+	int stride_x,
+	int stride_y,
+	int size_i_big_x,
+	int size_i_big_y
+)
+{
+	FUNC_BEGIN;
+
+	assert( src != NULL && dst != NULL && size_i_big_x >= 0 && size_i_big_y >= 0 );
+
+	for(int y = 0; y < size_i_big_y; y++)
+	{
+		for(int x = 0; x < size_i_big_x; x++)
+		{
+			const int16_t coeff = *addr2_const_i16(src, y, x, stride_x, stride_y);
+			int16_t *log_coeff = addr2_i16(dst, y, x, stride_x, stride_y);
+
+			// FIXME: *log_coeff = ceil_log2(1+abs(coeff)<<a)<<b;
+			*log_coeff = (int16_t)abs(coeff);
 		}
 	}
 

@@ -288,6 +288,19 @@ int16_t *addr2_i16(
 	return (int16_t *)((char *)ptr + y*stride_x + x*stride_y);
 }
 
+UNUSED_FUNC
+static
+const int16_t *addr2_const_i16(
+	void *ptr,
+	int y,
+	int x,
+	int stride_x,
+	int stride_y
+)
+{
+	return (const int16_t *)((char *)ptr + y*stride_x + x*stride_y);
+}
+
 /**
  * @{
  * @brief CDF 9/7 lifting scheme constants
