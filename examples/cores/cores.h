@@ -53,6 +53,16 @@ void cores2f_cdf53_v2x2B_f32(
 	struct image_t *dst
 );
 
+void cores2f_cdf53_v2x2_i16(
+	struct image_t *src,
+	struct image_t *dst
+);
+
+void cores2i_cdf53_v2x2_i16(
+	struct image_t *src,
+	struct image_t *dst
+);
+
 /**
  * @brief Single-loop core.
  *

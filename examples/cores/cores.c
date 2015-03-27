@@ -123,6 +123,74 @@ void vert_2x1_f32(
 	*data1 = y1;
 }
 
+// JPEG 2000 compatible
+// ITU-T Rec. T.800 (2000 FCDV1.0), p. 126
+// F.3.8.1 Reversible 1D filtering
+// returns the output of the 1D_FILT_R procedure
+static
+void cdf53_vert_2x1_i16(
+        int16_t *data0, // left [1]
+        int16_t *data1, // right [1]
+        int16_t *buff // [2]
+)
+{
+	int16_t c[2];
+	int16_t r[2];
+	int16_t x0, x1;
+	int16_t y0, y1;
+
+	int16_t *l = buff;
+
+	x0 = *data0;
+	x1 = *data1;
+
+	y0   = l[0];
+	c[0] = l[1];
+	c[1] = x0;
+
+	r[1] = x1;
+	r[0] = c[1] - ( ( l[1] + r[1] + 0 ) >> 1 );
+	y1   = c[0] + ( ( l[0] + r[0] + 2 ) >> 2 );
+
+	l[0] = r[0];
+	l[1] = r[1];
+
+	*data0 = y0;
+	*data1 = y1;
+}
+
+static
+void cdf53_vert_2x1_inv_i16(
+        int16_t *data0, // left [1]
+        int16_t *data1, // right [1]
+        int16_t *buff // [2]
+)
+{
+	int16_t c[2];
+	int16_t r[2];
+	int16_t x0, x1;
+	int16_t y0, y1;
+
+	int16_t *l = buff;
+
+	x0 = *data0;
+	x1 = *data1;
+
+	y0   = l[0];
+	c[0] = l[1];
+	c[1] = x0;
+
+	r[1] = x1;
+	r[0] = c[1] - ( ( l[1] + r[1] + 2 ) >> 2 );
+	y1   = c[0] + ( ( l[0] + r[0] + 0 ) >> 1 );
+
+	l[0] = r[0];
+	l[1] = r[1];
+
+	*data0 = y0;
+	*data1 = y1;
+}
+
 static
 void cdf53_vert_2x1_f32(
         float *data0, // left [1]
@@ -288,6 +356,7 @@ void vert_2x1_inv_f32(
 	*data1 = y1;
 }
 
+// M. D. Adams. Reversible Integer-to-Integer Wavelet Transforms for Image Coding. PhD thesis, 2002.
 static
 void vert_2x1_i32(
         int32_t *data0, // left [1]
@@ -635,6 +704,126 @@ void cores2f_cdf53_v2x2_f32_core(
 				continue;
 
 			*addr2_s(dst->ptr, pos_y, pos_x, dst->stride_y, dst->stride_x) = t[yy*step_x+xx];
+		}
+	}
+}
+
+// JPEG 2000 compatible
+// F.3.2 The 2D_SD procedure
+// ITU-T Rec. T.800 (2000 FCDV1.0), p. 121
+// returns outputs of the 2D_SD procedure
+static
+void cores2f_cdf53_v2x2_i16_core(
+	struct image_t *src,
+	struct image_t *dst,
+	int x,
+	int y,
+	int16_t *buffer_x_ptr,
+	int16_t *buffer_y_ptr
+)
+{
+	const int overlap_x_L = 3;
+	const int overlap_y_L = 3;
+
+	const int step_y = 2;
+	const int step_x = 2;
+
+	const int shift = 2;
+
+	// 2x2
+	int16_t t[4];
+
+	// load
+	for(int xx = 0; xx < step_x; xx++)
+	{
+		for(int yy = 0; yy < step_y; yy++)
+		{
+			// virtual to real coordinates
+			const int pos_x = virt2real(x, xx, overlap_x_L, src->size_x);
+			const int pos_y = virt2real(y, yy, overlap_y_L, src->size_y);
+
+			t[yy*step_x+xx] = *addr2_i16(src->ptr, pos_y, pos_x, src->stride_y, src->stride_x);
+		}
+	}
+
+	// vertical
+	cdf53_vert_2x1_i16(t+0, t+2, buffer_x_ptr+0);
+	cdf53_vert_2x1_i16(t+1, t+3, buffer_x_ptr+2);
+
+	// horizontal
+	cdf53_vert_2x1_i16(t+0, t+1, buffer_y_ptr+0);
+	cdf53_vert_2x1_i16(t+2, t+3, buffer_y_ptr+2);
+
+	// store
+	for(int yy = 0; yy < step_y; yy++)
+	{
+		for(int xx = 0; xx < step_x; xx++)
+		{
+			// virtual to real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, overlap_x_L, src->size_x);
+			const int pos_y = virt2real_error(y-shift, yy, overlap_y_L, src->size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_i16(dst->ptr, pos_y, pos_x, dst->stride_y, dst->stride_x) = t[yy*step_x+xx];
+		}
+	}
+}
+
+static
+void cores2i_cdf53_v2x2_i16_core(
+	struct image_t *src,
+	struct image_t *dst,
+	int x,
+	int y,
+	int16_t *buffer_x_ptr,
+	int16_t *buffer_y_ptr
+)
+{
+	const int overlap_x_L = 2;
+	const int overlap_y_L = 2;
+
+	const int step_y = 2;
+	const int step_x = 2;
+
+	const int shift = 2;
+
+	// 2x2
+	int16_t t[4];
+
+	// load
+	for(int xx = 0; xx < step_x; xx++)
+	{
+		for(int yy = 0; yy < step_y; yy++)
+		{
+			// virtual to real coordinates
+			const int pos_x = virt2real(x, xx, overlap_x_L, src->size_x);
+			const int pos_y = virt2real(y, yy, overlap_y_L, src->size_y);
+
+			t[yy*step_x+xx] = *addr2_i16(src->ptr, pos_y, pos_x, src->stride_y, src->stride_x);
+		}
+	}
+
+	// horizontal
+	cdf53_vert_2x1_inv_i16(t+0, t+1, buffer_y_ptr+0);
+	cdf53_vert_2x1_inv_i16(t+2, t+3, buffer_y_ptr+2);
+
+	// vertical
+	cdf53_vert_2x1_inv_i16(t+0, t+2, buffer_x_ptr+0);
+	cdf53_vert_2x1_inv_i16(t+1, t+3, buffer_x_ptr+2);
+
+	// store
+	for(int yy = 0; yy < step_y; yy++)
+	{
+		for(int xx = 0; xx < step_x; xx++)
+		{
+			// virtual to real coordinates
+			const int pos_x = virt2real_error(x-shift, xx, overlap_x_L, src->size_x);
+			const int pos_y = virt2real_error(y-shift, yy, overlap_y_L, src->size_y);
+			if( pos_x < 0 || pos_y < 0 )
+				continue;
+
+			*addr2_i16(dst->ptr, pos_y, pos_x, dst->stride_y, dst->stride_x) = t[yy*step_x+xx];
 		}
 	}
 }
@@ -1288,6 +1477,62 @@ void cores2f_cdf53_v2x2_f32(
 	for(int y = 0; y < super_y; y += step_y)
 		for(int x = 0; x < super_x; x += step_x)
 			cores2f_cdf53_v2x2_f32_core(src, dst, x, y, buffer_x+x*buff_elem_size, buffer_y+y*buff_elem_size);
+}
+
+void cores2f_cdf53_v2x2_i16(
+	struct image_t *src,
+	struct image_t *dst
+)
+{
+	assert( src->size_x == dst->size_x && src->size_y == dst->size_y );
+
+	const int buff_elem_size = 2;
+
+	const int step_x = 2;
+	const int step_y = 2;
+
+	const int overlap_x_L = 3;
+	const int overlap_y_L = 3;
+	const int overlap_x_R = 3;
+	const int overlap_y_R = 3;
+
+	const int super_x = overlap_x_L + src->size_x + overlap_x_R;
+	const int super_y = overlap_y_L + src->size_y + overlap_y_R;
+
+	int16_t buffer_x[buff_elem_size*super_x];
+	int16_t buffer_y[buff_elem_size*super_y];
+
+	for(int y = 0; y+step_y-1 < super_y; y += step_y)
+		for(int x = 0; x+step_x-1 < super_x; x += step_x)
+			cores2f_cdf53_v2x2_i16_core(src, dst, x, y, buffer_x+x*buff_elem_size, buffer_y+y*buff_elem_size);
+}
+
+void cores2i_cdf53_v2x2_i16(
+	struct image_t *src,
+	struct image_t *dst
+)
+{
+	assert( src->size_x == dst->size_x && src->size_y == dst->size_y );
+
+	const int buff_elem_size = 2;
+
+	const int step_x = 2;
+	const int step_y = 2;
+
+	const int overlap_x_L = 2;
+	const int overlap_y_L = 2;
+	const int overlap_x_R = 2;
+	const int overlap_y_R = 2;
+
+	const int super_x = overlap_x_L + src->size_x + overlap_x_R;
+	const int super_y = overlap_y_L + src->size_y + overlap_y_R;
+
+	int16_t buffer_x[buff_elem_size*super_x];
+	int16_t buffer_y[buff_elem_size*super_y];
+
+	for(int y = 0; y+step_y-1 < super_y; y += step_y)
+		for(int x = 0; x+step_x-1 < super_x; x += step_x)
+			cores2i_cdf53_v2x2_i16_core(src, dst, x, y, buffer_x+x*buff_elem_size, buffer_y+y*buff_elem_size);
 }
 
 void cores2f_cdf53_v2x2B_f32(

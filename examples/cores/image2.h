@@ -6,6 +6,7 @@
 
 enum dwt_types {
 	TYPE_INT32,
+	TYPE_INT16,
 	TYPE_FLOAT32,
 	TYPE_FIX32,
 	TYPE_FIX16,

@@ -83,6 +83,7 @@ size_t sizeof_type(enum dwt_types data_type)
 		case TYPE_INT32: return sizeof(int32_t);
 		case TYPE_FIX32: return sizeof(FIX32_T);
 		case TYPE_FIX16: return sizeof(FIX16_T);
+		case TYPE_INT16: return sizeof(int16_t);
 		default:
 			dwt_util_error("%s: unsupported data type (%i)\n", __FUNCTION__, data_type);
 	}
@@ -106,6 +107,23 @@ float image2_mse(struct image_t *source, struct image_t *target, enum dwt_types 
 					const int diff =
 						*addr2_i(source->ptr, y, x, source->stride_y, source->stride_x) -
 						*addr2_i(target->ptr, y, x, target->stride_y, target->stride_x);
+					mse += (float)diff*diff;
+				}
+			}
+
+			return mse/source->size_y/source->size_x;
+		}
+		case TYPE_INT16:
+		{
+			float mse = 0.f;
+
+			for(int y = 0; y < source->size_y; y++)
+			{
+				for(int x = 0; x < source->size_x; x++)
+				{
+					const int diff =
+						*addr2_i16(source->ptr, y, x, source->stride_y, source->stride_x) -
+						*addr2_i16(target->ptr, y, x, target->stride_y, target->stride_x);
 					mse += (float)diff*diff;
 				}
 			}
@@ -169,7 +187,7 @@ float image2_mse(struct image_t *source, struct image_t *target, enum dwt_types 
 
 void image2_fill(struct image_t *image, enum dwt_types data_type)
 {
-	int pattern_type = 1;
+	int pattern_type = 2;
 
 	switch(data_type)
 	{
@@ -189,6 +207,19 @@ void image2_fill(struct image_t *image, enum dwt_types data_type)
 		case TYPE_INT32:
 		{
 			dwt_util_test_image_fill2_i(
+				image->ptr,
+				image->stride_y,
+				image->stride_x,
+				image->size_x,
+				image->size_y,
+				0,
+				pattern_type
+			);
+			break;
+		}
+		case TYPE_INT16:
+		{
+			dwt_util_test_image_fill2_i16(
 				image->ptr,
 				image->stride_y,
 				image->stride_x,
@@ -249,6 +280,19 @@ void image2_save_to_pgm(struct image_t *image, const char *path, enum dwt_types 
 		case TYPE_INT32:
 		{
 			dwt_util_save_to_pgm_i(
+				path,
+				0xff,
+				image->ptr,
+				image->stride_y,
+				image->stride_x,
+				image->size_x,
+				image->size_y
+			);
+			break;
+		}
+		case TYPE_INT16:
+		{
+			dwt_util_save_to_pgm_i16(
 				path,
 				0xff,
 				image->ptr,
@@ -324,6 +368,27 @@ int image2_save_log_to_pgm_i(struct image_t *image, const char *path)
 	return r;
 }
 
+int image2_save_log_to_pgm_i16(struct image_t *image, const char *path)
+{
+	void *copy = dwt_util_reliably_alloc1(image->size);
+
+	dwt_util_conv_show_i16(image->ptr, copy, image->stride_y,  image->stride_x, image->size_x, image->size_y);
+
+	int r = dwt_util_save_to_pgm_i16(
+		path,
+		0xff,
+		copy,
+		image->stride_y,
+		image->stride_x,
+		image->size_x,
+		image->size_y
+	);
+
+	dwt_util_free(copy);
+
+	return r;
+}
+
 void image2_save_log_to_pgm(struct image_t *image, const char *path, enum dwt_types data_type)
 {
 	switch(data_type)
@@ -333,6 +398,9 @@ void image2_save_log_to_pgm(struct image_t *image, const char *path, enum dwt_ty
 			break;
 		case TYPE_INT32:
 			image2_save_log_to_pgm_i(image, path);
+			break;
+		case TYPE_INT16:
+			image2_save_log_to_pgm_i16(image, path);
 			break;
 		case TYPE_FIX32:
 		{
@@ -454,6 +522,9 @@ void image2_idwt_cdf53_op(struct image_t *source, struct image_t *target, enum d
 {
 	switch(data_type)
 	{
+		case TYPE_INT16:
+			cores2i_cdf53_v2x2_i16(source, target);
+			break;
 		case TYPE_FLOAT32:
 			// FIXME: cores2i_cdf53_v2x2_f32(source, target);
 			image_copy(source, target);
@@ -501,6 +572,20 @@ int image2_compare_map(struct image_t *source, struct image_t *target, struct im
 {
 	switch(data_type)
 	{
+		case TYPE_INT16:
+			return dwt_util_compare2_destructive2_i16(
+				source->ptr,
+				target->ptr,
+				map->ptr,
+				source->stride_y,
+				source->stride_x,
+				target->stride_y,
+				target->stride_x,
+				map->stride_y,
+				map->stride_x,
+				source->size_x,
+				source->size_y
+			);
 		case TYPE_FLOAT32:
 			return dwt_util_compare2_destructive2_s(
 				source->ptr,
