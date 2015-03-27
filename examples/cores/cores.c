@@ -680,7 +680,7 @@ void cores2f_cdf53_v2x2B_f32_core(
 	cdf53_vert_2x1A_f32(t+0, t+2, buffer_x_ptr+0);
 	cdf53_vert_2x1A_f32(t+1, t+3, buffer_x_ptr+2);
 #endif
-#if 0
+#if 1
 	// separable
 
 	const float alpha = -dwt_cdf53_p1_s;
@@ -689,70 +689,47 @@ void cores2f_cdf53_v2x2B_f32_core(
 	float *buff_y = buffer_y_ptr;
 	float *buff_x = buffer_x_ptr;
 
-	{
-		float d0_x0y0 = t[0];
-		float v0_x0y0 = t[1];
+	float d0_x0y0 = t[0];
+	float v0_x0y0 = t[1];
+	float h0_x0y0 = t[2];
+	float a0_x0y0 = t[3];
 
-		float d1_x1y0 = buff_y[0];
-		float v0_x1y0 = buff_y[1];
+	float d1_x1y0 = buff_y[0];
+	float v0_x1y0 = buff_y[1];
+	float h1_x1y0 = buff_y[2];
+	float a0_x1y0 = buff_y[3];
 
-		float d1_x0y0 = d0_x0y0 + alpha*(v0_x1y0 + v0_x0y0);
-		float v1_x1y0 = v0_x1y0 + beta *(d1_x1y0 + d1_x0y0);
+	float v2_x1y1 = buff_x[0];
+	float a1_x1y1 = buff_x[1];
+	float d2_x0y1 = buff_x[2];
+	float h1_x0y1 = buff_x[3];
 
-		buff_y[0] = d1_x0y0;
-		buff_y[1] = v0_x0y0;
+	float d1_x0y0 = d0_x0y0 + alpha * ( v0_x1y0 + v0_x0y0 );
+	float v1_x1y0 = v0_x1y0 + beta  * ( d1_x1y0 + d1_x0y0 );
 
-		t[0] = v1_x1y0;
-		t[1] = d1_x0y0;
-	}
-	{
-		float h0_x0y0 = t[2];
-		float a0_x0y0 = t[3];
+	float h1_x0y0 = h0_x0y0 + alpha * ( a0_x1y0 + a0_x0y0 );
+	float a1_x1y0 = a0_x1y0 + beta  * ( h1_x1y0 + h1_x0y0 );
 
-		float h1_x1y0 = buff_y[2];
-		float a0_x1y0 = buff_y[3];
+	float v2_x1y0 = v1_x1y0 + alpha * ( a1_x1y1 + a1_x1y0 );
+	float a2_x1y1 = a1_x1y1 + beta  * ( v2_x1y1 + v2_x1y0 );
 
-		float h1_x0y0 = h0_x0y0 + alpha*(a0_x1y0 + a0_x0y0);
-		float a1_x1y0 = a0_x1y0 + beta *(h1_x1y0 + h1_x0y0);
-		
-		buff_y[2] = h1_x0y0;
-		buff_y[3] = a0_x0y0;
+	float d2_x0y0 = d1_x0y0 + alpha * ( h1_x0y1 + h1_x0y0 );
+	float h2_x0y1 = h1_x0y1 + beta  * ( d2_x0y1 + d2_x0y0 );
 
-		t[2] = a1_x1y0;
-		t[3] = h1_x0y0;
-	}
-	{
-		float v1_x1y0 = t[0];
-		float a1_x1y0 = t[2];
+	buff_y[0] = d1_x0y0;
+	buff_y[1] = v0_x0y0;
+	buff_y[2] = h1_x0y0;
+	buff_y[3] = a0_x0y0;
 
-		float v2_x1y1 = buff_x[0];
-		float a1_x1y1 = buff_x[1];
+	buff_x[0] = v2_x1y0;
+	buff_x[1] = a1_x1y0;
+	buff_x[2] = d2_x0y0;
+	buff_x[3] = h1_x0y0;
 
-		float v2_x1y0 = v1_x1y0 + alpha*( a1_x1y1 + a1_x1y0 );
-		float a2_x1y1 = a1_x1y1 + beta *( v2_x1y1 + v2_x1y0 );
-
-		buff_x[0] = v2_x1y0;
-		buff_x[1] = a1_x1y0;
-
-		t[0] = a2_x1y1;
-		t[2] = v2_x1y0;
-	}
-	{
-		float d1_x0y0 = t[1];
-		float h1_x0y0 = t[3];
-
-		float d2_x0y1 = buff_x[2];
-		float h1_x0y1 = buff_x[3];
-
-		float d2_x0y0 = d1_x0y0 + alpha * ( h1_x0y1 + h1_x0y0 );
-		float h2_x0y1 = h1_x0y1 + beta  * ( d2_x0y1 + d2_x0y0 );
-
-		buff_x[2] = d2_x0y0;
-		buff_x[3] = h1_x0y0;
-
-		t[1] = h2_x0y1;
-		t[3] = d2_x0y0;
-	}
+	t[0] = a2_x1y1;
+	t[1] = h2_x0y1;
+	t[2] = v2_x1y0;
+	t[3] = d2_x0y0;
 #endif
 #if 0
 	// separable with reduced latency (reference)
@@ -762,7 +739,7 @@ void cores2f_cdf53_v2x2B_f32_core(
 	cdf53_vert_2x1B_f32(t+0, t+2, buffer_x_ptr+0);
 	cdf53_vert_2x1B_f32(t+1, t+3, buffer_x_ptr+2);
 #endif
-#if 1
+#if 0
 	// separable with reduced latency
 
 	float *buff_y = buffer_y_ptr;
