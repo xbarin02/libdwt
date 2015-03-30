@@ -134,29 +134,54 @@ void cdf53_vert_2x1_i16(
         int16_t *buff // [2]
 )
 {
-	int16_t c[2];
-	int16_t r[2];
-	int16_t x0, x1;
-	int16_t y0, y1;
+	int16_t d1_x1 = buff[0]; // 16 bits
+	int16_t s0_x1 = buff[1]; // 16 bits
 
-	int16_t *l = buff;
+	int16_t d0_x0 = *data0; // 16 bits
+	int16_t s0_x0 = *data1; // 16 bits
 
-	x0 = *data0;
-	x1 = *data1;
+	int16_t d1_x0 = d0_x0 - ( ( s0_x1 + s0_x0 + 0 ) >> 1 ); // (1)
+	int16_t s2_x1 = s0_x1 + ( ( d1_x1 + d1_x0 + 2 ) >> 2 ); // (2)
 
-	y0   = l[0];
-	c[0] = l[1];
-	c[1] = x0;
+	buff[0] = d1_x0;
+	buff[1] = s0_x0;
 
-	r[1] = x1;
-	r[0] = c[1] - ( ( l[1] + r[1] + 0 ) >> 1 );
-	y1   = c[0] + ( ( l[0] + r[0] + 2 ) >> 2 );
+	*data0 = s2_x1;
+	*data1 = d1_x0;
+}
 
-	l[0] = r[0];
-	l[1] = r[1];
+// JPEG 2000 compatible
+// ITU-T Rec. T.800 (2000 FCDV1.0), p. 126
+// F.3.8.1 Reversible 1D filtering
+// returns the output of the 1D_FILT_R procedure
+static
+void cdf53_vert_2x1B_i16(
+        int16_t *data0, // left
+        int16_t *data1, // right
+        int16_t *buff // []
+)
+{
+	int16_t d0_x0 = *data0; // 16 bits
+	int16_t s0_x0 = *data1; // 16 bits
 
-	*data0 = y0;
-	*data1 = y1;
+	int16_t s0_x1 = buff[0]; // 15 bits
+	int16_t s1_x1 = buff[1]; // 16 bits
+	int16_t b0_x1 = buff[2]; // 1 bit
+
+	int16_t c1 = 1 & s0_x0 & s0_x1; // 1 bit AND
+	int16_t c2 = 2 - b0_x1 - c1; // 2 bit LUT
+
+	int16_t s1_x0 = (s0_x0<<2) - (s0_x0&~1) + d0_x0 - (s0_x1>>1); // (10)
+	int16_t b0_x0 = c1; // (11)
+	int16_t s2_x1 = ( s1_x1 + d0_x0 - (s0_x0>>1) + c2 ) >> 2; // (12)
+	int16_t d1_x0 = d0_x0 - ( ( s0_x1 + s0_x0 ) >> 1 ); // (5)
+
+	*data0 = s2_x1;
+	*data1 = d1_x0;
+
+	buff[0] = s0_x0;
+	buff[1] = s1_x0;
+	buff[2] = b0_x0;
 }
 
 static
@@ -728,7 +753,8 @@ void cores2f_cdf53_v2x2_i16_core(
 	const int step_y = 2;
 	const int step_x = 2;
 
-	const int shift = 2;
+	const int shift = 1;
+	const int buff_elem_size = 4; // FIXME: 2
 
 	// 2x2
 	int16_t t[4];
@@ -746,13 +772,24 @@ void cores2f_cdf53_v2x2_i16_core(
 		}
 	}
 
+#if 0
 	// vertical
-	cdf53_vert_2x1_i16(t+0, t+2, buffer_x_ptr+0);
-	cdf53_vert_2x1_i16(t+1, t+3, buffer_x_ptr+2);
+	cdf53_vert_2x1_i16(t+0, t+2, buffer_x_ptr+0*buff_elem_size);
+	cdf53_vert_2x1_i16(t+1, t+3, buffer_x_ptr+1*buff_elem_size);
 
 	// horizontal
-	cdf53_vert_2x1_i16(t+0, t+1, buffer_y_ptr+0);
-	cdf53_vert_2x1_i16(t+2, t+3, buffer_y_ptr+2);
+	cdf53_vert_2x1_i16(t+0, t+1, buffer_y_ptr+0*buff_elem_size);
+	cdf53_vert_2x1_i16(t+2, t+3, buffer_y_ptr+1*buff_elem_size);
+#endif
+#if 1
+	// vertical
+	cdf53_vert_2x1B_i16(t+0, t+2, buffer_x_ptr+0*buff_elem_size);
+	cdf53_vert_2x1B_i16(t+1, t+3, buffer_x_ptr+1*buff_elem_size);
+
+	// horizontal
+	cdf53_vert_2x1B_i16(t+0, t+1, buffer_y_ptr+0*buff_elem_size);
+	cdf53_vert_2x1B_i16(t+2, t+3, buffer_y_ptr+1*buff_elem_size);
+#endif
 
 	// store
 	for(int yy = 0; yy < step_y; yy++)
@@ -1486,7 +1523,7 @@ void cores2f_cdf53_v2x2_i16(
 {
 	assert( src->size_x == dst->size_x && src->size_y == dst->size_y );
 
-	const int buff_elem_size = 2;
+	const int buff_elem_size = 4; // FIXME: 2
 
 	const int step_x = 2;
 	const int step_y = 2;
