@@ -31,6 +31,12 @@ void image2_save_to_pgm_s(struct image_t *image, const char *path);
 
 void image2_save_to_pgm(struct image_t *image, const char *path, enum dwt_types data_type);
 
+void image2_save_to_mat(struct image_t *image, const char *path, enum dwt_types data_type);
+
+struct image_t *image2_load_from_pgm(const char *path, enum dwt_types data_type);
+
+struct image_t *image2_load_from_mat(const char *path, enum dwt_types data_type);
+
 void image2_save_log_to_pgm_s(struct image_t *image, const char *path);
 
 int image2_save_log_to_pgm_i(struct image_t *image, const char *path);

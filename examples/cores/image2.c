@@ -268,6 +268,77 @@ void image2_save_to_pgm_s(struct image_t *image, const char *path)
 	image_save_to_pgm2_s(&swapped, path);
 }
 
+struct image_t *image2_load_from_pgm_i16(const char *path)
+{
+	struct image_t *image = dwt_util_reliably_alloc1(sizeof(struct image_t));
+
+	// TODO: check for error
+	dwt_util_load_from_pgm_i16(
+		path,
+		0xff,
+		&image->ptr,
+		&image->stride_y,
+		&image->stride_x,
+		&image->size_x,
+		&image->size_y
+	);
+
+	// FIXME: correct?
+	image->size = image->stride_y * image->size_y;
+
+	printf("image2_load_from_pgm_i16: %i MiB\n", image->size>>20);
+
+	return image;
+}
+
+struct image_t *image2_load_from_mat_i16(const char *path)
+{
+	struct image_t *image = dwt_util_reliably_alloc1(sizeof(struct image_t));
+
+	// TODO: check for error
+	dwt_util_load_from_mat_i16(
+		path,
+		&image->ptr,
+		&image->size_x,
+		&image->size_y,
+		&image->stride_y,
+		&image->stride_x
+	);
+
+	// FIXME: correct?
+	image->size = image->stride_y * image->size_y;
+
+	printf("image2_load_from_mat_i16: %i MiB\n", image->size>>20);
+
+	return image;
+}
+
+struct image_t *image2_load_from_pgm(const char *path, enum dwt_types data_type)
+{
+	switch(data_type)
+	{
+		case TYPE_INT16:
+			return image2_load_from_pgm_i16(path);
+		default:
+			dwt_util_error("%s: unsupported data type (%i)\n", __FUNCTION__, data_type);
+	}
+
+	return NULL;
+}
+
+struct image_t *image2_load_from_mat(const char *path, enum dwt_types data_type)
+{
+	switch(data_type)
+	{
+		case TYPE_INT16:
+			return image2_load_from_mat_i16(path);
+		default:
+			dwt_util_error("%s: unsupported data type (%i)\n", __FUNCTION__, data_type);
+	}
+
+	return NULL;
+}
+
 void image2_save_to_pgm(struct image_t *image, const char *path, enum dwt_types data_type)
 {
 	switch(data_type)
@@ -326,6 +397,27 @@ void image2_save_to_pgm(struct image_t *image, const char *path, enum dwt_types 
 			image2_save_to_pgm(float32_image, path, TYPE_FLOAT32);
 			// free TYPE_FLOAT32
 			image_destroy(float32_image);
+			break;
+		}
+		default:
+			dwt_util_error("%s: unsupported data type (%i)\n", __FUNCTION__, data_type);
+	}
+}
+
+void image2_save_to_mat(struct image_t *image, const char *path, enum dwt_types data_type)
+{
+	switch(data_type)
+	{
+		case TYPE_INT16:
+		{
+			dwt_util_save_to_mat_i16(
+				path,
+				image->ptr,
+				image->size_x,
+				image->size_y,
+				image->stride_y,
+				image->stride_x
+			);
 			break;
 		}
 		default:
@@ -674,6 +766,7 @@ int image2_compare(struct image_t *source, struct image_t *target, enum dwt_type
 
 void image2_flush_cache(struct image_t *image)
 {
+	assert( image );
 	assert( image->stride_y > 0 );
 
 	dwt_util_flush_cache(
