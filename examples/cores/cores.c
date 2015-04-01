@@ -1536,8 +1536,15 @@ void cores2f_cdf53_v2x2_i16(
 	const int super_x = overlap_x_L + src->size_x + overlap_x_R;
 	const int super_y = overlap_y_L + src->size_y + overlap_y_R;
 
+#if 0
 	int16_t buffer_x[buff_elem_size*super_x];
 	int16_t buffer_y[buff_elem_size*super_y];
+#else
+	int16_t *buffer_x = dwt_util_alloc(buff_elem_size*super_x, sizeof(int16_t));
+	int16_t *buffer_y = dwt_util_alloc(buff_elem_size*super_y, sizeof(int16_t));
+
+	assert( buffer_x && buffer_y );
+#endif
 
 	for(int y = 0; y+step_y-1 < super_y; y += step_y)
 		for(int x = 0; x+step_x-1 < super_x; x += step_x)
